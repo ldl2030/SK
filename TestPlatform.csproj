@@ -353,6 +353,7 @@
     </Compile>
     <Compile Include="Presentation\Converters\StringContainsConverter.cs" />
     <Compile Include="Presentation\ViewModels\ResultWindowModel.cs" />
+    <Compile Include="Presentation\Shell\MainWindow.UtilityTools.cs" />
     <Compile Include="Domain\TestExecution\TestActionHost.cs" />
     <Compile Include="Infrastructure\Persistence\TestCountHelper.cs" />
     <Compile Include="Domain\TestExecution\TestPlanModels.cs" />
