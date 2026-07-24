@@ -8,6 +8,7 @@ namespace TestPlatform
     public enum ReportSaveMode
     {
         AppendCsv = 0,
-        SingleExcel = 1
+        SingleExcel = 1,
+        Bcm125TxtPdf = 2
     }
 }

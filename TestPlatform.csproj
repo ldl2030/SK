@@ -297,6 +297,7 @@
     <Compile Include="Application\TestExecution\DataTableTestGridService.cs" />
     <Compile Include="Hardware\Instruments\Measurement\DMM.cs" />
     <Compile Include="Infrastructure\Reporting\ExcelReportExporter.cs" />
+    <Compile Include="Infrastructure\Reporting\BCM125\Bcm125LegacyReportExporter.cs" />
     <Compile Include="Presentation\Views\Dialogs\FixtureDownWindow.xaml.cs">
       <DependentUpon>FixtureDownWindow.xaml</DependentUpon>
     </Compile>
@@ -356,6 +357,7 @@
     <Compile Include="Presentation\Converters\StringContainsConverter.cs" />
     <Compile Include="Presentation\ViewModels\ResultWindowModel.cs" />
     <Compile Include="Presentation\Shell\MainWindow.UtilityTools.cs" />
+    <Compile Include="Presentation\Shell\MainWindow.Bcm125ReportSaving.cs" />
     <Compile Include="Presentation\Shell\MainWindow.Updates.cs" />
     <Compile Include="Domain\TestExecution\TestActionHost.cs" />
     <Compile Include="Infrastructure\Persistence\TestCountHelper.cs" />
@@ -602,6 +604,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\BCM-125\BCM-125_autoTest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\BCM-125\BCM-125_report.psv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\BCM-125\BCM-125_profiles.xml">

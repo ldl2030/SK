@@ -65,6 +65,7 @@ namespace TestPlatform
                 if (username.Equals("admin", StringComparison.OrdinalIgnoreCase) &&
                     inputPassword.Equals(serverPassword, StringComparison.OrdinalIgnoreCase))
                 {
+                    GlobalState.CurrentUserName = username;
                     GlobalState.IsLoggedIn = true;
                     DialogResult = true;
                     Close();

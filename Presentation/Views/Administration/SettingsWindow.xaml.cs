@@ -76,7 +76,12 @@ namespace TestPlatform
             }
             //数据保存模式
 
-            cmbReportSaveMode.SelectedIndex = CurrentSettings.ReportSaveMode == ReportSaveMode.SingleExcel ? 1 : 0;
+            cmbReportSaveMode.SelectedIndex = (int)CurrentSettings.ReportSaveMode;
+            if (cmbReportSaveMode.SelectedIndex < 0 ||
+                cmbReportSaveMode.SelectedIndex >= cmbReportSaveMode.Items.Count)
+            {
+                cmbReportSaveMode.SelectedIndex = 0;
+            }
             // 窗口行为
             chkRememberWindowPos.IsChecked = CurrentSettings.RememberWindowPos;
             chkAutoStart.IsChecked = CurrentSettings.AutoStart;
@@ -191,7 +196,11 @@ namespace TestPlatform
             CurrentSettings.MESPath = txtMESPath.Text;
             //保存报告的模式
 
-            CurrentSettings.ReportSaveMode = cmbReportSaveMode.SelectedIndex == 1? ReportSaveMode.SingleExcel: ReportSaveMode.AppendCsv;
+            CurrentSettings.ReportSaveMode = cmbReportSaveMode.SelectedIndex == 2
+                ? ReportSaveMode.Bcm125TxtPdf
+                : cmbReportSaveMode.SelectedIndex == 1
+                    ? ReportSaveMode.SingleExcel
+                    : ReportSaveMode.AppendCsv;
             // 在线打印
             CurrentSettings.OnlinePrint = chkOnlinePrint.IsChecked ?? false;
             //SMB上传

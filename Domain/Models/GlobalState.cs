@@ -20,6 +20,8 @@ namespace TestPlatform
 
         private static bool _isLoggedIn = false;
 
+        public static string CurrentUserName { get; set; } = "";
+
         public static bool IsLoggedIn
         {
             get => DebugBypassLogin || _isLoggedIn;

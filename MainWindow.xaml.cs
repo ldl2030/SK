@@ -1099,12 +1099,13 @@ namespace TestPlatform
                     testStartTime,
                     testEndTime);
 
-                // 4. 如果上传失败，根据规则修正 testResult
-                // 当前规则：上传失败则最终结果标记为失败。
+                // 4. 报告状态与DUT测试结果分离。
+                // 报告生成/上传失败必须明确提示，但不能把已经通过的电气测试改成FAIL。
                 if (!reportUploadSuccess)
                 {
-                    AppendLog($"[通道{channel.Index + 1}] 报告保存或上传失败，最终结果修正为 FAIL", LogError);
-                    finalResult = false;
+                    AppendLog(
+                        $"[通道{channel.Index + 1}] DUT测试结果为{(testResult ? "PASS" : "FAIL")}；报告保存或上传失败，请补传报告。",
+                        LogError);
                 }
 
                 // 5. MES createRoute 上传最终结果
@@ -1133,7 +1134,11 @@ namespace TestPlatform
                 // 7. 更新通道 UI
                 if (!reportUploadSuccess)
                 {
-                    SetChannelFinalUI(channel, sn, false, "上传失败");
+                    SetChannelFinalUI(
+                        channel,
+                        sn,
+                        finalResult,
+                        finalResult ? "PASS\n报告上传失败" : "FAIL\n报告上传失败");
                 }
                 else
                 {
@@ -1530,6 +1535,25 @@ namespace TestPlatform
             // 报告保存模式统一入口：
             // 1. AppendCsv：保持当前按天累加 CSV 的保存方式。
             // 2. SingleExcel：每个 SN 单独保存一个 Excel，然后复用同一套 FTP / SMB 上传方法。
+            // 3. Bcm125TxtPdf：按BCM-UP125客户格式生成同名TXT和PDF。
+            if (appSettings.ReportSaveMode == ReportSaveMode.Bcm125TxtPdf)
+            {
+                if (string.IsNullOrWhiteSpace(ProjectSettings.CurrentProjectName) ||
+                    ProjectSettings.CurrentProjectName.IndexOf(
+                        "BCM-125",
+                        StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    AppendLog("BCM-125 TXT/PDF报告模式仅适用于BCM-125项目。", LogError);
+                    return false;
+                }
+
+                return await SaveBcm125TxtPdfReportAndUploadAsync(
+                    channelIndex,
+                    sn,
+                    testResult,
+                    testEndTime);
+            }
+
             if (appSettings.ReportSaveMode == ReportSaveMode.SingleExcel)
             {
                 return await SaveSingleExcelReportAndUploadAsync(
