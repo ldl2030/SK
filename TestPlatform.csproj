@@ -335,6 +335,7 @@
     <Compile Include="Domain\Models\ReportSaveMode.cs" />
     <Compile Include="Hardware\Instruments\Measurement\RigolDHO804Scope.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.Fixture.cs" />
     <Compile Include="Sequences\SK\SKSequences.cs" />
     <Compile Include="Sequences\SK\Common\SKBaseSequence.OperatorPrompts.cs" />
     <Compile Include="Sequences\SK\BCM125\SKBCM125Sequence.cs" />
