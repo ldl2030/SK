@@ -286,105 +286,112 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="CableRotationMonitorWindow.xaml.cs">
+    <Compile Include="Presentation\Views\Monitoring\CableRotationMonitorWindow.xaml.cs">
       <DependentUpon>CableRotationMonitorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ConfirmDisplayWindow.xaml.cs">
+    <Compile Include="Presentation\Views\Dialogs\ConfirmDisplayWindow.xaml.cs">
       <DependentUpon>ConfirmDisplayWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="DataTableTestGridService.cs" />
-    <Compile Include="DMM.cs" />
-    <Compile Include="ExcelReportExporter.cs" />
-    <Compile Include="FixtureDownWindow.xaml.cs">
+    <Compile Include="Application\Channels\ChannelContext.cs" />
+    <Compile Include="Application\State\ProjectSettings.cs" />
+    <Compile Include="Application\TestExecution\DataTableTestGridService.cs" />
+    <Compile Include="Hardware\Instruments\Measurement\DMM.cs" />
+    <Compile Include="Infrastructure\Reporting\ExcelReportExporter.cs" />
+    <Compile Include="Presentation\Views\Dialogs\FixtureDownWindow.xaml.cs">
       <DependentUpon>FixtureDownWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="FrequencyMonitorWindow.xaml.cs">
+    <Compile Include="Presentation\Views\Monitoring\FrequencyMonitorWindow.xaml.cs">
       <DependentUpon>FrequencyMonitorWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="FTPHelper.cs" />
-    <Compile Include="GlobalState.cs" />
-    <Compile Include="HighVoltageTestParser.cs" />
-    <Compile Include="ITestGridService.cs" />
-    <Compile Include="ITestSequence.cs" />
-    <Compile Include="LEDAnalyzerHelper.cs" />
-    <Compile Include="LEDConfigWindow.xaml.cs">
+    <Compile Include="Infrastructure\Network\FTPHelper.cs" />
+    <Compile Include="Domain\Models\GlobalState.cs" />
+    <Compile Include="Infrastructure\Parsing\HighVoltageTestParser.cs" />
+    <Compile Include="Domain\TestExecution\ITestGridService.cs" />
+    <Compile Include="Domain\TestExecution\ITestSequence.cs" />
+    <Compile Include="Hardware\Instruments\Optical\LEDAnalyzerHelper.cs" />
+    <Compile Include="Presentation\Views\Configuration\LEDConfigWindow.xaml.cs">
       <DependentUpon>LEDConfigWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="LEDModels.cs" />
-    <Compile Include="LoginWindow.xaml.cs">
+    <Compile Include="Domain\Models\LEDModels.cs" />
+    <Compile Include="Presentation\Views\Administration\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="LogViewerWindow.xaml.cs">
+    <Compile Include="Presentation\Views\Reporting\LogViewerWindow.xaml.cs">
       <DependentUpon>LogViewerWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="LR4_2912Sequence.cs" />
-    <Compile Include="MESHelper.cs" />
-    <Compile Include="OffsetConfigWindow.xaml.cs">
+    <Compile Include="Sequences\Legacy\LR4\LR4_2912Sequence.cs" />
+    <Compile Include="Infrastructure\MES\MESHelper.cs" />
+    <Compile Include="Presentation\Views\Configuration\OffsetConfigWindow.xaml.cs">
       <DependentUpon>OffsetConfigWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="OnlineConfigHelper.cs" />
-    <Compile Include="ProjectConfigWindow.xaml.cs">
+    <Compile Include="Infrastructure\Network\OnlineConfigHelper.cs" />
+    <Compile Include="Presentation\Views\Configuration\ProjectConfigWindow.xaml.cs">
       <DependentUpon>ProjectConfigWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ProjectEditWindow.xaml.cs">
+    <Compile Include="Presentation\Views\Configuration\ProjectEditWindow.xaml.cs">
       <DependentUpon>ProjectEditWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="RelayController.cs" />
-    <Compile Include="ReportSaveMode.cs" />
-    <Compile Include="RigolDHO804Scope.cs" />
-    <Compile Include="SK441Device.cs" />
-    <Compile Include="SKSequences.cs" />
-    <Compile Include="ScanCompareWindow.xaml.cs">
+    <Compile Include="Hardware\Fixture\RelayController.cs" />
+    <Compile Include="Domain\Models\ReportSaveMode.cs" />
+    <Compile Include="Hardware\Instruments\Measurement\RigolDHO804Scope.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.cs" />
+    <Compile Include="Sequences\SK\SKSequences.cs" />
+    <Compile Include="Sequences\SK\BCM125\SKBCM125Sequence.cs" />
+    <Compile Include="Sequences\SK\BCM250\SKBCM250Sequence.cs" />
+    <Compile Include="Sequences\SK\MPS125\SKMPS125Sequence.cs" />
+    <Compile Include="Sequences\SK\MPS250\SKMPS250Sequence.cs" />
+    <Compile Include="Presentation\Views\Operations\ScanCompareWindow.xaml.cs">
       <DependentUpon>ScanCompareWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SerialPortHelper.cs" />
-    <Compile Include="SettingsWindow.xaml.cs">
+    <Compile Include="Hardware\Communication\SerialPortHelper.cs" />
+    <Compile Include="Presentation\Views\Administration\SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SMBHelper.cs" />
-    <Compile Include="StatisticsWindow.xaml.cs">
+    <Compile Include="Infrastructure\Network\SMBHelper.cs" />
+    <Compile Include="Presentation\Views\Reporting\StatisticsWindow.xaml.cs">
       <DependentUpon>StatisticsWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="StringContainsConverter.cs" />
-    <Compile Include="TestActionHost.cs" />
-    <Compile Include="TestCountHelper.cs" />
-    <Compile Include="TestPlanModels.cs" />
-    <Compile Include="TestSequenceContext.cs" />
-    <Compile Include="UpdateHelper.cs" />
-    <Compile Include="UpdateWindow.xaml.cs">
+    <Compile Include="Presentation\Converters\StringContainsConverter.cs" />
+    <Compile Include="Presentation\ViewModels\ResultWindowModel.cs" />
+    <Compile Include="Domain\TestExecution\TestActionHost.cs" />
+    <Compile Include="Infrastructure\Persistence\TestCountHelper.cs" />
+    <Compile Include="Domain\TestExecution\TestPlanModels.cs" />
+    <Compile Include="Domain\TestExecution\TestSequenceContext.cs" />
+    <Compile Include="Infrastructure\Updates\UpdateHelper.cs" />
+    <Compile Include="Presentation\Views\Operations\UpdateWindow.xaml.cs">
       <DependentUpon>UpdateWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="WaitDialog.xaml.cs">
+    <Compile Include="Presentation\Views\Dialogs\WaitDialog.xaml.cs">
       <DependentUpon>WaitDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ZplBuilder.cs" />
-    <Compile Include="ZplOffsetConfig.cs" />
-    <Compile Include="ZplPrinterHelper.cs" />
-    <Page Include="CableRotationMonitorWindow.xaml">
+    <Compile Include="Infrastructure\Printing\ZplBuilder.cs" />
+    <Compile Include="Infrastructure\Printing\ZplOffsetConfig.cs" />
+    <Compile Include="Infrastructure\Printing\ZplPrinterHelper.cs" />
+    <Page Include="Presentation\Views\Monitoring\CableRotationMonitorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ConfirmDisplayWindow.xaml">
+    <Page Include="Presentation\Views\Dialogs\ConfirmDisplayWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="FixtureDownWindow.xaml">
+    <Page Include="Presentation\Views\Dialogs\FixtureDownWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="FrequencyMonitorWindow.xaml">
+    <Page Include="Presentation\Views\Monitoring\FrequencyMonitorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="LEDConfigWindow.xaml">
+    <Page Include="Presentation\Views\Configuration\LEDConfigWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="LoginWindow.xaml">
+    <Page Include="Presentation\Views\Administration\LoginWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="LogViewerWindow.xaml">
+    <Page Include="Presentation\Views\Reporting\LogViewerWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -392,13 +399,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="AnsPowerSupply.cs" />
-    <Compile Include="DaqMultimeter.cs" />
-    <Compile Include="DigitalInputController.cs" />
-    <Compile Include="FirmwareFlasher.cs" />
-    <Compile Include="HengHuiElectronicLoad.cs" />
-    <Compile Include="HengHuiPowerSupply.cs" />
-    <Compile Include="TargetBoardComm.cs" />
+    <Compile Include="Hardware\Instruments\PowerSupplies\AnsPowerSupply.cs" />
+    <Compile Include="Hardware\Instruments\Measurement\DaqMultimeter.cs" />
+    <Compile Include="Hardware\Fixture\DigitalInputController.cs" />
+    <Compile Include="Hardware\Communication\FirmwareFlasher.cs" />
+    <Compile Include="Hardware\Communication\LegacyCommunicationState.cs" />
+    <Compile Include="Hardware\Instruments\Loads\HengHuiElectronicLoad.cs" />
+    <Compile Include="Hardware\Instruments\PowerSupplies\HengHuiPowerSupply.cs" />
+    <Compile Include="Hardware\Communication\TargetBoardComm.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -407,35 +415,35 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="OffsetConfigWindow.xaml">
+    <Page Include="Presentation\Views\Configuration\OffsetConfigWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ProjectConfigWindow.xaml">
+    <Page Include="Presentation\Views\Configuration\ProjectConfigWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ProjectEditWindow.xaml">
+    <Page Include="Presentation\Views\Configuration\ProjectEditWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ScanCompareWindow.xaml">
+    <Page Include="Presentation\Views\Operations\ScanCompareWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SettingsWindow.xaml">
+    <Page Include="Presentation\Views\Administration\SettingsWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="StatisticsWindow.xaml">
+    <Page Include="Presentation\Views\Reporting\StatisticsWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="UpdateWindow.xaml">
+    <Page Include="Presentation\Views\Operations\UpdateWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="WaitDialog.xaml">
+    <Page Include="Presentation\Views\Dialogs\WaitDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
