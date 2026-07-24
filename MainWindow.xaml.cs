@@ -2698,6 +2698,18 @@ namespace TestPlatform
             logWindow.Owner = this;
             logWindow.Show();
         }
+
+        private void BtnUtilityTools_Click(object sender, RoutedEventArgs e)
+        {
+            if (btnUtilityTools.ContextMenu == null)
+                return;
+
+            btnUtilityTools.ContextMenu.PlacementTarget = btnUtilityTools;
+            btnUtilityTools.ContextMenu.Placement =
+                System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            btnUtilityTools.ContextMenu.IsOpen = true;
+        }
+
         private void btnStatistics_Click(object sender, RoutedEventArgs e)
         {
             var win = new StatisticsWindow();

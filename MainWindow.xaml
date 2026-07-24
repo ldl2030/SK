@@ -240,12 +240,12 @@
                             <TextBlock Text="系统设置" Foreground="#713800" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
-                    <Menu Margin="4,0" ToolBar.OverflowMode="AsNeeded">
-                        <MenuItem Height="40" MinWidth="112" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}">
-                            <MenuItem.Icon>
-                                <TextBlock Style="{StaticResource ToolButtonIcon}" Text="&#xE74C;" Foreground="#0B5CAD"/>
-                            </MenuItem.Icon>
-                            <MenuItem.Header>实用工具</MenuItem.Header>
+                    <Button x:Name="btnUtilityTools"
+                            MinWidth="112"
+                            Click="BtnUtilityTools_Click"
+                            ToolBar.OverflowMode="AsNeeded">
+                        <Button.ContextMenu>
+                            <ContextMenu>
                             <MenuItem x:Name="打开设备管理器ToolStripMenuItem" Header="💻 打开设备管理器" Click="打开设备管理器ToolStripMenuItem_Click"/>
                             <MenuItem x:Name="打开默认打印机首选项ToolStripMenuItem" Header="🖨️ 打开默认打印机首选项" Click="打开默认打印机首选项ToolStripMenuItem_Click"/>
                             <MenuItem x:Name="快速截图ToolStripMenuItem" Header="📸 快速截图(Ctrl+Shift+S)" Click="快速截图ToolStripMenuItem_Click"/>
@@ -254,8 +254,18 @@
                             <MenuItem x:Name="btnStatistics" Header="📊 统计报告" Click="btnStatistics_Click"/>
                             <MenuItem x:Name="btnOffsetConfig" Header="✏️ 打印偏移设置" Click="btnOffsetConfig_Click"/>
                             <MenuItem x:Name="btnLEDConfig" Header="💡 LED分析仪配置" Click="btnLEDConfig_Click"/>
-                        </MenuItem>
-                    </Menu>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource ToolButtonIcon}"
+                                       Text="&#xE74C;"
+                                       Foreground="#0B5CAD"/>
+                            <TextBlock Text="实用工具"
+                                       TextWrapping="NoWrap"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
+                    </Button>
                     <Separator/>
                     <Button x:Name="btnCheckUpdate" MinWidth="112" Click="btnCheckUpdate_Click"
                             ToolBar.OverflowMode="AsNeeded">
