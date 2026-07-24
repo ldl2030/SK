@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Profiles BoardType="BCM-125">
+  <Profile Id="NORMAL">
+    <Name>常规</Name>
+    <UseBaselineDefaults>true</UseBaselineDefaults>
+    <AllowGroupOverride>false</AllowGroupOverride>
+    <AllowStepOverride>false</AllowStepOverride>
+    <ResetFromBaselineEveryRun>true</ResetFromBaselineEveryRun>
+  </Profile>
+  <Profile Id="REWORK">
+    <Name>返修</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>false</AllowStepOverride>
+    <ResetFromBaselineEveryRun>false</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM125.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CH07"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
+  <Profile Id="ENGINEERING">
+    <Name>工程</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>true</AllowStepOverride>
+    <ResetFromBaselineEveryRun>false</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM125.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CH07"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
+</Profiles>

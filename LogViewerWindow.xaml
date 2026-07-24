@@ -1,0 +1,19 @@
+﻿<Window x:Class="TestPlatform.LogViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="日志查看器" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="放大" Width="60" Click="ZoomIn_Click"/>
+            <Button Content="缩小" Width="60" Margin="10,0,0,0" Click="ZoomOut_Click"/>
+            <Button Content="复制" Width="60" Margin="10,0,0,0" Click="CopyLog_Click"/>
+        </StackPanel>
+        <RichTextBox x:Name="rtbLog" Grid.Row="1" VerticalScrollBarVisibility="Auto" 
+                     FontSize="12" IsReadOnly="True"/>
+    </Grid>
+</Window>

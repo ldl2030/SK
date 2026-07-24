@@ -1,0 +1,10 @@
+si SWD
+JTAGConf -1 -1
+speed 4000
+connect
+halt
+erase
+loadbin "ftc_rczigbeesoc_combinedhex_1.1.1.hex" 0x00000000
+r
+g
+exit

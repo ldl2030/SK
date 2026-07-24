@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestItems>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>扫描的镭雕码</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭所有继电器</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待主板下压</Name>
+    <UpperLimit>01</UpperLimit>
+    <LowerLimit>01</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>TP5输入电压</Name>
+    <UpperLimit>3.15</UpperLimit>
+    <LowerLimit>2.85</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>TP3输入电压</Name>
+    <UpperLimit>0.2415</UpperLimit>
+    <LowerLimit>0.2185</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启电机继电器06-08</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待电机稳定</Name>
+    <UpperLimit>1000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>电机输出电压</Name>
+    <UpperLimit>3.4</UpperLimit>
+    <LowerLimit>3.2</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭电机继电器06-08</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启1.65V输入继电器09-11</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待1.65V输入稳定</Name>
+    <UpperLimit>2000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Pin7电压_Apply1.65V</Name>
+    <UpperLimit>2.15</UpperLimit>
+    <LowerLimit>1.15</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>TP8电压_Apply1.65V</Name>
+    <UpperLimit>0.3</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭11号继电器，准备1.66V输入</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启12号继电器，准备1.66V输入</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待1.66V输入稳定</Name>
+    <UpperLimit>1000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Pin7电压_Apply1.66V</Name>
+    <UpperLimit>2.858</UpperLimit>
+    <LowerLimit>1.858</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>TP8电压_Apply1.66V</Name>
+    <UpperLimit>3.5</UpperLimit>
+    <LowerLimit>2.9</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭09-12号继电器</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启电磁北继电器01-02</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待电磁北稳定</Name>
+    <UpperLimit>2000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>磁性北</Name>
+    <UpperLimit>0.2</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭电磁北继电器01-02</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>再次确认关闭电磁北继电器01-02</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启电磁南继电器03-04</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待电磁南稳定</Name>
+    <UpperLimit>2000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>磁性南</Name>
+    <UpperLimit>3.4</UpperLimit>
+    <LowerLimit>3.1</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>关闭电磁南继电器03-04</Name>
+    <UpperLimit />
+    <LowerLimit />
+    <Unit>ACTION</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待无磁性稳定</Name>
+    <UpperLimit>1000</UpperLimit>
+    <LowerLimit />
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>无磁性</Name>
+    <UpperLimit>1.756</UpperLimit>
+    <LowerLimit>1.644</LowerLimit>
+    <Unit>V</Unit>
+  </TestItem>
+</TestItems>

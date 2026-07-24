@@ -1,0 +1,38 @@
+# Visual Studio / MSBuild generated files
+.vs/
+bin/
+obj/
+packages/
+TestResults/
+*.user
+*.suo
+*.cache
+
+# Local Codex / agent workspace state
+.codex/
+.agents/
+
+# Runtime data
+Logs/
+Reports/
+Screenshots/
+TestCount.xml
+TestPlatform.xml
+ZPL_Debug.txt
+*.log
+
+# Temporary analysis and rendered files
+tmp/
+
+# Machine-local print/runtime settings
+PrintConfig/SerialNumber.txt
+
+# Third-party programming runtime binaries
+ProjectConfig/**/JLink.exe
+ProjectConfig/**/JLinkARM.dll
+ProjectConfig/**/JLink_x64.dll
+
+# Product firmware artifacts: keep them in the controlled deployment package
+ProjectConfig/**/*.bin
+ProjectConfig/**/*.hex
+

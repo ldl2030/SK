@@ -1,0 +1,9 @@
+si SWD
+speed 4000
+connect
+halt
+erase
+loadbin "ftc_imxrt_combinedhex_2.0.5.hex" 0x60000000
+r
+g
+exit

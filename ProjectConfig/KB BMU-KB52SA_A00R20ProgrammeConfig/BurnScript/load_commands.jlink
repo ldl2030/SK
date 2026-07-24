@@ -1,0 +1,11 @@
+si SWD
+JTAGConf -1 -1
+speed 4000
+connect
+halt
+erase
+loadbin "BTLAndBMU_APP_V08.02.00.XX.bin" 0x08000000
+verifybin "BTLAndBMU_APP_V08.02.00.XX.bin" 0x08000000
+r
+g
+exit

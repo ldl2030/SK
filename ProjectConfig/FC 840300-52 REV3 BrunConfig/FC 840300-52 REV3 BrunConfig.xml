@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestItems>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>SN</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>获取治具下压状态</Name>
+    <UpperLimit>01</UpperLimit>
+    <LowerLimit>01</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Programming U6 Conn P5</Name>
+    <UpperLimit>succeed</UpperLimit>
+    <LowerLimit>succeed</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Open All Relay</Name>
+    <UpperLimit>01060034000109C4</UpperLimit>
+    <LowerLimit>01060034000109C4</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Programming U16 Conn P2</Name>
+    <UpperLimit>succeed</UpperLimit>
+    <LowerLimit>succeed</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>Programming U20 Conn P3</Name>
+    <UpperLimit>succeed</UpperLimit>
+    <LowerLimit>succeed</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+</TestItems>

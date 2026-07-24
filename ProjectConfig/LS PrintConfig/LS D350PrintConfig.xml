@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestItems>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>扫描的镭雕码</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>打印贴纸</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>打印确认</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+</TestItems>

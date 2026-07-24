@@ -1,0 +1,1 @@
+.\JLink.exe -device GD32F470VG -CommandFile load_commands.jlink -Log jlink_program.log

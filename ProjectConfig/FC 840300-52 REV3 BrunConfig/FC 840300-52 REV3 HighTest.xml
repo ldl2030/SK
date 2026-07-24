@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestItems>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>SN（Scan SN）</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>获取治具盒盖状态（Get status of the fixture box lid）</Name>
+    <UpperLimit>01</UpperLimit>
+    <LowerLimit>01</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>闭合Y1Y2（Closing Y1Y2）</Name>
+    <UpperLimit>01</UpperLimit>
+    <LowerLimit>01</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>获取治具盒盖状态（Get status of the fixture box lid）</Name>
+    <UpperLimit>01</UpperLimit>
+    <LowerLimit>01</LowerLimit>
+    <Unit>TAG</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开始测试（start testing）</Name>
+    <UpperLimit>Test</UpperLimit>
+    <LowerLimit>Test</LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>等待4秒（Wait for 4 seconds）</Name>
+    <UpperLimit>10000</UpperLimit>
+    <LowerLimit>10000</LowerLimit>
+    <Unit>ms</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>输出电压（output voltage）</Name>
+    <UpperLimit>1.705</UpperLimit>
+    <LowerLimit>1.695</LowerLimit>
+    <Unit>kV</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>输出电流（current output）</Name>
+    <UpperLimit>2.5</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <Unit>uA</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>高压测试时间（High-pressure testing duration）</Name>
+    <UpperLimit>1</UpperLimit>
+    <LowerLimit>1</LowerLimit>
+    <Unit>s</Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>综合结论（Overall conclusion）</Name>
+    <UpperLimit>1</UpperLimit>
+    <LowerLimit>1</LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <Enabled>true</Enabled>
+    <Name>开启继电器（Activate the relay）</Name>
+    <UpperLimit>0</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+</TestItems>

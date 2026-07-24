@@ -1,0 +1,6 @@
+si SWD
+speed 4000
+connect
+halt
+erase
+exit

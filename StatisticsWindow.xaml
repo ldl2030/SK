@@ -1,0 +1,23 @@
+﻿<Window x:Class="TestPlatform.StatisticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="测试统计报告" Height="450" Width="600"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Text="历史测试统计" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+        <DataGrid x:Name="dgStatistics" Grid.Row="1" AutoGenerateColumns="False" 
+                  IsReadOnly="True" HeadersVisibility="Column">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="项目名称" Binding="{Binding ProjectName}" Width="*"/>
+                <DataGridTextColumn Header="测试总数" Binding="{Binding TotalCount}" Width="100"/>
+                <DataGridTextColumn Header="PASS" Binding="{Binding PassCount}" Width="80"/>
+                <DataGridTextColumn Header="NG" Binding="{Binding FailCount}" Width="80"/>
+                <DataGridTextColumn Header="不良率" Binding="{Binding FailRate}" Width="120"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

@@ -1,0 +1,10 @@
+si SWD
+speed 4000
+connect
+halt
+erase
+loadbin "436_02(Exceed)_v1.2.3.bin" 0x08000000
+verifybin "436_02(Exceed)_v1.2.3.bin" 0x08000000
+r
+g
+exit

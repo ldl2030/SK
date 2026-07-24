@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectList>
+  <Project>
+    <GroupName>VC</GroupName>
+    <ModelName>Docking Station Board测试</ModelName>
+    <DisplayName>VC Docking Station Board测试</DisplayName>
+    <FilePath>ProjectConfig\VC Docking Station Board TestConfig\TestFile_VC Docking Station Board.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/vc_dockingStation_release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>VC_DOCKING</SequenceKey>
+    <ComInitKey>VC_DOCKING</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+      <ComPort>powerSupplyComName</ComPort>
+      <ComPort>ledComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/VC/VC Docking Station Board</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>FC</GroupName>
+    <ModelName>840300-52 REV3烧录</ModelName>
+    <DisplayName>FC 840300-52 REV3烧录</DisplayName>
+    <FilePath>ProjectConfig\FC 840300-52 REV3 BrunConfig\FC 840300-52 REV3 BrunConfig.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/fc_840300_52_burner_update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>FC_840300_52_REV3_BURN</SequenceKey>
+    <ComInitKey>RS485_ONLY</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/FC/FC 840300-52 REV3 Programme</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>ME</GroupName>
+    <ModelName>MTD005 436_01-50-01(FBAD64202)</ModelName>
+    <DisplayName>ME MTD005 436_01-50-01(FBAD64202)</DisplayName>
+    <FilePath>ProjectConfig\ME MTD500TestConfig\ME MTD005 436_01-50-01(FBAD64202)TestConfig.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/me_mtd500Test</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>ME_MTD005_FBAD64202</SequenceKey>
+    <ComInitKey>ME_MTD005</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+      <ComPort>uartComName</ComPort>
+      <ComPort>powerSupplyComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/ME/MTD500/ME MTD005 436_01-50-01(FBAD64202)</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>LS</GroupName>
+    <ModelName>D350打印贴纸</ModelName>
+    <DisplayName>LS D350打印贴纸</DisplayName>
+    <FilePath>ProjectConfig\LS PrintConfig\LS D350PrintConfig.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>LS_D350_PRINT</SequenceKey>
+    <ComInitKey>NONE</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/LS/D350/打印数据</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>LS</GroupName>
+    <ModelName>D550打印贴纸</ModelName>
+    <DisplayName>LS D550打印贴纸</DisplayName>
+    <FilePath>ProjectConfig\LS PrintConfig\LS D550PrintConfig.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>LS_D550_PRINT</SequenceKey>
+    <ComInitKey>NONE</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/LS/D550/打印数据</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>ME</GroupName>
+    <ModelName>MTD005 436_01-50-01(FBAD61004)</ModelName>
+    <DisplayName>ME MTD005 436_01-50-01(FBAD61004)</DisplayName>
+    <FilePath>ProjectConfig\ME MTD500TestConfig\ME MTD005 436_01-50-01(FBAD61004).xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/me_mtd500Test</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>ME_MTD005_FBAD61004</SequenceKey>
+    <ComInitKey>ME_MTD005</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+      <ComPort>uartComName</ComPort>
+      <ComPort>powerSupplyComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/ME/MTD500/ME MTD005 436_01-50-01(FBAD61004)</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>Ei</GroupName>
+    <ModelName>G4 UUI Controller EC-1032 REV2 Test</ModelName>
+    <DisplayName>Ei G4 UUI Controller EC-1032 REV2 Test</DisplayName>
+    <FilePath>ProjectConfig\EI G4 Men Controller\EI G4 SUI Controller EC-1031 REV2 Test.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>EI_G4_UUI_CONTROLLER</SequenceKey>
+    <ComInitKey>EI_CONTROLLER</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/EI/G4 UUI Controller EC-1032 REV2 TestRport</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>KB</GroupName>
+    <ModelName>BMU-KB52SA_A00R20烧录</ModelName>
+    <DisplayName>KB BMU-KB52SA_A00R20烧录</DisplayName>
+    <FilePath>ProjectConfig\KB BMU-KB52SA_A00R20ProgrammeConfig\BMU-KB52SA_A00R20ProgrammeConfig.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/KB-BMU-KB52SA_A00R20-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>KB_BMU_KB52SA_A00R20_BURN</SequenceKey>
+    <ComInitKey>RS485_ONLY</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/KB/KB BMU-KB52SA_A00R20烧录</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>FC</GroupName>
+    <ModelName>840300-52 REV3高压测试</ModelName>
+    <DisplayName>FC 840300-52 REV3高压测试</DisplayName>
+    <FilePath>ProjectConfig\FC 840300-52 REV3 BrunConfig\FC 840300-52 REV3 HighTest.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/fc_840300_52-Rev3-HighTest_update-</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>FC_840300_52_REV3_HIGHTEST</SequenceKey>
+    <ComInitKey>FC_HIGHTEST</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/FC/FC 840300-52 REV3高压测试</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>Ei</GroupName>
+    <ModelName>G4 SUI Controller EC-1031 REV2 Test</ModelName>
+    <DisplayName>Ei G4 SUI Controller EC-1031 REV2 Test</DisplayName>
+    <FilePath>ProjectConfig\EI G4 Men Controller\EI G4 SUI Controller EC-1031 REV2 Test.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>EI_G4_SUI_CONTROLLER</SequenceKey>
+    <ComInitKey>EI_CONTROLLER</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/EI/G4 SUI Controller EC-1031 REV2 TestReport</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>LO</GroupName>
+    <ModelName>LR4-2912-0D AutoTest</ModelName>
+    <DisplayName>LR4-2912-0D AutoTest</DisplayName>
+    <FilePath>ProjectConfig\LO\LR4-2912-0D\LR4-2912-0D_autoTest.xml</FilePath>
+    <UpdateUrl>https://updatebqc.bqc-smt.com/version/fc_840300_52_burner_update-release</UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>LR4_2912_CLASS</SequenceKey>
+    <ComInitKey>RS485_ONLY</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>rs485ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/LO/LR4-2912-0D</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>SK</GroupName>
+    <ModelName>MPS-250 测试</ModelName>
+    <DisplayName>SK MPS-250 自动测试</DisplayName>
+    <FilePath>ProjectConfig\SK\MPS-250\MPS-250_autoTest.xml</FilePath>
+    <UpdateUrl></UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>SK_MPS250_Sequence</SequenceKey>
+    <ComInitKey>SK441Device</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/SK/MPS-250</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>SK</GroupName>
+    <ModelName>MPS-125 测试</ModelName>
+    <DisplayName>SK MPS-125 自动测试</DisplayName>
+    <FilePath>ProjectConfig\SK\MPS-125\MPS-125_autoTest.xml</FilePath>
+    <UpdateUrl></UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>SK_MPS125_Sequence</SequenceKey>
+    <ComInitKey>SK441Device</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/SK/MPS-125</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>SK</GroupName>
+    <ModelName>BCM-250 测试</ModelName>
+    <DisplayName>SK BCM-250 自动测试</DisplayName>
+    <FilePath>ProjectConfig\SK\BCM-250\BCM-250_autoTest.xml</FilePath>
+    <UpdateUrl></UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>SK_BCM250_Sequence</SequenceKey>
+    <ComInitKey>SK441Device</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/SK/BCM-250</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>SK</GroupName>
+    <ModelName>BCM-125 测试</ModelName>
+    <DisplayName>SK BCM-125 自动测试</DisplayName>
+    <FilePath>ProjectConfig\SK\BCM-125\BCM-125_autoTest.xml</FilePath>
+    <UpdateUrl></UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>SK_BCM125_Sequence</SequenceKey>
+    <ComInitKey>SK441Device</ComInitKey>
+    <RequiredComPorts />
+    <FtpBasePath>/SK/BCM-125</FtpBasePath>
+  </Project>
+</ProjectList>

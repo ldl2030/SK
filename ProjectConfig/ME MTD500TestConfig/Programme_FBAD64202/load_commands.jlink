@@ -1,0 +1,12 @@
+si SWD
+speed 4000
+device STM32F405VG
+connect
+halt
+erase
+loadbin "436_03(Candela)_v1.0.3.bin" 0x08000000
+verifybin "436_03(Candela)_v1.0.3.bin" 0x08000000
+exec SetRDPLevel=1
+r
+g
+exit
