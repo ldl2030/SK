@@ -27,9 +27,11 @@ namespace TestPlatform
                     return false;
                 }
 
-                string operatorCode = string.IsNullOrWhiteSpace(GlobalState.CurrentUserName)
-                    ? Environment.UserName
-                    : GlobalState.CurrentUserName;
+                string operatorCode = !string.IsNullOrWhiteSpace(appSettings.ReportOperatorCode)
+                    ? appSettings.ReportOperatorCode
+                    : !string.IsNullOrWhiteSpace(GlobalState.CurrentUserName)
+                        ? GlobalState.CurrentUserName
+                        : Environment.UserName;
 
                 Bcm125LegacyReportExporter.ExportResult result =
                     await Bcm125LegacyReportExporter.SaveAsync(

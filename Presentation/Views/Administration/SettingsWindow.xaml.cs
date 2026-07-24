@@ -82,6 +82,7 @@ namespace TestPlatform
             {
                 cmbReportSaveMode.SelectedIndex = 0;
             }
+            txtReportOperatorCode.Text = CurrentSettings.ReportOperatorCode;
             // 窗口行为
             chkRememberWindowPos.IsChecked = CurrentSettings.RememberWindowPos;
             chkAutoStart.IsChecked = CurrentSettings.AutoStart;
@@ -201,6 +202,7 @@ namespace TestPlatform
                 : cmbReportSaveMode.SelectedIndex == 1
                     ? ReportSaveMode.SingleExcel
                     : ReportSaveMode.AppendCsv;
+            CurrentSettings.ReportOperatorCode = txtReportOperatorCode.Text.Trim();
             // 在线打印
             CurrentSettings.OnlinePrint = chkOnlinePrint.IsChecked ?? false;
             //SMB上传
@@ -373,6 +375,7 @@ namespace TestPlatform
         /// 报告保存模式
         /// </summary>
         public ReportSaveMode ReportSaveMode { get; set; } = ReportSaveMode.AppendCsv;
+        public string ReportOperatorCode { get; set; } = "";
 
     }
 }

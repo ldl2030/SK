@@ -510,6 +510,7 @@
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
 
                                             <Label Grid.Row="0" Grid.Column="0" Content="保存格式" Style="{StaticResource FormLabel}" Margin="0,0,12,0"/>
@@ -522,6 +523,12 @@
 
                                             <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0" Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"
                                                        Text="Excel 模式下文件名按 SN 保存；如果同名文件已存在，会自动追加 年月日时分，避免覆盖。"/>
+
+                                            <Label Grid.Row="2" Grid.Column="0" Content="报告操作员工号" Style="{StaticResource FormLabel}" Margin="0,12,12,0"/>
+                                            <TextBox x:Name="txtReportOperatorCode" Grid.Row="2" Grid.Column="1" Height="36" Margin="0,12,0,0"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="2" Margin="14,12,0,0" VerticalAlignment="Center"
+                                                       Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"
+                                                       Text="用于 BCM-125 TXT/PDF 文件名和报告首行，例如 1105。"/>
                                         </Grid>
                                     </Border>
                                 </Grid>
