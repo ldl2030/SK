@@ -817,10 +817,9 @@ namespace TestPlatform
                         return;
 
                     DataRow targetDataRow = table.Rows[rowIndex];
-                    EnsureRuntimeGroupExpanded(targetDataRow["GroupHeader"]?.ToString());
-                    if (rowIndex == _lastScrolledRow)
-                        return;
-
+                    string groupHeader =
+                        targetDataRow["GroupHeader"]?.ToString() ?? string.Empty;
+                    EnsureRuntimeGroupExpanded(groupHeader);
                     _lastScrolledRow = rowIndex;
 
                     DataRowView item = table.DefaultView
@@ -829,8 +828,32 @@ namespace TestPlatform
                     if (item == null)
                         return;
 
+                    ICollectionView groupedView = dataGridView1.ItemsSource as ICollectionView;
+                    CollectionViewGroup targetGroup = groupedView?.Groups?
+                        .OfType<CollectionViewGroup>()
+                        .FirstOrDefault(group => string.Equals(
+                            group.Name?.ToString(),
+                            groupHeader,
+                            StringComparison.OrdinalIgnoreCase));
+                    if (targetGroup != null)
+                    {
+                        dataGridView1.ScrollIntoView(targetGroup);
+                        dataGridView1.UpdateLayout();
+
+                        GroupItem groupItem = dataGridView1.ItemContainerGenerator
+                            .ContainerFromItem(targetGroup) as GroupItem;
+                        Expander groupExpander = FindVisualChildren<Expander>(groupItem)
+                            .FirstOrDefault();
+                        if (groupExpander != null)
+                        {
+                            groupExpander.IsExpanded = true;
+                            groupExpander.UpdateLayout();
+                        }
+                    }
+
                     dataGridView1.ScrollIntoView(item);
                     dataGridView1.UpdateLayout();
+                    dataGridView1.SelectedItem = item;
 
                     var row = dataGridView1.ItemContainerGenerator
                         .ContainerFromItem(item) as DataGridRow;
@@ -2375,16 +2398,25 @@ namespace TestPlatform
             }
 
             EnsureRuntimeGroupExpanded(node.DisplayName);
-            int rowIndex = ProjectSettings.testDataTable.Rows
+            int? rowIndex = ProjectSettings.testDataTable.Rows
                 .Cast<DataRow>()
                 .Select((row, index) => new { row, index })
                 .Where(x => string.Equals(
                     x.row["StepId"]?.ToString(),
                     node.FirstStepId,
                     StringComparison.OrdinalIgnoreCase))
-                .Select(x => x.index)
+                .Select(x => (int?)x.index)
                 .FirstOrDefault();
-            await ScrollToTestRowAsync(rowIndex);
+            if (!rowIndex.HasValue)
+            {
+                AppendLog(
+                    $"快速跳转失败：未找到章节 {node.DisplayName} 的首个步骤 " +
+                    $"{node.FirstStepId}",
+                    LogWarning);
+                return;
+            }
+
+            await ScrollToTestRowAsync(rowIndex.Value);
         }
 
         private void RuntimeGroupExpander_Loaded(object sender, RoutedEventArgs e)
