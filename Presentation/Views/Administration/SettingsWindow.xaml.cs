@@ -46,6 +46,8 @@ namespace TestPlatform
             chkAutoUpper.IsChecked = CurrentSettings.AutoUpper;
             chkStopOnFail.IsChecked = CurrentSettings.StopOnFail;
             chkPromptOnFail.IsChecked = CurrentSettings.PromptOnFail;
+            chkContinueAfterPowerCriticalFailure.IsChecked =
+                CurrentSettings.ContinueAfterPowerCriticalFailure;
             chkAllowEmptySN.IsChecked = CurrentSettings.AllowEmptySN;
             // 外观
             rbLightTheme.IsChecked = CurrentSettings.LightTheme;
@@ -166,6 +168,8 @@ namespace TestPlatform
             CurrentSettings.AutoUpper = chkAutoUpper.IsChecked ?? false;
             CurrentSettings.StopOnFail = chkStopOnFail.IsChecked ?? true;
             CurrentSettings.PromptOnFail = chkPromptOnFail.IsChecked ?? true;
+            CurrentSettings.ContinueAfterPowerCriticalFailure =
+                chkContinueAfterPowerCriticalFailure.IsChecked ?? false;
             CurrentSettings.AllowEmptySN = chkAllowEmptySN.IsChecked ?? false;
 
             // 外观
@@ -361,6 +365,11 @@ namespace TestPlatform
         /// 测试失败时是否弹出重试提示（仅在 StopOnFail = false 时生效）
         /// </summary>
         public bool PromptOnFail { get; set; } = true;
+
+        /// <summary>
+        /// Engineering-only override. Safety-critical failures still stop.
+        /// </summary>
+        public bool ContinueAfterPowerCriticalFailure { get; set; } = false;
 
         // SMB 相关设置
         public bool SMBEnabled { get; set; } = false;

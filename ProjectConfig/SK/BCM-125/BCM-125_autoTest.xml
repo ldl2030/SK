@@ -270,7 +270,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>测试板安装检查（闭合218/219，数字量4）</Name>
+    <Name>测试板安装检查（闭合318/319，数字量4）</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -354,7 +354,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>8.1 FIRST START-UP-设置并开启MPS板电源（140V/1A）</Name>
+    <Name>8.1 FIRST START-UP-配置MPS板电源140V/1A并保持输出关闭</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -368,7 +368,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>8.2 FIRST START-UP-闭合RL4给DUT供电</Name>
+    <Name>8.2 FIRST START-UP-闭合RL4后开启MPS板电源</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -383,9 +383,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B01 +5V（DAQ CH01）</Name>
-    <UpperLimit>5.300</UpperLimit>
-    <LowerLimit>4.750</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>5300</UpperLimit>
+    <LowerLimit>4750</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S004.B02</StepId>
@@ -397,9 +397,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B02 +VCC（DAQ CH02）</Name>
-    <UpperLimit>15.570</UpperLimit>
-    <LowerLimit>14.690</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>15570</UpperLimit>
+    <LowerLimit>14690</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S005.B03</StepId>
@@ -411,9 +411,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B03 -VEE1（DAQ CH03）</Name>
-    <UpperLimit>-13.610</UpperLimit>
-    <LowerLimit>-13.890</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>-13610</UpperLimit>
+    <LowerLimit>-13890</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S006.B04</StepId>
@@ -425,9 +425,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B04 -VEE2（DAQ CH04）</Name>
-    <UpperLimit>-13.610</UpperLimit>
-    <LowerLimit>-13.890</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>-13610</UpperLimit>
+    <LowerLimit>-13890</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S007.B05</StepId>
@@ -439,9 +439,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B05 3V3A-1（DAQ CH07）</Name>
-    <UpperLimit>3.400</UpperLimit>
-    <LowerLimit>3.200</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>3400</UpperLimit>
+    <LowerLimit>3200</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S008.B06</StepId>
@@ -453,9 +453,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B06 3V3A-2（DAQ CH08）</Name>
-    <UpperLimit>3.400</UpperLimit>
-    <LowerLimit>3.200</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>3400</UpperLimit>
+    <LowerLimit>3200</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S009.B07</StepId>
@@ -467,9 +467,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B07 3V3-1（DAQ CH11）</Name>
-    <UpperLimit>3.400</UpperLimit>
-    <LowerLimit>3.200</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>3400</UpperLimit>
+    <LowerLimit>3200</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S010.B08</StepId>
@@ -481,9 +481,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>B08 3V3-2（DAQ CH12）</Name>
-    <UpperLimit>3.400</UpperLimit>
-    <LowerLimit>3.200</LowerLimit>
-    <Unit>V</Unit>
+    <UpperLimit>3400</UpperLimit>
+    <LowerLimit>3200</LowerLimit>
+    <Unit>mV</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S011.B09</StepId>
@@ -593,6 +593,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>9.3 BCM1 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -606,7 +607,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9.4 BCM1 闭合RL4给DUT供电</Name>
+    <Name>9.4 BCM1 闭合RL4后开启ANS给DUT供电</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -621,6 +622,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>9.5 BCM1 等待6000ms</Name>
+    <DelayMs>6000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -691,6 +693,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>9.10 BCM1 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -721,7 +724,7 @@
     <Name>C01 BCM1 跳过TTL实际烧录并保存结果</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH09.S014.ACTION</StepId>
@@ -803,6 +806,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>9.18 BCM2 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -845,6 +849,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>9.21 BCM2 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -875,7 +880,7 @@
     <Name>C02 BCM2 跳过TTL实际烧录并保存结果</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH09.S025.ACTION</StepId>
@@ -956,7 +961,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>10.1 打开RL4断开DUT供电</Name>
+    <Name>10.1 先关闭ANS输出再断开RL4</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -971,6 +976,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>10.2 等待6500ms</Name>
+    <DelayMs>6500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -984,7 +990,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>10.3 闭合RL4重新给DUT供电</Name>
+    <Name>10.3 闭合RL4后重新开启ANS给DUT供电</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -1029,7 +1035,7 @@
     <Name>D01 读取R14检查BCM内部CAN响应</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH10.S007.D02</StepId>
@@ -1043,7 +1049,7 @@
     <Name>D02 读取R15检查SAFE内部CAN响应</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH10.S008.ACTION</StepId>
@@ -1195,6 +1201,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>12.2 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -1321,6 +1328,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>12.11 ST1等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -1365,7 +1373,7 @@
     <Name>F01 ST1判断Reset from flat cable</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH12.S015.ACTION</StepId>
@@ -1461,6 +1469,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>12.21 ST2等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -1505,7 +1514,7 @@
     <Name>F02 ST2判断Reset from flat cable</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit></Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH12.S025.ACTION</StepId>
@@ -1911,7 +1920,7 @@
     <Name>I01 ST1读取R52 adc10 hs_temp PC0</Name>
     <UpperLimit>2500</UpperLimit>
     <LowerLimit>1800</LowerLimit>
-    <Unit>0.1C</Unit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH15.S006.ACTION</StepId>
@@ -1953,7 +1962,7 @@
     <Name>I02 ST2读取R52 adc10 hs_temp PC0</Name>
     <UpperLimit>2500</UpperLimit>
     <LowerLimit>1800</LowerLimit>
-    <Unit>0.1C</Unit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH15.S009.ACTION</StepId>
@@ -2049,6 +2058,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>16.6 ST1等待5000ms</Name>
+    <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -2119,9 +2129,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J01 ST1计算Gain_VBUS并写入W18</Name>
-    <UpperLimit>999999</UpperLimit>
-    <LowerLimit>1</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>210000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S012.ACTION</StepId>
@@ -2161,9 +2171,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J02 ST1读取R18验证gain_vstr_pos</Name>
-    <UpperLimit>999999</UpperLimit>
-    <LowerLimit>1</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>210000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S015.J03</StepId>
@@ -2175,9 +2185,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J03 ST1读取R19验证offset_vstr_pos</Name>
-    <UpperLimit>0</UpperLimit>
-    <LowerLimit>0</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>100</UpperLimit>
+    <LowerLimit>-100</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S016.J04</StepId>
@@ -2245,6 +2255,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>16.16 ST2等待5000ms</Name>
+    <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -2315,9 +2326,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J05 ST2计算Gain_VBUS并写入W18</Name>
-    <UpperLimit>999999</UpperLimit>
-    <LowerLimit>1</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>210000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S026.ACTION</StepId>
@@ -2357,9 +2368,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J06 ST2读取R18验证gain_vstr_pos</Name>
-    <UpperLimit>999999</UpperLimit>
-    <LowerLimit>1</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>210000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S029.J07</StepId>
@@ -2371,9 +2382,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>J07 ST2读取R19验证offset_vstr_pos</Name>
-    <UpperLimit>0</UpperLimit>
-    <LowerLimit>0</LowerLimit>
-    <Unit>count</Unit>
+    <UpperLimit>100</UpperLimit>
+    <LowerLimit>-100</LowerLimit>
+    <Unit>Count</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH16.S030.J08</StepId>
@@ -2569,7 +2580,7 @@
     <Name>K01 ST1 读取R61 st_emerg=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S009.ACTION</StepId>
@@ -2625,7 +2636,7 @@
     <Name>K02 ST1 读取R61 st_emerg=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S013.ACTION</StepId>
@@ -2653,7 +2664,7 @@
     <Name>K03 ST1 读取R61 DUT报警=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S015.ACTION</StepId>
@@ -2681,7 +2692,7 @@
     <Name>K04 ST1 读取R81 MBD报警=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S017.ACTION</StepId>
@@ -2737,7 +2748,7 @@
     <Name>K05 ST1 读取R61 DUT报警=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S021.ACTION</StepId>
@@ -2765,7 +2776,7 @@
     <Name>K06 ST1 读取R81 MBD报警=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S023.ACTION</StepId>
@@ -2877,7 +2888,7 @@
     <Name>K07 ST2 读取R61 st_emerg=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S031.ACTION</StepId>
@@ -2933,7 +2944,7 @@
     <Name>K08 ST2 读取R61 st_emerg=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S035.ACTION</StepId>
@@ -2961,7 +2972,7 @@
     <Name>K09 ST2 读取R61 DUT报警=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S037.ACTION</StepId>
@@ -2989,7 +3000,7 @@
     <Name>K10 ST2 读取R81 MBD报警=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S039.ACTION</StepId>
@@ -3045,7 +3056,7 @@
     <Name>K11 ST2 读取R61 DUT报警=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S043.ACTION</StepId>
@@ -3073,7 +3084,7 @@
     <Name>K12 ST2 读取R81 MBD报警=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH17.S045.ACTION</StepId>
@@ -3155,6 +3166,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3337,6 +3349,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.17 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3407,6 +3420,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.22 等待15000ms</Name>
+    <DelayMs>15000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3519,6 +3533,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.30 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3561,6 +3576,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.33 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3631,6 +3647,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.37 等待15000ms</Name>
+    <DelayMs>15000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3757,6 +3774,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.39 ST2等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3785,6 +3803,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.39 ST2等待15000ms</Name>
+    <DelayMs>15000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3911,6 +3930,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>18.41 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -3981,6 +4001,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4009,6 +4030,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.6 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4051,6 +4073,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.8 ST1 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4107,6 +4130,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.12 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4135,6 +4159,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.14 ST1 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4191,6 +4216,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.18 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4247,6 +4273,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.22 ST1 等待12000ms</Name>
+    <DelayMs>12000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4291,7 +4318,7 @@
     <Name>M05 ST1 计算Gain_VMID并写W20</Name>
     <UpperLimit>145000</UpperLimit>
     <LowerLimit>140000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH19.S027.M06</StepId>
@@ -4333,7 +4360,7 @@
     <Name>M07 ST1 读取R20验证Gain_VMID</Name>
     <UpperLimit>145000</UpperLimit>
     <LowerLimit>140000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH19.S030.M08</StepId>
@@ -4373,6 +4400,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.31 ST1 等待12000ms</Name>
+    <DelayMs>12000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4499,6 +4527,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.8 ST2 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4555,6 +4584,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.12 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4583,6 +4613,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.14 ST2 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4639,6 +4670,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.18 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4695,6 +4727,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.22 ST2 等待12000ms</Name>
+    <DelayMs>12000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4739,7 +4772,7 @@
     <Name>M14 ST2 计算Gain_VMID并写W20</Name>
     <UpperLimit>145000</UpperLimit>
     <LowerLimit>140000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH19.S059.M15</StepId>
@@ -4781,7 +4814,7 @@
     <Name>M16 ST2 读取R20验证Gain_VMID</Name>
     <UpperLimit>145000</UpperLimit>
     <LowerLimit>140000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH19.S062.M17</StepId>
@@ -4821,6 +4854,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.31 ST2 等待12000ms</Name>
+    <DelayMs>12000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4975,6 +5009,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.46 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5003,6 +5038,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>19.48 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5073,6 +5109,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.3 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5143,6 +5180,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.7 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5255,6 +5293,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.17 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5327,7 +5366,7 @@
     <Name>N05/N06 ST1 计算GAIN/OFFSET idch</Name>
     <UpperLimit>92500</UpperLimit>
     <LowerLimit>87500</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH20.S023.N06</StepId>
@@ -5409,6 +5448,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.31 ST1 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5451,6 +5491,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.38 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5521,6 +5562,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.47 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5549,6 +5591,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.49 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5577,6 +5620,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.7 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5689,6 +5733,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.17 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5761,7 +5806,7 @@
     <Name>N13/N14 ST2 计算GAIN/OFFSET idch</Name>
     <UpperLimit>92500</UpperLimit>
     <LowerLimit>87500</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH20.S054.N14</StepId>
@@ -5843,6 +5888,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.31 ST2 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5885,6 +5931,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.38 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5955,6 +6002,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.47 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5983,6 +6031,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>20.49 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6067,6 +6116,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6137,6 +6187,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.8 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6277,6 +6328,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.19 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6305,6 +6357,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.21 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6333,6 +6386,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.8 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6473,6 +6527,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.19 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6501,6 +6556,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>21.21 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6585,6 +6641,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6669,6 +6726,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.8 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6711,6 +6769,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.11 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6781,6 +6840,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.16 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6797,7 +6857,7 @@
     <Name>P01 ST1 读取R61 st_emerg=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S020.P02</StepId>
@@ -6811,7 +6871,7 @@
     <Name>P02 ST1 读取R60 st_prot_short=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S021.ACTION</StepId>
@@ -6823,6 +6883,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.18 ST1 等待100ms</Name>
+    <DelayMs>100</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6851,6 +6912,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.20 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6867,7 +6929,7 @@
     <Name>P03 ST1 读取R61 st_emerg=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S025.P04</StepId>
@@ -6881,7 +6943,7 @@
     <Name>P04 ST1 读取R60 st_prot_short=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S026.ACTION</StepId>
@@ -6949,6 +7011,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.28 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -6977,6 +7040,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.30 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7033,6 +7097,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.8 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7075,6 +7140,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.11 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7145,6 +7211,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.16 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7161,7 +7228,7 @@
     <Name>P05 ST2 读取R61 st_emerg=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S046.P06</StepId>
@@ -7175,7 +7242,7 @@
     <Name>P06 ST2 读取R60 st_prot_short=1</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S047.ACTION</StepId>
@@ -7187,6 +7254,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.18 ST2 等待100ms</Name>
+    <DelayMs>100</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7215,6 +7283,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.20 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7231,7 +7300,7 @@
     <Name>P07 ST2 读取R61 st_emerg=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S051.P08</StepId>
@@ -7245,7 +7314,7 @@
     <Name>P08 ST2 读取R60 st_prot_short=0</Name>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH22.S052.U33</StepId>
@@ -7313,6 +7382,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.28 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7341,6 +7411,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>22.30 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7439,6 +7510,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7509,6 +7581,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.8 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7537,6 +7610,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.10 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7691,6 +7765,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.20 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7775,6 +7850,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.27 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -7859,6 +7935,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.34 ST1 等待7000ms</Name>
+    <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8001,7 +8078,7 @@
     <Name>Q12 ST1 计算gain_vstr_neg</Name>
     <UpperLimit>95000</UpperLimit>
     <LowerLimit>88000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S045.Q13</StepId>
@@ -8029,7 +8106,7 @@
     <Name>Q14 ST1 计算gain_iccb</Name>
     <UpperLimit>18300</UpperLimit>
     <LowerLimit>17300</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S047.Q15</StepId>
@@ -8043,7 +8120,7 @@
     <Name>Q15 ST1 计算gain_iccb_vstr_neg</Name>
     <UpperLimit>9600</UpperLimit>
     <LowerLimit>-6620</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S048.Q16</StepId>
@@ -8195,6 +8272,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.57 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8223,6 +8301,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.59 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8265,6 +8344,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.8 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8293,6 +8373,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.10 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8447,6 +8528,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.20 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8531,6 +8613,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.27 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8615,6 +8698,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.34 ST2 等待7000ms</Name>
+    <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8757,7 +8841,7 @@
     <Name>Q28 ST2 计算gain_vstr_neg</Name>
     <UpperLimit>95000</UpperLimit>
     <LowerLimit>88000</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mV/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S099.Q29</StepId>
@@ -8785,7 +8869,7 @@
     <Name>Q30 ST2 计算gain_iccb</Name>
     <UpperLimit>18300</UpperLimit>
     <LowerLimit>17300</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S101.Q31</StepId>
@@ -8799,7 +8883,7 @@
     <Name>Q31 ST2 计算gain_iccb_vstr_neg</Name>
     <UpperLimit>9600</UpperLimit>
     <LowerLimit>-6620</LowerLimit>
-    <Unit>count</Unit>
+    <Unit>(mA/4096) cnt</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH23.S102.Q32</StepId>
@@ -8951,6 +9035,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.57 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -8979,6 +9064,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>23.59 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9064,6 +9150,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.3 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9134,6 +9221,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.7 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9316,6 +9404,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.19 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9344,7 +9433,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>R02 ST1 读取R44 iccb @0V 0A</Name>
-    <UpperLimit>40</UpperLimit>
+    <UpperLimit>400</UpperLimit>
     <LowerLimit>-40</LowerLimit>
     <Unit>mA</Unit>
   </TestItem>
@@ -9400,6 +9489,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.26 ST1 等待5000ms</Name>
+    <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9498,6 +9588,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.33 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9526,6 +9617,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.35 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9596,6 +9688,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.41 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9792,6 +9885,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.56 ST1 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -9834,6 +9928,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.7 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10016,6 +10111,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.19 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10044,8 +10140,8 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>R16 ST2 读取R44 iccb @0V 0A</Name>
-    <UpperLimit>40</UpperLimit>
-    <LowerLimit>-40</LowerLimit>
+    <UpperLimit>17</UpperLimit>
+    <LowerLimit>-10</LowerLimit>
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>
@@ -10100,6 +10196,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.26 ST2 等待5000ms</Name>
+    <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10129,7 +10226,7 @@
     <Enabled>true</Enabled>
     <Name>R18 ST2 读取R42 vstr_neg @0V 6A</Name>
     <UpperLimit>1000</UpperLimit>
-    <LowerLimit>400</LowerLimit>
+    <LowerLimit>500</LowerLimit>
     <Unit>mV</Unit>
   </TestItem>
   <TestItem>
@@ -10198,6 +10295,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.33 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10226,6 +10324,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.35 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10296,6 +10395,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.41 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10324,8 +10424,8 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>R26 ST2 读取R44 iccb @15V 6A</Name>
-    <UpperLimit>6100</UpperLimit>
-    <LowerLimit>5900</LowerLimit>
+    <UpperLimit>6080</UpperLimit>
+    <LowerLimit>5920</LowerLimit>
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>
@@ -10492,6 +10592,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.56 ST2 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10520,6 +10621,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.59 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10619,6 +10721,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10689,6 +10792,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.8 ST1 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10787,6 +10891,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.15 ST1 等待15000ms</Name>
+    <DelayMs>15000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10913,6 +11018,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.24 ST1 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -10955,6 +11061,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.27 ST1 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11053,6 +11160,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.34 ST1 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11095,6 +11203,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.37 ST1 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11179,6 +11288,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.43 ST1 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11263,6 +11373,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.50 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11333,6 +11444,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.8 ST2 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11431,6 +11543,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.15 ST2 等待15000ms</Name>
+    <DelayMs>15000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11557,6 +11670,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.24 ST2 等待2000ms</Name>
+    <DelayMs>2000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11599,6 +11713,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.27 ST2 等待1000ms</Name>
+    <DelayMs>1000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11697,6 +11812,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.34 ST2 等待10000ms</Name>
+    <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11739,6 +11855,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.37 ST2 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11823,6 +11940,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.43 ST2 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -11907,6 +12025,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>25.50 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12019,6 +12138,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12089,6 +12209,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.8 ST1 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12131,6 +12252,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.11 ST1 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12299,6 +12421,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.23 ST1 等待7000ms</Name>
+    <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12326,7 +12449,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T02 ST1 DAQ CH13外部分流电流MOS打开</Name>
+    <Name>T02 ST1 DAQ CH13外部分流电流MOS打开【待实机确认极性】</Name>
     <UpperLimit>1000</UpperLimit>
     <LowerLimit>300</LowerLimit>
     <Unit>mA</Unit>
@@ -12355,6 +12478,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.27 ST1 等待6000ms</Name>
+    <DelayMs>6000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12467,6 +12591,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.36 ST1 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12495,6 +12620,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.38 ST1 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12565,6 +12691,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.8 ST2 等待20ms</Name>
+    <DelayMs>20</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12607,6 +12734,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.11 ST2 等待3000ms</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12775,6 +12903,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.23 ST2 等待7000ms</Name>
+    <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12802,7 +12931,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T05 ST2 DAQ CH15外部分流电流MOS打开</Name>
+    <Name>T05 ST2 DAQ CH15外部分流电流MOS打开【待实机确认极性】</Name>
     <UpperLimit>1000</UpperLimit>
     <LowerLimit>300</LowerLimit>
     <Unit>mA</Unit>
@@ -12831,6 +12960,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.27 ST2 等待6000ms</Name>
+    <DelayMs>6000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12943,6 +13073,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.36 ST2 等待4000ms</Name>
+    <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -12971,6 +13102,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>26.38 ST2 等待200ms</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13098,6 +13230,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.4 等待50ms</Name>
+    <DelayMs>50</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13280,6 +13413,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.15 ST1 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13296,7 +13430,7 @@
     <Name>U01 ST1 校验ACT-&gt;FLASH响应</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH27.S019.ACTION</StepId>
@@ -13308,6 +13442,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.17 ST1 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13324,7 +13459,7 @@
     <Name>U02 ST1 回读R40校准日期</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH27.S021.ACTION</StepId>
@@ -13336,6 +13471,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.19 ST1 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13352,7 +13488,7 @@
     <Name>U03 ST1 回读R41 BCM序列号</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH27.S023.ACTION</StepId>
@@ -13476,6 +13612,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.15 ST2 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13492,7 +13629,7 @@
     <Name>U04 ST2 校验ACT-&gt;FLASH响应</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH27.S033.ACTION</StepId>
@@ -13504,6 +13641,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.17 ST2 等待300ms</Name>
+    <DelayMs>300</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13520,7 +13658,7 @@
     <Name>U05 ST2 回读R40校准日期</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH27.S035.ACTION</StepId>
@@ -13532,6 +13670,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>27.19 ST2 等待500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -13548,7 +13687,7 @@
     <Name>U06 ST2 回读R41 BCM序列号</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
-    <Unit>state</Unit>
+    <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CLEANUP.S001.ACTION</StepId>
@@ -13559,7 +13698,7 @@
     <AlwaysRun>true</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>27.22 打开RL4关闭BCM DUT</Name>
+    <Name>27.22 Turn off all power supplies and electronic load</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -13587,7 +13726,7 @@
     <AlwaysRun>true</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>27.24 关闭全部电源与电子负载输出</Name>
+    <Name>27.24 Open RL4 after all outputs are off</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

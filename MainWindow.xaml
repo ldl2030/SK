@@ -314,6 +314,8 @@
                             <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="230"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
@@ -328,7 +330,12 @@
                                   MinHeight="28"
                                   DisplayMemberPath="DisplayName"
                                   SelectionChanged="CmbRuntimeGroupJump_SelectionChanged"/>
-                        <TextBlock x:Name="txtRuntimeCurrentStep" Grid.Column="6"
+                        <Button x:Name="btnSetChapterDebug" Grid.Column="6"
+                                Content="设为单章调试"
+                                MinHeight="28" Padding="12,2"
+                                Click="BtnSetChapterDebug_Click"
+                                ToolTip="仅运行所选章节；安全前检与收尾仍会执行"/>
+                        <TextBlock x:Name="txtRuntimeCurrentStep" Grid.Column="8"
                                    Text="当前：等待测试"
                                    FontWeight="Bold"
                                    Foreground="{StaticResource TextPrimaryBrush}"
@@ -479,7 +486,7 @@
             <!-- Activity Loading -->
             <GroupBox Header="Activity Loading" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5,0,5">
                 <RichTextBox x:Name="rictxB_log" VerticalScrollBarVisibility="Auto"
-                             FontFamily="Consolas, Microsoft YaHei UI" FontSize="13"
+                             FontFamily="Microsoft YaHei UI" FontSize="13"
                              Background="#FFFFFF" Foreground="{StaticResource TextPrimaryBrush}"
                              BorderBrush="{StaticResource BorderBrushHighContrast}" BorderThickness="1"/>
             </GroupBox>

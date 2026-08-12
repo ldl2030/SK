@@ -32,11 +32,17 @@ namespace TestPlatform.TestSequences
 
         public bool StopOnFail { get; set; }
 
+        public bool PromptOnFail { get; set; }
+
+        public bool ContinueAfterPowerCriticalFailure { get; set; }
+
         public int ParallelTestCount { get; set; }
 
         public int FailRetryCount { get; set; }
 
         public ResolvedTestPlan TestPlan { get; set; }
+
+        public ISet<string> RequiredComPorts { get; set; }
 
         public IDictionary<string, TestSequenceValue> Values
         {

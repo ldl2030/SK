@@ -127,6 +127,14 @@ namespace TestPlatform
         }
 
         /// <summary>
+        /// 设置二线制自动量程电阻测量，适用于测试前实测不同量级的分流电阻。
+        /// </summary>
+        public void ConfigResistanceAuto(string channelList)
+        {
+            SendCommand($"CONF:RES AUTO,MIN,({channelList})");
+        }
+
+        /// <summary>
         /// 设置四线制电阻测量通道。
         /// </summary>
         public void ConfigFResistance(string channelList, float range = 1000f)
@@ -285,6 +293,23 @@ namespace TestPlatform
         }
 
         /// <summary>
+        /// Measure one or more DC voltage channels explicitly.  Using MEAS with
+        /// the channel list in the query prevents a stale ROUT:SCAN selection
+        /// from deciding which channel READ? returns.
+        /// </summary>
+        public double MeasureVoltageDc(string channelList, out string rawResponse)
+        {
+            // A previous ROUT:SCAN/INIT can leave the DAQ in the initiated
+            // state.  In that state the DAQ-9600 rejects a new measurement
+            // configuration with error +261.  Always return to idle and clear
+            // the error queue before selecting the requested input.
+            SendCommand("ABOR");
+            ClearStatus();
+            rawResponse = Query($"MEAS:VOLT:DC? AUTO,MIN,({channelList})");
+            return ParseSingleValue(rawResponse);
+        }
+
+        /// <summary>
         /// 读取扫描统计：平均值
         /// </summary>
         public double GetAverage(string channelList)
@@ -347,10 +372,10 @@ namespace TestPlatform
             return 0.0;
         }
 
-        // ================== 继电器控制 (201-220) ==================
+        // ================== 继电器控制 (301-320) ==================
 
         /// <summary>
-        /// 闭合继电器。如 channelList = "@201:210"
+        /// 闭合继电器。如 channelList = "@301:310"
         /// </summary>
         public void CloseRelay(string channelList)
         {

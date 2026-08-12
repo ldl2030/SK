@@ -165,7 +165,16 @@
     <Runner>Legacy</Runner>
     <SequenceKey>SK_MPS250_Sequence</SequenceKey>
     <ComInitKey>SK441Device</ComInitKey>
-    <RequiredComPorts />
+    <RequiredComPorts>
+      <ComPort>ansPowerComName</ComPort>
+      <ComPort>hengHuiPowerAComName</ComPort>
+      <ComPort>hengHuiPowerBComName</ComPort>
+      <ComPort>electronicLoadComName</ComPort>
+      <ComPort>daqComName</ComPort>
+      <ComPort>digitalInputComName</ComPort>
+      <ComPort>fixtureRelayComName</ComPort>
+      <ComPort>relay16ComName</ComPort>
+    </RequiredComPorts>
     <FtpBasePath>/SK/MPS-250</FtpBasePath>
   </Project>
   <Project>
@@ -177,7 +186,16 @@
     <Runner>Legacy</Runner>
     <SequenceKey>SK_MPS125_Sequence</SequenceKey>
     <ComInitKey>SK441Device</ComInitKey>
-    <RequiredComPorts />
+    <RequiredComPorts>
+      <ComPort>ansPowerComName</ComPort>
+      <ComPort>hengHuiPowerAComName</ComPort>
+      <ComPort>hengHuiPowerBComName</ComPort>
+      <ComPort>electronicLoadComName</ComPort>
+      <ComPort>daqComName</ComPort>
+      <ComPort>digitalInputComName</ComPort>
+      <ComPort>fixtureRelayComName</ComPort>
+      <ComPort>relay16ComName</ComPort>
+    </RequiredComPorts>
     <FtpBasePath>/SK/MPS-125</FtpBasePath>
   </Project>
   <Project>
@@ -189,7 +207,13 @@
     <Runner>Legacy</Runner>
     <SequenceKey>SK_BCM250_Sequence</SequenceKey>
     <ComInitKey>SK441Device</ComInitKey>
-    <RequiredComPorts />
+    <RequiredComPorts>
+      <ComPort>ansPowerComName</ComPort>
+      <ComPort>daqComName</ComPort>
+      <ComPort>digitalInputComName</ComPort>
+      <ComPort>fixtureRelayComName</ComPort>
+      <ComPort>relay16ComName</ComPort>
+    </RequiredComPorts>
     <FtpBasePath>/SK/BCM-250</FtpBasePath>
   </Project>
   <Project>
@@ -201,7 +225,16 @@
     <Runner>Legacy</Runner>
     <SequenceKey>SK_BCM125_Sequence</SequenceKey>
     <ComInitKey>SK441Device</ComInitKey>
-    <RequiredComPorts />
+    <RequiredComPorts>
+      <ComPort>ansPowerComName</ComPort>
+      <ComPort>hengHuiPowerAComName</ComPort>
+      <ComPort>hengHuiPowerBComName</ComPort>
+      <ComPort>electronicLoadComName</ComPort>
+      <ComPort>daqComName</ComPort>
+      <ComPort>digitalInputComName</ComPort>
+      <ComPort>fixtureRelayComName</ComPort>
+      <ComPort>relay16ComName</ComPort>
+    </RequiredComPorts>
     <FtpBasePath>/SK/BCM-125</FtpBasePath>
   </Project>
 </ProjectList>

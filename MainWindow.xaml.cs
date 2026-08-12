@@ -54,6 +54,7 @@ namespace TestPlatform
         private bool _updatingRuntimeGroupSummary;
         private readonly Dictionary<string, bool> _runtimeGroupExpansion =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private static readonly object LiveLogSync = new object();
 
         // 全局计时器
         private System.Windows.Threading.DispatcherTimer globalTimer;
@@ -377,6 +378,59 @@ namespace TestPlatform
             if (_projectConfigs.TryGetValue(ProjectSettings.CurrentProjectName, out var config))
                 return config.RequiredComPorts;
             return new List<string>();
+        }
+
+        private async Task<bool> InitializeSkSerialDevicesAsync(IProgress<string> progress)
+        {
+            string mode = System.Configuration.ConfigurationManager.AppSettings["SKExecutionMode"];
+            if (string.Equals(mode, "Simulation", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "Sim", StringComparison.OrdinalIgnoreCase))
+            {
+                ComName.ansPowerComName = "SIMULATION";
+                ComName.hengHuiPowerAComName = "SIMULATION";
+                ComName.hengHuiPowerBComName = "SIMULATION";
+                ComName.electronicLoadComName = "SIMULATION";
+                ComName.daqComName = "SIMULATION";
+                ComName.digitalInputComName = "SIMULATION";
+                ComName.fixtureRelayComName = "SIMULATION";
+                ComName.relay16ComName = "SIMULATION";
+                progress?.Report("SK仿真模式：跳过物理串口扫描");
+                return true;
+            }
+
+            progress?.Report("正在读取SK工位预设COM口；仅对未配置设备自动扫描...");
+            var requiredPorts = new HashSet<string>(
+                GetRequiredComPortsForCurrentProject(),
+                StringComparer.OrdinalIgnoreCase);
+            SKSerialDeviceDiscoveryResult discovery =
+                await SKSerialDeviceDiscovery.ResolveConfiguredOrDiscoverAsync(
+                    msg => AppendLog(msg, LogInfo),
+                    requiredPorts);
+            foreach (string error in discovery.Errors)
+                AppendLog(error, LogError);
+
+            if (!discovery.IsCompleteFor(requiredPorts))
+            {
+                string missing = string.Join("、", discovery.GetMissingDeviceNames(requiredPorts));
+                AppendLog($"缺少必需设备：{missing}", LogError);
+                await Dispatcher.InvokeAsync(() => MessageBox.Show(
+                    $"自动串口识别未完成，缺少：\n{missing}",
+                    "SK工位设备缺失",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning));
+                return false;
+            }
+
+            progress?.Report("SK工位串口识别完成");
+            AppendLog(
+                $"SK串口识别完成：ANS={discovery.AnsPowerPort}, " +
+                $"恒辉A={discovery.HengHuiPowerAPort}, 恒辉B={discovery.HengHuiPowerBPort}, " +
+                 $"负载={discovery.ElectronicLoadPort}, DAQ={discovery.DaqPort}, " +
+                 $"数字输入={discovery.DigitalInputPort}, 工装继电器={discovery.FixtureRelayPort}, " +
+                 $"16路继电器={discovery.Relay16Port}, MBD UART=上电后识别, " +
+                 $"TTL烧录={discovery.TtlPort}",
+                 LogSuccess);
+            return true;
         }
         #endregion 自动串口识别END
 
@@ -2033,16 +2087,44 @@ namespace TestPlatform
         #region 辅助方法
         private void AppendLog(string message, Brush color = null)
         {
+            Brush effectiveColor = color ?? LogInfo;
+            string level = ReferenceEquals(effectiveColor, LogError)
+                ? "ERROR"
+                : ReferenceEquals(effectiveColor, LogWarning)
+                    ? "WARN"
+                    : ReferenceEquals(effectiveColor, LogSuccess) ? "PASS" : "INFO";
+            WriteLiveLog(level, message);
+
             Dispatcher.Invoke(() =>
             {
-                if (color == null) color = LogInfo;
                 var tr = new TextRange(rictxB_log.Document.ContentEnd, rictxB_log.Document.ContentEnd)
                 {
                     Text = $"{DateTime.Now:HH:mm:ss} - {message}\n"
                 };
-                tr.ApplyPropertyValue(TextElement.ForegroundProperty, color);
+                tr.ApplyPropertyValue(TextElement.ForegroundProperty, effectiveColor);
                 rictxB_log.ScrollToEnd();
             });
+        }
+
+        private static void WriteLiveLog(string level, string message)
+        {
+            try
+            {
+                string logDirectory = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "Logs");
+                Directory.CreateDirectory(logDirectory);
+                string logPath = Path.Combine(
+                    logDirectory,
+                    $"Live_{DateTime.Now:yyyyMMdd}.log");
+                string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}{Environment.NewLine}";
+                lock (LiveLogSync)
+                    File.AppendAllText(logPath, line, new UTF8Encoding(false));
+            }
+            catch
+            {
+                // 实时日志不得影响测试流程，也不能递归调用 AppendLog。
+            }
         }
 
         private void RefreshStatus()
@@ -2441,6 +2523,93 @@ namespace TestPlatform
             }
 
             await ScrollToTestRowAsync(rowIndex.Value);
+        }
+
+        private void BtnSetChapterDebug_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(cmbRuntimeGroupJump.SelectedItem is RuntimeGroupNode selectedGroup) ||
+                string.IsNullOrWhiteSpace(selectedGroup.GroupId))
+            {
+                MessageBox.Show(
+                    "请先在“快速跳转”中选择要调试的章节。",
+                    "单章调试",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            TestPlanDefinition definition;
+            try
+            {
+                definition = TestPlanService.LoadDefinition(ProjectSettings.TestFikePath);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"设置单章调试失败：{ex.Message}", LogError);
+                return;
+            }
+
+            if (!string.Equals(definition.BoardType, "BCM-250", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "当前“单章调试”快捷功能仅用于 BCM-250。",
+                    "单章调试",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!selectedGroup.GroupId.StartsWith(
+                    "BCM250.CH",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(
+                    "请选择 CH7 至 CH27 中的一个测试章节，不能选择 PRECHECK 或 CLEANUP。",
+                    "单章调试",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var overrides = definition.Steps.ToDictionary(
+                step => step.StepId,
+                step => string.Equals(
+                            step.GroupId,
+                            selectedGroup.GroupId,
+                            StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(
+                            step.GroupId,
+                            "BCM250.PRECHECK",
+                            StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(
+                            step.GroupId,
+                            "BCM250.CLEANUP",
+                            StringComparison.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
+
+            TestPlanRuntimeState.ActiveProfileId = TestProfileIds.SingleChapter;
+            TestPlanRuntimeState.SetStepOverrides(overrides);
+            LoadTestDataFromXML();
+
+            ResolvedTestPlan resolved = TestPlanService.Resolve(
+                ProjectSettings.TestFikePath,
+                TestPlanRuntimeState.ActiveProfileId,
+                TestPlanRuntimeState.GetStepOverridesSnapshot());
+            string[] enabledChapters = resolved.Definition.Groups
+                .Where(group => group.GroupId.StartsWith(
+                    "BCM250.CH",
+                    StringComparison.OrdinalIgnoreCase))
+                .Where(group => resolved.Definition.Steps.Any(step =>
+                    string.Equals(step.GroupId, group.GroupId, StringComparison.OrdinalIgnoreCase) &&
+                    resolved.ShouldRun(step.StepId)))
+                .Select(group => group.Name)
+                .ToArray();
+
+            AppendLog(
+                $"BCM250单章调试已设置：目标={selectedGroup.DisplayName}；" +
+                $"实际章节={string.Join("、", enabledChapters)}；" +
+                "PRECHECK与CLEANUP按安全规则保留。",
+                LogSuccess);
         }
 
         private void RuntimeGroupExpander_Loaded(object sender, RoutedEventArgs e)
@@ -9893,12 +10062,22 @@ namespace TestPlatform
             try
             {
                 ResolvedTestPlan resolvedPlan = null;
-                if (sequence is SKBCM125Sequence)
+                if (RequiresResolvedTestPlan(sequence))
                 {
                     resolvedPlan = TestPlanService.Resolve(
                         ProjectSettings.TestFikePath,
                         TestPlanRuntimeState.ActiveProfileId,
                         TestPlanRuntimeState.GetStepOverridesSnapshot());
+                    if (resolvedPlan == null)
+                    {
+                        throw new TestPlanConfigurationException(
+                            $"测试流程 {sequence.GetType().Name} 未能加载XML测试计划：" +
+                            ProjectSettings.TestFikePath);
+                    }
+                    AppendLog(
+                        $"已为 {sequence.GetType().Name} 加载XML测试计划，" +
+                        $"步骤数={resolvedPlan.Definition.Steps.Count}",
+                        LogInfo);
                 }
 
                 var context = new TestSequenceContext
@@ -9907,10 +10086,25 @@ namespace TestPlatform
                     SN = sn,
                     CancellationToken = ct,
                     StopOnFail = appSettings.StopOnFail,
+                    PromptOnFail = appSettings.PromptOnFail,
+                    ContinueAfterPowerCriticalFailure =
+                        !appSettings.StopOnFail &&
+                        appSettings.ContinueAfterPowerCriticalFailure,
                     ParallelTestCount = appSettings.ParallelTestCount,
                     FailRetryCount = appSettings.FailRetryCount,
-                    TestPlan = resolvedPlan
+                    TestPlan = resolvedPlan,
+                    RequiredComPorts = new HashSet<string>(
+                        GetRequiredComPortsForCurrentProject(),
+                        StringComparer.OrdinalIgnoreCase)
                 };
+
+                AppendLog(
+                    $"测试失败策略：自动重试 {context.FailRetryCount} 次；" +
+                    $"普通步骤最终失败后{(context.StopOnFail ? "停止流程" : "记录失败并继续")}；" +
+                    $"续测前{(context.PromptOnFail ? "需要操作员确认" : "不弹窗")}；" +
+                    $"供电关键步骤最终失败后{(context.ContinueAfterPowerCriticalFailure ? "工程模式继续" : "安全停机")}；" +
+                    "安全关键步骤始终安全停机。",
+                    LogInfo);
 
                 return await sequence.RunAsync(context);
             }
@@ -9921,6 +10115,14 @@ namespace TestPlatform
                 sequence.LogError -= error;
                 sequence.LogSuccess -= success;
             }
+        }
+
+        private static bool RequiresResolvedTestPlan(ITestSequence sequence)
+        {
+            return sequence is SKBCM125Sequence ||
+                   sequence is SKBCM250Sequence ||
+                   sequence is SKMPS125Sequence ||
+                   sequence is SKMPS250Sequence;
         }
 
         private Dictionary<string, ProjectListRuntimeConfig> LoadProjectListRuntimeConfigs()
@@ -10015,6 +10217,14 @@ namespace TestPlatform
 
                 config.SequenceKey = item.SequenceKey ?? "";
                 config.ComInitKey = item.ComInitKey ?? "";
+
+                if (string.Equals(
+                    config.ComInitKey,
+                    "SK441Device",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    config.InitializeComPortsAsync = InitializeSkSerialDevicesAsync;
+                }
 
                 // 1. 覆盖测试 XML 文件路径
                 if (!string.IsNullOrWhiteSpace(item.FilePath))

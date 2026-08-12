@@ -60,6 +60,47 @@ namespace TestPlatform
             }
         }
 
+        private string QueryWithRetry(string queryCmd, int maxAttempts = 3)
+        {
+            Exception lastError = null;
+            int attempts = Math.Max(1, maxAttempts);
+            for (int attempt = 1; attempt <= attempts; attempt++)
+            {
+                try
+                {
+                    string response = Query(queryCmd);
+                    if (string.IsNullOrWhiteSpace(response))
+                        throw new FormatException("empty response");
+                    return response;
+                }
+                catch (Exception ex) when (ex is TimeoutException || ex is FormatException)
+                {
+                    lastError = ex;
+                    if (attempt < attempts)
+                        Thread.Sleep(100);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"KUNKIN 7303 query '{queryCmd}' failed after {attempts} attempts.",
+                lastError);
+        }
+
+        private static float ParseMeasurement(string command, string response)
+        {
+            float value;
+            if (!float.TryParse(
+                    response,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out value))
+            {
+                throw new FormatException(
+                    $"KUNKIN 7303 returned invalid numeric data for '{command}': '{response}'.");
+            }
+            return value;
+        }
+
         /// <summary>
         /// 控制负载拉载开关
         /// </summary>
@@ -132,20 +173,20 @@ namespace TestPlatform
 
         public float MeasureVoltage()
         {
-            string resp = Query("MEAS:VOLT?");
-            return float.TryParse(resp, NumberStyles.Any, CultureInfo.InvariantCulture, out float val) ? val : 0f;
+            string resp = QueryWithRetry("MEAS:VOLT?");
+            return ParseMeasurement("MEAS:VOLT?", resp);
         }
 
         public float MeasureCurrent()
         {
-            string resp = Query("MEAS:CURR?");
-            return float.TryParse(resp, NumberStyles.Any, CultureInfo.InvariantCulture, out float val) ? val : 0f;
+            string resp = QueryWithRetry("MEAS:CURR?");
+            return ParseMeasurement("MEAS:CURR?", resp);
         }
 
         public float MeasurePower()
         {
-            string resp = Query("MEAS:POW?");
-            return float.TryParse(resp, NumberStyles.Any, CultureInfo.InvariantCulture, out float val) ? val : 0f;
+            string resp = QueryWithRetry("MEAS:POW?");
+            return ParseMeasurement("MEAS:POW?", resp);
         }
         
         public float MeasureVpp()

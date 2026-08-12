@@ -81,26 +81,45 @@ namespace TestPlatform
 
                         logAction?.Invoke($"发送命令：{BytesToHex(fullCommand)}");
                         port.Write(fullCommand, 0, fullCommand.Length);
-                        await Task.Delay(200);
 
-                        int bytesToRead = port.BytesToRead;
-                        if (bytesToRead == 0)
+                        DateTime responseStart = DateTime.UtcNow;
+                        var received = new List<byte>();
+                        int expectedLength = -1;
+                        while ((DateTime.UtcNow - responseStart).TotalMilliseconds < readTimeout)
                         {
-                            DateTime start = DateTime.Now;
-                            while (bytesToRead == 0 && (DateTime.Now - start).TotalMilliseconds < readTimeout)
+                            int available = port.BytesToRead;
+                            if (available > 0)
                             {
-                                await Task.Delay(10);
-                                bytesToRead = port.BytesToRead;
+                                byte[] chunk = new byte[available];
+                                int read = port.Read(chunk, 0, chunk.Length);
+                                for (int index = 0; index < read; index++)
+                                    received.Add(chunk[index]);
+
+                                expectedLength = GetExpectedModbusResponseLength(received);
+                                if (expectedLength > 0 && received.Count >= expectedLength)
+                                    break;
                             }
+
+                            await Task.Delay(5);
                         }
 
-                        if (bytesToRead > 0)
+                        if (expectedLength > 0 && received.Count >= expectedLength)
                         {
-                            byte[] buffer = new byte[bytesToRead];
-                            port.Read(buffer, 0, bytesToRead);
+                            byte[] buffer = received.Take(expectedLength).ToArray();
                             string hexResp = BytesToHex(buffer);
-                            responseBuilder.Append(hexResp);
-                            logAction?.Invoke($"收到响应：{hexResp}");
+                            if (HasValidCrc(buffer) &&
+                                buffer[0] == fullCommand[0] &&
+                                (buffer[1] == fullCommand[1] ||
+                                 buffer[1] == (byte)(fullCommand[1] | 0x80)))
+                            {
+                                responseBuilder.Append(hexResp);
+                                logAction?.Invoke($"收到响应：{hexResp}");
+                            }
+                            else
+                            {
+                                responseBuilder.Append("INVALID");
+                                logAction?.Invoke($"命令 {i + 1} 响应校验失败：{hexResp}");
+                            }
                         }
                         else
                         {
@@ -180,18 +199,54 @@ namespace TestPlatform
                     port.Write(fullCommand, 0, fullCommand.Length);
                     logAction?.Invoke($"发送命令: {BytesToHex(fullCommand)}");
 
-                    DateTime startTime = DateTime.Now;
-                    while (port.BytesToRead == 0 && (DateTime.Now - startTime).TotalMilliseconds < timeoutMs)
-                        await Task.Delay(10);
-
-                    if (port.BytesToRead == 0)
+                    DateTime startTime = DateTime.UtcNow;
+                    var received = new List<byte>();
+                    int expectedLength = -1;
+                    while ((DateTime.UtcNow - startTime).TotalMilliseconds < timeoutMs)
                     {
-                        logAction?.Invoke("未收到响应，超时");
+                        int available = port.BytesToRead;
+                        if (available > 0)
+                        {
+                            byte[] chunk = new byte[available];
+                            int read = port.Read(chunk, 0, chunk.Length);
+                            for (int index = 0; index < read; index++)
+                                received.Add(chunk[index]);
+
+                            expectedLength = GetExpectedModbusResponseLength(received);
+                            if (expectedLength > 0 && received.Count >= expectedLength)
+                                break;
+                        }
+
+                        await Task.Delay(5);
+                    }
+
+                    if (expectedLength <= 0 || received.Count < expectedLength)
+                    {
+                        string partial = received.Count == 0
+                            ? "<empty>"
+                            : BytesToHex(received.ToArray());
+                        logAction?.Invoke(
+                            $"Modbus响应不完整：收到{received.Count}字节，" +
+                            $"期望{(expectedLength > 0 ? expectedLength.ToString() : "未知")}字节；{partial}");
                         return string.Empty;
                     }
 
-                    byte[] buffer = new byte[port.BytesToRead];
-                    port.Read(buffer, 0, buffer.Length);
+                    byte[] buffer = received.Take(expectedLength).ToArray();
+                    if (!HasValidCrc(buffer))
+                    {
+                        logAction?.Invoke($"Modbus响应CRC错误：{BytesToHex(buffer)}");
+                        return string.Empty;
+                    }
+
+                    bool addressMatches = buffer[0] == fullCommand[0];
+                    bool functionMatches = buffer[1] == fullCommand[1] ||
+                                           buffer[1] == (byte)(fullCommand[1] | 0x80);
+                    if (!addressMatches || !functionMatches)
+                    {
+                        logAction?.Invoke($"Modbus响应地址/功能码不匹配：{BytesToHex(buffer)}");
+                        return string.Empty;
+                    }
+
                     string hexResponse = BytesToHex(buffer);
                     logAction?.Invoke($"收到响应: {hexResponse}");
                     return hexResponse;
@@ -206,6 +261,25 @@ namespace TestPlatform
             {
                 _serialSemaphore.Release();
             }
+        }
+
+        private static int GetExpectedModbusResponseLength(IList<byte> response)
+        {
+            if (response == null || response.Count < 2)
+                return -1;
+
+            byte function = response[1];
+            if ((function & 0x80) != 0)
+                return 5;
+
+            if (function == 0x03 || function == 0x04)
+                return response.Count >= 3 ? 3 + response[2] + 2 : -1;
+
+            if (function == 0x05 || function == 0x06 ||
+                function == 0x0F || function == 0x10)
+                return 8;
+
+            return -1;
         }
 
         /// <summary>

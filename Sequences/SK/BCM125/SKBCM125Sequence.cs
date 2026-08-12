@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace TestPlatform.TestSequences
 {
-    public class SKBCM125Sequence : SKBaseSequence
+    public partial class SKBCM125Sequence : SKBcmSequenceBase
     {
         public override string SequenceKey => "SK_BCM125_Sequence";
 
@@ -22,28 +22,52 @@ namespace TestPlatform.TestSequences
             TestSequenceContext context,
             SK441Device deviceManager)
         {
-            AddInitializingToolsStep(steps, deviceManager, ExpectedBoardType);
-            AddBcm125FirstStartupSteps(steps, deviceManager);
-            AddBcm125ProgrammingSteps(steps, deviceManager);
-            AddBcm125CanBusSteps(steps, deviceManager);
-            AddBcm125FirmwareVersionSteps(steps, deviceManager);
-            AddBcm125ResetFlatCableSteps(steps, context, deviceManager);
-            AddBcm125VrefVoltageSteps(steps, deviceManager);
-            AddBcm125PowerSupplyVoltageSteps(steps, deviceManager);
-            AddBcm125HeatSinkTemperatureSteps(steps, deviceManager);
-            AddBcm125VbattScalCalibrationSteps(steps, context, deviceManager);
-            AddBcm125WestinghouseSteps(steps, deviceManager);
-            AddBcm125PrechargeRelaySteps(steps, deviceManager);
-            AddBcm125MidpointCalibrationSteps(steps, context, deviceManager);
-            AddBcm125DischargeCurrentSteps(steps, context, deviceManager);
-            AddBcm125DischargeMosfetSteps(steps, deviceManager);
-            AddBcm125ShortProtectionSteps(steps, deviceManager);
-            AddBcm125ChargingCurrentCalibrationSteps(steps, context, deviceManager);
-            AddBcm125CurrentAndVstrNegVerificationSteps(steps, deviceManager);
-            AddBcm125CcbFunctionalCheckSteps(steps, deviceManager);
-            AddBcm125StringTestSteps(steps, deviceManager);
-            AddBcm125WritingInfoFieldsSteps(steps, context, deviceManager);
-            AddBcm125FixtureReleaseSteps(steps, deviceManager);
+            AssignPlanGroupToRange(steps, context, Bcm125GroupIds.Precheck, 0, steps.Count);
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(7),
+                () => AddInitializingToolsStep(steps, deviceManager, ExpectedBoardType));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(8),
+                () => AddBcm125FirstStartupSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(9),
+                () => AddBcm125ProgrammingSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(10),
+                () => AddBcm125CanBusSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(11),
+                () => AddBcm125FirmwareVersionSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(12),
+                () => AddBcm125ResetFlatCableSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(13),
+                () => AddBcm125VrefVoltageSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(14),
+                () => AddBcm125PowerSupplyVoltageSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(15),
+                () => AddBcm125HeatSinkTemperatureSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(16),
+                () => AddBcm125VbattScalCalibrationSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(17),
+                () => AddBcm125WestinghouseSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(18),
+                () => AddBcm125PrechargeRelaySteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(19),
+                () => AddBcm125MidpointCalibrationSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(20),
+                () => AddBcm125DischargeCurrentSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(21),
+                () => AddBcm125DischargeMosfetSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(22),
+                () => AddBcm125ShortProtectionSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(23),
+                () => AddBcm125ChargingCurrentCalibrationSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(24),
+                () => AddBcm125CurrentAndVstrNegVerificationSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(25),
+                () => AddBcm125CcbFunctionalCheckSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(26),
+                () => AddBcm125StringTestSteps(steps, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(27),
+                () => AddBcm125WritingInfoFieldsSteps(steps, context, deviceManager));
+            AddPlanChapter(steps, context, Bcm125GroupIds.Cleanup,
+                () => AddBcm125FixtureReleaseSteps(steps, deviceManager));
         }
+
     }
 }

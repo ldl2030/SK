@@ -344,6 +344,7 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <CheckBox x:Name="chkMESEnable" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Content="启用 MES"/>
                                         <Label Grid.Row="1" Grid.Column="0" Content="工单号" Style="{StaticResource FormLabel}"/>
@@ -623,6 +624,7 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <CheckBox x:Name="chkStopOnFail" Grid.Row="0" Grid.Column="0" Content="失败时停止整个测试" IsChecked="True"/>
                                         <CheckBox x:Name="chkPromptOnFail" Grid.Row="0" Grid.Column="2" Content="失败时弹窗提示" IsChecked="True"/>
@@ -636,6 +638,10 @@
                                             <TextBox x:Name="txtFailRetryCount" Grid.Column="1" Text="0" TextAlignment="Center"/>
                                             <TextBlock Grid.Column="2" Text="0 表示不重测，2 表示失败后最多重测 2 次" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="12,0,0,12"/>
                                         </Grid>
+                                        <CheckBox x:Name="chkContinueAfterPowerCriticalFailure"
+                                                  Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                                                  Content="工程模式：供电关键步骤失败后继续（高风险）"
+                                                  ToolTip="仅在工程 Profile 且未勾选失败时停止整个测试时生效；急停、治具和接口等安全关键失败仍会停止。"/>
                                     </Grid>
                                 </Grid>
                             </Border>

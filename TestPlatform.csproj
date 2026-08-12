@@ -336,17 +336,36 @@
     <Compile Include="Domain\Models\ReportSaveMode.cs" />
     <Compile Include="Hardware\Instruments\Measurement\RigolDHO804Scope.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.cs" />
+    <Compile Include="Hardware\Stations\SK441\Bcm125StationMap.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.Fixture.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.Mps125.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.PowerSafety.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.EmergencySafety.cs" />
     <Compile Include="Sequences\SK\SKSequences.cs" />
     <Compile Include="Sequences\SK\Common\SKBaseSequence.OperatorPrompts.cs" />
+    <Compile Include="Sequences\SK\Common\SKBaseSequence.Initializing.cs" />
+    <Compile Include="Sequences\SK\Common\BcmStringChannelConfig.cs" />
+    <Compile Include="Sequences\SK\Common\SKBcmSequenceBase.cs" />
     <Compile Include="Sequences\SK\BCM125\SKBCM125Sequence.cs" />
+    <Compile Include="Sequences\SK\BCM125\Bcm125Definitions.cs" />
+    <Compile Include="Sequences\SK\BCM125\SKBCM125Sequence.Chapters.cs" />
     <Compile Include="Sequences\SK\BCM250\SKBCM250Sequence.cs" />
+    <Compile Include="Sequences\SK\BCM250\Bcm250Definitions.cs" />
+    <Compile Include="Sequences\SK\BCM250\Bcm250DetailedActionCatalog.cs" />
+    <Compile Include="Sequences\SK\BCM250\Bcm250StationMap.cs" />
     <Compile Include="Sequences\SK\MPS125\SKMPS125Sequence.cs" />
+    <Compile Include="Sequences\SK\MPS125\Mps125Definitions.cs" />
+    <Compile Include="Sequences\SK\MPS125\Mps125DetailedActionCatalog.cs" />
+    <Compile Include="Sequences\SK\MPS125\Mps125StationMap.cs" />
     <Compile Include="Sequences\SK\MPS250\SKMPS250Sequence.cs" />
+    <Compile Include="Sequences\SK\MPS250\Mps250Definitions.cs" />
+    <Compile Include="Sequences\SK\MPS250\Mps250DetailedActionCatalog.cs" />
+    <Compile Include="Sequences\SK\MPS250\Mps250StationMap.cs" />
     <Compile Include="Presentation\Views\Operations\ScanCompareWindow.xaml.cs">
       <DependentUpon>ScanCompareWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Hardware\Communication\SerialPortHelper.cs" />
+    <Compile Include="Hardware\Communication\SKSerialDeviceDiscovery.cs" />
     <Compile Include="Presentation\Views\Administration\SettingsWindow.xaml.cs">
       <DependentUpon>SettingsWindow.xaml</DependentUpon>
     </Compile>
@@ -409,9 +428,11 @@
     <Compile Include="Hardware\Instruments\Measurement\DaqMultimeter.cs" />
     <Compile Include="Hardware\Fixture\DigitalInputController.cs" />
     <Compile Include="Hardware\Communication\FirmwareFlasher.cs" />
+    <Compile Include="Hardware\Communication\IDeviceLogSource.cs" />
     <Compile Include="Hardware\Communication\LegacyCommunicationState.cs" />
     <Compile Include="Hardware\Instruments\Loads\HengHuiElectronicLoad.cs" />
     <Compile Include="Hardware\Instruments\PowerSupplies\HengHuiPowerSupply.cs" />
+    <Compile Include="Hardware\Communication\MbdResponseParser.cs" />
     <Compile Include="Hardware\Communication\TargetBoardComm.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
@@ -613,6 +634,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\BCM-250\BCM-250_autoTest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\BCM-250\BCM-250_profiles.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\MPS-125\MPS-125_autoTest.xml">

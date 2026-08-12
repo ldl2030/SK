@@ -91,32 +91,65 @@ namespace TestPlatform
 
                 byte[] crc = CalculateCrc(cmdBytes);
                 byte[] fullCmd = cmdBytes.Concat(crc).ToArray();
+                const int maxAttempts = 2;
+                Exception lastError = null;
 
-                _serialPort.DiscardInBuffer();
-                _serialPort.Write(fullCmd, 0, fullCmd.Length);
-
-                byte[] resp = new byte[expectedRespLen];
-                int bytesRead = 0;
-                
-                // 由于可能分包，采用循环读取直到满足长度
-                while (bytesRead < expectedRespLen)
+                for (int attempt = 1; attempt <= maxAttempts; attempt++)
                 {
-                    int read = _serialPort.Read(resp, bytesRead, expectedRespLen - bytesRead);
-                    if (read == 0) break;
-                    bytesRead += read;
+                    try
+                    {
+                        _serialPort.DiscardInBuffer();
+                        _serialPort.Write(fullCmd, 0, fullCmd.Length);
+
+                        byte[] resp = new byte[expectedRespLen];
+                        int bytesRead = 0;
+                        while (bytesRead < expectedRespLen)
+                        {
+                            try
+                            {
+                                int read = _serialPort.Read(
+                                    resp,
+                                    bytesRead,
+                                    expectedRespLen - bytesRead);
+                                if (read == 0) break;
+                                bytesRead += read;
+                            }
+                            catch (TimeoutException)
+                            {
+                                throw new TimeoutException(
+                                    $"Modbus响应超时，期望{expectedRespLen}字节，实际收到{bytesRead}字节。");
+                            }
+                        }
+
+                        if (bytesRead < expectedRespLen)
+                            throw new TimeoutException(
+                                $"Modbus响应超时，期望{expectedRespLen}字节，实际收到{bytesRead}字节。");
+
+                        byte[] receivedData = resp.Take(resp.Length - 2).ToArray();
+                        byte[] receivedCrc = resp.Skip(resp.Length - 2).ToArray();
+                        byte[] expectedCrc = CalculateCrc(receivedData);
+
+                        if (receivedCrc[0] != expectedCrc[0] ||
+                            receivedCrc[1] != expectedCrc[1])
+                        {
+                            throw new InvalidOperationException("Modbus CRC校验失败。");
+                        }
+
+                        return resp;
+                    }
+                    catch (Exception ex) when (
+                        ex is TimeoutException ||
+                        ex.Message.IndexOf("CRC", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        lastError = ex;
+                        if (attempt < maxAttempts)
+                            continue;
+                    }
                 }
 
-                if (bytesRead < expectedRespLen)
-                    throw new TimeoutException($"Modbus 响应超时。期望 {expectedRespLen} 字节，实际接收 {bytesRead} 字节。");
-
-                byte[] receivedData = resp.Take(resp.Length - 2).ToArray();
-                byte[] receivedCrc = resp.Skip(resp.Length - 2).ToArray();
-                byte[] expectedCrc = CalculateCrc(receivedData);
-
-                if (receivedCrc[0] != expectedCrc[0] || receivedCrc[1] != expectedCrc[1])
-                    throw new Exception("Modbus CRC 校验失败。");
-
-                return resp;
+                throw new TimeoutException(
+                    $"ANS Modbus命令在{maxAttempts}次尝试后仍未收到有效应答：{lastError?.Message}",
+                    lastError);
             }
         }
 

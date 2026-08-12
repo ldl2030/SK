@@ -1,8 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace TestPlatform
 {
+    public sealed class DigitalInputReadResult
+    {
+        public bool CommunicationOk { get; set; }
+        public bool[] States { get; set; }
+        public string Error { get; set; }
+    }
+
     /// <summary>
     /// SK441 娴嬭瘯宸ヤ綅鐨勨€滆澶囩瀹垛€?(Hardware Abstraction Layer)
     /// 缁熶竴绠＄悊璇ュ伐浣嶄笅鎵€鏈?8 鍙拌澶囩殑鍒濆鍖栥€佽繛鎺ュ拰閲婃斁銆?    /// Sequence (娴嬭瘯娴佺▼) 鍙渶瑕佽皟鐢ㄨ繖涓被鐨勫疄渚嬶紝鑰屼笉闇€瑕佸叧蹇冨簳灞傜殑鍏蜂綋涓插彛鍒涘缓銆?    /// </summary>
@@ -29,7 +38,21 @@ namespace TestPlatform
 
         // 娉? 涓洓鐨?RelayController 鍜?DigitalInputController 鏄潤鎬佸伐鍏风被锛?        // 瀹冧滑涓嶉渶瑕佸疄渚嬪寲锛岀洿鎺ラ€氳繃浼犲叆涓插彛鍙峰拰绔欏彿浣跨敤鍗冲彲銆?
         // 璋冭瘯涓撶敤鏍囪锛氳烦杩囩湡瀹炰覆鍙ｈ繛鎺ワ紝鏂逛究鑴辨満璋冭瘯娴佺▼
-        public bool SkipComInit { get; set; } = GetBoolAppSetting("SKSkipComInit", false);
+        // 单点模式开关：
+        // App.config: SKExecutionMode=Simulation|Hardware
+        // 临时覆盖: TESTPLATFORM_SK_MODE=Simulation|Hardware
+        public bool SkipComInit { get; set; } = ResolveSimulationMode();
+
+        public string ExecutionModeName => SkipComInit ? "Simulation" : "Hardware";
+        public bool IsTtlProgrammingRequired => GetBoolAppSetting("SKRequireTtl", true);
+        public bool IsEmergencyStopTriggered(bool logicalState)
+        {
+            return GetBoolAppSetting("SKEmergencyStopActiveHigh", true)
+                ? logicalState
+                : !logicalState;
+        }
+        public string SimulationBoardType { get; set; } = "BCM-125";
+        public bool SimulateDigitalInputCommunicationFailure { get; set; }
 
         public Action<string> LogInfo { get; set; }
         public Action<string> LogError { get; set; }
@@ -50,10 +73,16 @@ namespace TestPlatform
         private double _mockGainIdch = 90000;
         private double _mockOffsetIdch;
         private double _mockShortProtectionVoltage = 2.9;
+        private float _ansConfiguredVoltage = float.NaN;
+        private float _ansConfiguredCurrent = float.NaN;
+        private string _digitalInputPort;
+        private string _targetBoardPortCandidate;
+        private string _lastLoggedDigitalInputBits;
 
         public SK441Device()
         {
-            // 瀹炰緥鍖栧悇涓华鍣ㄥ璞?            AnsPower = new AnsPowerSupply();
+            // Instantiate every device even before connecting physical ports.
+            AnsPower = new AnsPowerSupply();
             HengHuiPower1 = new HengHuiPowerSupply();
             HengHuiPower2 = new HengHuiPowerSupply();
             ElectronicLoad = new HengHuiElectronicLoad();
@@ -62,23 +91,17 @@ namespace TestPlatform
             Flasher = new FirmwareFlasher();
 
             // 缁戝畾鏃ュ織浜嬩欢锛屽皢搴曞眰浠櫒鐨勬棩蹇楀叏閮ㄥ線涓婃姏
-            BindLogs(AnsPower);
-            BindLogs(HengHuiPower1);
-            BindLogs(HengHuiPower2);
-            BindLogs(ElectronicLoad);
-            BindLogs(Daq);
             BindLogs(TargetBoard);
             BindLogs(Flasher);
         }
 
-        private void BindLogs(dynamic device)
+        private void BindLogs(IDeviceLogSource device)
         {
-            try
-            {
-                device.LogInfo += new Action<string>(msg => LogInfo?.Invoke(msg));
-                device.LogError += new Action<string>(msg => LogError?.Invoke(msg));
-            }
-            catch { /* 蹇界暐涓嶆敮鎸佷簨浠剁殑缁戝畾 */ }
+            if (device == null)
+                throw new ArgumentNullException(nameof(device));
+
+            device.LogInfo += msg => LogInfo?.Invoke(msg);
+            device.LogError += msg => LogError?.Invoke(msg);
         }
 
         private static bool GetBoolAppSetting(string key, bool defaultValue)
@@ -108,6 +131,28 @@ namespace TestPlatform
             return string.IsNullOrWhiteSpace(value) ? defaultValue : value;
         }
 
+        private static bool ResolveSimulationMode()
+        {
+            string mode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
+            if (string.IsNullOrWhiteSpace(mode))
+                mode = GetAppSetting("SKExecutionMode");
+
+            if (string.Equals(mode, "Simulation", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "Sim", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (string.Equals(mode, "Hardware", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(mode, "Real", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // 兼容旧配置；新部署只需要维护 SKExecutionMode。
+            return GetBoolAppSetting("SKSkipComInit", false);
+        }
+
         private static string GetRelayResponseError(string response)
         {
             if (string.IsNullOrWhiteSpace(response))
@@ -130,11 +175,15 @@ namespace TestPlatform
             string henghui2Port,
             string loadPort,
             string daqPort,
+            string digitalInputPort,
+            string fixtureRelayPort,
+            string relay16Port,
             string targetBoardPort,
-            string ttlPort)
+            string ttlPort,
+            ISet<string> requiredComPorts = null)
         {
             LogInfo?.Invoke("=========================================");
-            LogInfo?.Invoke("寮€濮嬪垵濮嬪寲 SK441 娴嬭瘯宸ヤ綅鐨勬墍鏈夊簳灞傜‖浠?..");
+            LogInfo?.Invoke("开始初始化 SK441 测试工位的所有底层硬件...");
             LogInfo?.Invoke("=========================================");
 
             if (SkipComInit)
@@ -143,41 +192,112 @@ namespace TestPlatform
                 return Task.FromResult(true);
             }
 
+            bool requireTtl = IsTtlProgrammingRequired;
+            bool useProjectRequirements = requiredComPorts != null && requiredComPorts.Count > 0;
+            Func<string, bool> isRequired = key =>
+                !useProjectRequirements || requiredComPorts.Contains(key);
+            var requiredPorts = new[]
+            {
+                new { Key = "ansPowerComName", Name = "ANS电源", Port = ansPort },
+                new { Key = "hengHuiPowerAComName", Name = "恒辉电源A", Port = henghui1Port },
+                new { Key = "hengHuiPowerBComName", Name = "恒辉电源B", Port = henghui2Port },
+                new { Key = "electronicLoadComName", Name = "KUNKIN 7303电子负载", Port = loadPort },
+                new { Key = "daqComName", Name = "GWInstek DAQ-9600", Port = daqPort },
+                new { Key = "digitalInputComName", Name = "16路数字量输入模块", Port = digitalInputPort },
+                new { Key = "fixtureRelayComName", Name = "工装继电器模块", Port = fixtureRelayPort },
+                new { Key = "relay16ComName", Name = "16路继电器模块", Port = relay16Port },
+                new { Key = "uartComName", Name = "固件烧录TTL", Port = ttlPort }
+            }.Where(item => isRequired(item.Key) &&
+                (requireTtl || item.Name != "固件烧录TTL")).ToArray();
+            string[] missingDevices = requiredPorts
+                .Where(item => string.IsNullOrWhiteSpace(item.Port))
+                .Select(item => item.Name)
+                .ToArray();
+            if (missingDevices.Length > 0)
+            {
+                LogError?.Invoke($"缺少必需设备：{string.Join("、", missingDevices)}");
+                return Task.FromResult(false);
+            }
+
+            string[] duplicatePorts = requiredPorts
+                .GroupBy(item => item.Port, StringComparer.OrdinalIgnoreCase)
+                .Where(group =>
+                {
+                    string[] names = group.Select(item => item.Name).ToArray();
+                    string[] sharedBusDevices =
+                    {
+                        "16路数字量输入模块",
+                        "工装继电器模块",
+                        "16路继电器模块"
+                    };
+                    bool sharedFixtureBus =
+                        names.Length > 1 &&
+                        names.All(name => sharedBusDevices.Contains(name));
+                    return names.Length > 1 && !sharedFixtureBus;
+                })
+                .Select(group =>
+                    $"{group.Key} 被同时分配给 {string.Join("、", group.Select(item => item.Name))}")
+                .ToArray();
+            if (duplicatePorts.Length > 0)
+            {
+                foreach (string duplicate in duplicatePorts)
+                    LogError?.Invoke($"串口配置冲突：{duplicate}");
+                return Task.FromResult(false);
+            }
+
             bool allSuccess = true;
-
-            try
+            Action<string, Action> connect = (deviceName, action) =>
             {
-                // 1. 鍒濆鍖栫洰鏍囨澘涓插彛
-                TargetBoard.Connect(targetBoardPort);
-
-                // 2. 鍒濆鍖栫儳褰曚覆鍙?                Flasher.Connect(ttlPort);
-
-                // 3. 渚濇鎵撳紑鍚勪华鍣ㄧ鍙?                LogInfo?.Invoke("姝ｅ湪杩炴帴鍚勭鐢垫簮銆佽礋杞藉強 DAQ 璁惧...");
-                AnsPower.Connect(ansPort);
-                HengHuiPower1.Connect(henghui1Port, address: 1);
-                HengHuiPower2.Connect(henghui2Port, address: 2); // 鍋囪绗簩鍙扮珯鍙蜂负2
-                ElectronicLoad.Connect(loadPort);
-                Daq.Connect(daqPort);
-
-                LogInfo?.Invoke(">>> All device ports opened.");
-
-                // 4. Query DAQ to confirm device is online.
-                string daqIdn = Daq.GetIdn();
-                if (string.IsNullOrEmpty(daqIdn))
+                try
                 {
-                    LogError?.Invoke("DAQ 璁惧鏃犲搷搴旓紝璇锋鏌ユ帴绾匡紒");
+                    action();
+                    LogInfo?.Invoke($"{deviceName}连接成功");
+                }
+                catch (Exception ex)
+                {
                     allSuccess = false;
+                    LogError?.Invoke($"{deviceName}连接失败：{ex.Message}");
                 }
-                else
-                {
-                    LogInfo?.Invoke($"DAQ 鍦ㄧ嚎锛屽瀷鍙? {daqIdn}");
-                }
-            }
-            catch (Exception ex)
+            };
+
+            int ansAddress = GetIntAppSetting("SKAnsAddress", 1);
+            int electronicLoadBaudRate = GetIntAppSetting("SKElectronicLoadBaudRate", 38400);
+            _digitalInputPort = digitalInputPort;
+            _targetBoardPortCandidate = targetBoardPort;
+            ComName.fixtureRelayComName = fixtureRelayPort;
+            ComName.relay16ComName = relay16Port;
+            ComName.rs485ComName = fixtureRelayPort;
+
+            LogInfo?.Invoke(
+                "MBD USB-B暂不连接：将在DUT上电并等待启动完成后的通信步骤中自动识别。");
+            if (isRequired("uartComName") && !string.IsNullOrWhiteSpace(ttlPort))
+                connect("固件烧录TTL", () => Flasher.Connect(ttlPort));
+            else if (isRequired("uartComName"))
+                LogInfo?.Invoke("独立TTL未连接：按SKRequireTtl=false跳过烧录，继续实机测试。");
+            if (isRequired("ansPowerComName"))
+                connect("ANS电源", () => AnsPower.Connect(ansPort, address: (byte)ansAddress));
+            if (isRequired("hengHuiPowerAComName"))
+                connect("恒辉8602电源A (SCPI 9600 8N1)", () => HengHuiPower1.Connect(henghui1Port));
+            if (isRequired("hengHuiPowerBComName"))
+                connect("恒辉8602电源B (SCPI 9600 8N1)", () => HengHuiPower2.Connect(henghui2Port));
+            if (isRequired("electronicLoadComName"))
+                connect(
+                    "KUNKIN 7303电子负载",
+                    () => ElectronicLoad.Connect(loadPort, electronicLoadBaudRate));
+            if (isRequired("daqComName"))
+                connect("GWInstek DAQ-9600", () =>
             {
-                LogError?.Invoke($"璁惧鍒濆鍖栬繃绋嬩腑鍙戠敓寮傚父: {ex.Message}");
-                allSuccess = false;
-            }
+                Daq.Connect(daqPort);
+                string daqIdn = Daq.GetIdn();
+                if (string.IsNullOrWhiteSpace(daqIdn) ||
+                    daqIdn.IndexOf("DAQ-9600", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    throw new InvalidOperationException($"IDN不匹配：{daqIdn ?? "无响应"}");
+                }
+                });
+
+            if (allSuccess)
+                LogInfo?.Invoke("全部必需串口设备已连接。");
 
             return Task.FromResult(allSuccess);
         }
@@ -212,23 +332,97 @@ namespace TestPlatform
 
         public async Task<bool> SetAnsVoltageCurrentOutputAsync(float voltage, float current, bool outputOn)
         {
+            string safetyError;
+            if (outputOn && !ValidatePowerSourceEnable("ANS", voltage, out safetyError))
+            {
+                LogError?.Invoke(safetyError);
+                return false;
+            }
+            if (SkipComInit)
+            {
+                await Task.Delay(50);
+                _ansConfiguredVoltage = voltage;
+                _ansConfiguredCurrent = current;
+                RecordPowerOutput("ANS", outputOn);
+                LogInfo?.Invoke($"[Debug] Mock AnsPower: {voltage}V/{current}A, output {(outputOn ? "ON" : "OFF")}");
+                return true;
+            }
+
             try
             {
-                if (SkipComInit)
-                {
-                    await Task.Delay(50);
-                    LogInfo?.Invoke($"[Debug] Mock AnsPower: {voltage}V/{current}A, output {(outputOn ? "ON" : "OFF")}");
-                    return true;
-                }
-
                 AnsPower.SetVoltageCurrent(voltage, current);
+                _ansConfiguredVoltage = voltage;
+                _ansConfiguredCurrent = current;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"设置ANS电压/电流 {voltage}V/{current}A 失败: {ex.Message}");
+                return false;
+            }
+
+            try
+            {
                 AnsPower.SetPower(outputOn);
+                RecordPowerOutput("ANS", outputOn);
                 LogInfo?.Invoke($"AnsPower set: {voltage}V/{current}A, output {(outputOn ? "ON" : "OFF")}");
                 return true;
             }
             catch (Exception ex)
             {
-                LogError?.Invoke($"设置AnsPower电源输出失败: {ex.Message}");
+                LogError?.Invoke($"设置ANS输出{(outputOn ? "开启" : "关闭")}失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        public bool IsAnsSetpointConfigured(float voltage, float current)
+        {
+            return !float.IsNaN(_ansConfiguredVoltage) &&
+                   !float.IsNaN(_ansConfiguredCurrent) &&
+                   Math.Abs(_ansConfiguredVoltage - voltage) < 0.001f &&
+                   Math.Abs(_ansConfiguredCurrent - current) < 0.001f;
+        }
+
+        public async Task<bool> SetAnsPowerOnlyAsync(float configuredVoltage, bool outputOn)
+        {
+            string safetyError;
+            if (outputOn && !ValidatePowerSourceEnable("ANS", configuredVoltage, out safetyError))
+            {
+                LogError?.Invoke(safetyError);
+                return false;
+            }
+
+            if (SkipComInit)
+            {
+                await Task.Delay(50);
+                RecordPowerOutput("ANS", outputOn);
+                LogInfo?.Invoke($"[Debug] Mock AnsPower output {(outputOn ? "ON" : "OFF")}");
+                return true;
+            }
+
+            try
+            {
+                AnsPower.SetPower(outputOn);
+                if (outputOn)
+                {
+                    await Task.Delay(100);
+                    ushort status1;
+                    ushort status2;
+                    AnsPower.ReadStatus(out status1, out status2);
+                    if ((status1 & 0x0010) == 0)
+                    {
+                        LogError?.Invoke($"ANS输出开启命令已应答，但状态未确认输出允许：status1=0x{status1:X4}");
+                        return false;
+                    }
+                    LogInfo?.Invoke($"ANS输出状态确认成功：status1=0x{status1:X4}");
+                }
+
+                RecordPowerOutput("ANS", outputOn);
+                LogInfo?.Invoke($"ANS output {(outputOn ? "ON" : "OFF")}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"设置ANS输出{(outputOn ? "开启" : "关闭")}失败: {ex.Message}");
                 return false;
             }
         }
@@ -268,30 +462,33 @@ namespace TestPlatform
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
-                    double mockVal = (channel == 113 || channel == 115) && _mockCcbEnabled && _mockCcbCurrentSetpointMa > 0.001
-                        ? (_mockCcbCurrentSetpointMa / 1000.0) * (channel == 115 ? 0.0215914 : 0.0215909)
-                        : (channel == 113 || channel == 115) && _mockMosTestOn
-                        ? 0.65 * (channel == 115 ? 0.0215914 : 0.0215909)
+                    double mockVal = (channel == Bcm125StationMap.String1ShuntDaqChannel || channel == Bcm125StationMap.String2ShuntDaqChannel) && _mockCcbEnabled && _mockCcbCurrentSetpointMa > 0.001
+                        ? (_mockCcbCurrentSetpointMa / 1000.0) * (channel == Bcm125StationMap.String2ShuntDaqChannel ? Bcm125StationMap.String2ShuntOhms : Bcm125StationMap.String1ShuntOhms)
+                        : (channel == Bcm125StationMap.String1ShuntDaqChannel || channel == Bcm125StationMap.String2ShuntDaqChannel) && _mockMosTestOn
+                        ? 0.65 * (channel == Bcm125StationMap.String2ShuntDaqChannel ? Bcm125StationMap.String2ShuntOhms : Bcm125StationMap.String1ShuntOhms)
                         : (channel == 114 || channel == 116) && _mockStringCurrent > 0.001
                         ? 134.36
                         : (channel == 109 || channel == 110) && _mockStringCurrent >= 5.5 && _mockCcbEnabled && _mockVbusVoltage <= 2.0
                         ? 0.7
                         : (channel == 109 || channel == 110) && _mockVbusVoltage > 0.001
                         ? _mockVbusVoltage
-                        : (channel == 105 || channel == 106) && _mockVbusVoltage > 0.001
+                        : (channel == 105 || channel == Bcm125StationMap.VmidReferenceDaqChannel) && _mockVbusVoltage > 0.001
                         ? _mockVbusVoltage
-                        : (channel == 113 || channel == 115 || channel == 118) && _mockStringCurrent > 0.001
-                            ? _mockStringCurrent * (channel == 115 || channel == 118 ? 0.0215914 : 0.0215909)
+                        : (channel == Bcm125StationMap.String1ShuntDaqChannel ||
+                           channel == Bcm125StationMap.String2ShuntDaqChannel ||
+                           channel == 118) && _mockStringCurrent > 0.001
+                            ? _mockStringCurrent *
+                              (channel == Bcm125StationMap.String2ShuntDaqChannel || channel == 118
+                                  ? Bcm125StationMap.String2ShuntOhms
+                                  : Bcm125StationMap.String1ShuntOhms)
                         : GetMockBcm125FirstStartupVoltage(channel);
                     LogInfo?.Invoke($"[调试模式] 模拟 DAQ 通道 {channel} 测量电压: {mockVal:0.###}V");
                     return mockVal;
                 }
 
                 string channelList = "@" + channel.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                double range = Math.Max(10.0, Math.Abs(GetExpectedDaqRangeHint(channel)));
-                Daq.ConfigVoltageDc(channelList, (float)range);
-                double val = Daq.ReadSingleValue();
-                LogInfo?.Invoke($"DAQ 通道 {channel} 测量电压: {val:0.###}V");
+                double val = Daq.MeasureVoltageDc(channelList, out string rawResponse);
+                LogInfo?.Invoke($"DAQ 通道 {channel} 测量电压: {val:0.######}V (原始响应: {rawResponse})");
                 return val;
             }
             catch (Exception ex)
@@ -340,27 +537,55 @@ namespace TestPlatform
         {
             try
             {
+                string safetyError;
+                if (!ValidatePowerRelaySwitch(relayId, isOpen, out safetyError))
+                {
+                    LogError?.Invoke(safetyError);
+                    return false;
+                }
+                if (IsPowerRelayAlreadyInState(relayId, isOpen))
+                {
+                    return true;
+                }
+
+                // isOpen=true means close/energize in this legacy API. Only closing
+                // requires a strict power-off measurement; opening is always allowed.
+                if (isOpen && !await VerifyRelayPowerIsOffAsync(relayId))
+                {
+                    LogError?.Invoke($"继电器 {relayId} 闭合前掉电确认失败。");
+                    return false;
+                }
+
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerRelay(relayId, isOpen);
                     LogInfo?.Invoke($"[调试模式] 模拟{(isOpen ? "闭合" : "断开")}继电器: {relayId}");
                     return true;
                 }
 
-                int address = GetIntAppSetting("SKRelayAddress", 1);
+                int address = GetIntAppSetting("SKRelayAddress", 3);
+                if (address != 3)
+                {
+                    LogError?.Invoke($"功率继电器站位配置错误：期望地址3，当前地址{address}。");
+                    return false;
+                }
                 int baudRate = GetIntAppSetting("SKRelayBaudRate", 38400);
                 string comPort = GetAppSetting("SKRelayComPort", ComName.rs485ComName);
                 string response = await RelayController.SendCommandAsync(
-                    address, relayId, isOpen, 1, baudRate, comPort, msg => LogInfo?.Invoke(msg));
+                    address, relayId, isOpen, 1, baudRate, comPort, null);
                 bool ok = !string.IsNullOrWhiteSpace(response) &&
                           response.IndexOf("TIMEOUT", StringComparison.OrdinalIgnoreCase) < 0 &&
-                          response.IndexOf("閿欒", StringComparison.OrdinalIgnoreCase) < 0;
+                          response.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) < 0 &&
+                          response.IndexOf("错误", StringComparison.OrdinalIgnoreCase) < 0 &&
+                          response.IndexOf("超时", StringComparison.OrdinalIgnoreCase) < 0;
                 if (!ok)
                 {
                     LogError?.Invoke($"继电器 {relayId} 控制失败: {response}");
                     return false;
                 }
-                LogInfo?.Invoke($"Relay {(isOpen ? "closed" : "opened")}: {relayId}");
+                LogInfo?.Invoke($"功率继电器站3 Y{relayId} -> {(isOpen ? "闭合" : "断开")}");
+                RecordPowerRelay(relayId, isOpen);
                 return true;
             }
             catch (Exception ex)
@@ -373,36 +598,132 @@ namespace TestPlatform
         /// <summary>
         /// 璇诲彇 16 璺暟瀛楅噺杈撳叆妯″潡鐘舵€?(涓昏鐢ㄤ簬鎺ュ彛D-鎺у埗鎺ュ彛)
         /// </summary>
-        public async Task<bool[]> ReadDigitalInputsAsync(int address = 1, string comPort = null)
+        public async Task<DigitalInputReadResult> ReadDigitalInputsSafeAsync(int address = 0, string comPort = null)
         {
             try
             {
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
-                    // 调试模式仍模拟真实下压状态变化：
-                    // 数字量4=0 表示板子已安装；数字量7=1 表示未下压，0 表示下压到位。
+                    if (SimulateDigitalInputCommunicationFailure)
+                    {
+                        return new DigitalInputReadResult
+                        {
+                            CommunicationOk = false,
+                            States = null,
+                            Error = "模拟数字输入通信失联"
+                        };
+                    }
+                    // Simulation returns normalized logical states, not raw module levels.
+                    // DI4=0 installed; DI7=1 released; DI8=0 emergency normal.
                     bool[] mockStates = new bool[16];
                     for (int i = 0; i < 16; i++) mockStates[i] = false;
+                    mockStates[4] = SimulationBoardType.StartsWith(
+                        "MPS",
+                        StringComparison.OrdinalIgnoreCase);
+                    mockStates[5] = SimulationBoardType.EndsWith(
+                        "250",
+                        StringComparison.OrdinalIgnoreCase);
                     mockStates[6] = !_mockFixtureDown;
+                    mockStates[7] = false;
 
-                    return mockStates;
+                    return new DigitalInputReadResult
+                    {
+                        CommunicationOk = true,
+                        States = mockStates
+                    };
                 }
 
                 // 鐪熷疄璋冪敤
-                bool[] states = await DigitalInputController.ReadDigitalInputAsync(address, 38400, comPort, msg => LogError?.Invoke(msg));
-                if (states == null)
+                if (address <= 0)
+                    address = GetIntAppSetting("SKDigitalInputAddress", 2);
+                if (address != 2)
+                {
+                    string stationError = $"数字输入模块站位配置错误：期望地址2，当前地址{address}。";
+                    LogError?.Invoke(stationError);
+                    return new DigitalInputReadResult
+                    {
+                        CommunicationOk = false,
+                        States = null,
+                        Error = stationError
+                    };
+                }
+                if (string.IsNullOrWhiteSpace(comPort))
+                    comPort = _digitalInputPort ??
+                              GetAppSetting("SKDigitalInputPort", ComName.digitalInputComName);
+                int baudRate = GetIntAppSetting("SKDigitalInputBaudRate", 38400);
+                bool[] rawStates = await DigitalInputController.ReadDigitalInputAsync(
+                    address,
+                    baudRate,
+                    comPort,
+                    null);
+                if (rawStates == null)
                 {
                     LogError?.Invoke("读取数字输入模块失败，返回 null");
-                    return new bool[16]; // 杩斿洖榛樿
+                    return new DigitalInputReadResult
+                    {
+                        CommunicationOk = false,
+                        States = null,
+                        Error = "数字输入模块无响应或数据无效"
+                    };
                 }
-                return states;
+                int invertMask = GetIntAppSetting("SKDigitalInputInvertMask", 0x03F7);
+                bool[] states = NormalizeDigitalInputStates(rawStates, invertMask);
+                string stateBits = FormatDigitalInputBits(states);
+                if (!string.Equals(
+                    stateBits,
+                    _lastLoggedDigitalInputBits,
+                    StringComparison.Ordinal))
+                {
+                    _lastLoggedDigitalInputBits = stateBits;
+                    LogInfo?.Invoke($"数字输入状态变化 DI16→DI1: {stateBits}");
+                }
+                return new DigitalInputReadResult
+                {
+                    CommunicationOk = true,
+                    States = states
+                };
             }
             catch (Exception ex)
             {
                 LogError?.Invoke($"读取数字输入模块发生异常: {ex.Message}");
-                return new bool[16];
+                return new DigitalInputReadResult
+                {
+                    CommunicationOk = false,
+                    States = null,
+                    Error = ex.Message
+                };
             }
+        }
+
+        public async Task<bool[]> ReadDigitalInputsAsync(int address = 0, string comPort = null)
+        {
+            DigitalInputReadResult result = await ReadDigitalInputsSafeAsync(address, comPort);
+            if (result.CommunicationOk) return result.States;
+            bool[] failSafeStates = new bool[16];
+            failSafeStates[7] = GetBoolAppSetting("SKEmergencyStopActiveHigh", true);
+            return failSafeStates;
+        }
+
+        public static bool[] NormalizeDigitalInputStates(bool[] rawStates, int invertMask)
+        {
+            if (rawStates == null)
+                return null;
+
+            bool[] normalized = new bool[rawStates.Length];
+            for (int index = 0; index < rawStates.Length; index++)
+            {
+                bool invert = index < 16 && (invertMask & (1 << index)) != 0;
+                normalized[index] = invert ? !rawStates[index] : rawStates[index];
+            }
+            return normalized;
+        }
+
+        private static string FormatDigitalInputBits(bool[] states)
+        {
+            if (states == null)
+                return "<null>";
+            return string.Concat(states.Reverse().Select(state => state ? "1" : "0"));
         }
 
         /// <summary>
@@ -415,23 +736,39 @@ namespace TestPlatform
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerOutput("ANS", false);
+                    RecordPowerOutput("VBUS", false);
+                    RecordPowerOutput("SECONDARY", false);
+                    RecordPowerOutput("LOAD", false);
                     LogInfo?.Invoke("[调试模式] 模拟关闭所有电源/负载输出。");
                     return true;
                 }
 
                 bool allSuccess = true;
 
-                try { AnsPower.SetPower(false); }
-                catch (Exception ex) { allSuccess = false; LogError?.Invoke($"ANS 电源关闭失败: {ex.Message}"); }
+                if (AnsPower.IsConnected)
+                {
+                    try { AnsPower.SetPower(false); RecordPowerOutput("ANS", false); }
+                    catch (Exception ex) { allSuccess = false; LogError?.Invoke($"ANS 电源关闭失败: {ex.Message}"); }
+                }
 
-                try { HengHuiPower1.SetPower(false); }
-                catch (Exception ex) { allSuccess = false; LogError?.Invoke($"HengHui1 电源关闭失败: {ex.Message}"); }
+                if (HengHuiPower1.IsConnected)
+                {
+                    try { HengHuiPower1.SetPower(false); RecordPowerOutput("VBUS", false); }
+                    catch (Exception ex) { allSuccess = false; LogError?.Invoke($"HengHui1 电源关闭失败: {ex.Message}"); }
+                }
 
-                try { HengHuiPower2.SetPower(false); }
-                catch (Exception ex) { allSuccess = false; LogError?.Invoke($"HengHui2 电源关闭失败: {ex.Message}"); }
+                if (HengHuiPower2.IsConnected)
+                {
+                    try { HengHuiPower2.SetPower(false); RecordPowerOutput("SECONDARY", false); }
+                    catch (Exception ex) { allSuccess = false; LogError?.Invoke($"HengHui2 电源关闭失败: {ex.Message}"); }
+                }
 
-                try { ElectronicLoad.SetInputState(false); }
-                catch (Exception ex) { allSuccess = false; LogError?.Invoke($"电子负载关闭失败: {ex.Message}"); }
+                if (ElectronicLoad.IsConnected)
+                {
+                    try { ElectronicLoad.SetInputState(false); RecordPowerOutput("LOAD", false); }
+                    catch (Exception ex) { allSuccess = false; LogError?.Invoke($"电子负载关闭失败: {ex.Message}"); }
+                }
 
                 LogInfo?.Invoke("已发送关闭所有仪器输出的指令");
                 return allSuccess;
@@ -545,11 +882,24 @@ namespace TestPlatform
                     return true;
                 }
 
-                string response = await TargetBoard.SendCommandAsync(command, 2000);
+                if (!await EnsureMbdConnectedAsync())
+                    return false;
+
+                int timeoutMs = Math.Max(
+                    100,
+                    GetIntAppSetting("SKMbdCommandTimeoutMs", 700));
+                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
                 await Task.Delay(Math.Max(0, waitAfterMs));
 
-                // MBD 鍛戒护涓嶄竴瀹氭瘡鏉￠兘鏈夋湁鏁堣浇鑽峰洖澶嶏紱鍙涓插彛鍐欒鏈紓甯稿嵆鍙户缁€?                if (response == null)
-                    LogInfo?.Invoke($"USB-B/MBD 命令已发送但未读到回复: {command}");
+                string responseError;
+                if (!MbdResponseParser.IsSuccessfulCommandResponse(
+                    response,
+                    out responseError))
+                {
+                    LogError?.Invoke(
+                        $"USB-B/MBD 命令失败: {command}，设备返回={responseError}，原始响应={response}");
+                    return false;
+                }
 
                 return true;
             }
@@ -572,9 +922,14 @@ namespace TestPlatform
                     return mock;
                 }
 
-                string response = await TargetBoard.SendCommandAsync(command, 2000);
+                if (!await EnsureMbdConnectedAsync())
+                    return null;
+
+                int timeoutMs = Math.Max(
+                    100,
+                    GetIntAppSetting("SKMbdCommandTimeoutMs", 700));
+                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
                 await Task.Delay(Math.Max(0, waitAfterMs));
-                LogInfo?.Invoke($"USB-B/MBD 鏌ヨ {command} 杩斿洖: {response}");
                 return response;
             }
             catch (Exception ex)
@@ -584,17 +939,50 @@ namespace TestPlatform
             }
         }
 
-        public Task<bool> CheckMbdCommunicationAsync()
+        public async Task<bool> CheckMbdCommunicationAsync()
         {
             if (SkipComInit)
             {
                 LogInfo?.Invoke("[调试模式] 模拟 USB-B/MBD 串口通信已打开");
-                return Task.FromResult(true);
+                return true;
             }
 
-            bool ok = TargetBoard != null && TargetBoard.IsConnected;
-            LogInfo?.Invoke(ok ? "USB-B/MBD 串口通信已打开" : "USB-B/MBD 串口未打开");
-            return Task.FromResult(ok);
+            bool ok = await EnsureMbdConnectedAsync();
+            LogInfo?.Invoke(ok
+                ? $"USB-B/MBD 串口通信正常：{ComName.testComName}"
+                : "USB-B/MBD 串口识别或连接失败");
+            return ok;
+        }
+
+        private async Task<bool> EnsureMbdConnectedAsync()
+        {
+            if (TargetBoard != null && TargetBoard.IsConnected)
+                return true;
+
+            string detectedPort = await SKSerialDeviceDiscovery.DiscoverMbdPortAsync(
+                null,
+                _targetBoardPortCandidate);
+            if (string.IsNullOrWhiteSpace(detectedPort))
+            {
+                LogError?.Invoke(
+                    "DUT上电后未识别到MBD UART；请检查ANS输出、RL4、USB-B和启动等待时间。");
+                return false;
+            }
+
+            try
+            {
+                int baudRate = GetIntAppSetting("SKTargetBoardBaudRate", 9600);
+                int settleMs = GetIntAppSetting("SKMbdOpenSettleMs", 500);
+                TargetBoard.Connect(detectedPort, baudRate, settleMs);
+                _targetBoardPortCandidate = detectedPort;
+                ComName.testComName = detectedPort;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"连接MBD UART失败 ({detectedPort})：{ex.Message}");
+                return false;
+            }
         }
 
         public string GetBcm125ExpectedFirmwareVersion()
@@ -606,9 +994,16 @@ namespace TestPlatform
         {
             try
             {
+                string safetyError;
+                if (outputOn && !ValidatePowerSourceEnable("VBUS", voltage, out safetyError))
+                {
+                    LogError?.Invoke(safetyError);
+                    return false;
+                }
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerOutput("VBUS", outputOn);
                     _mockVbusVoltage = voltage;
                     if (Math.Abs(voltage) < 0.001 && !outputOn)
                         _mockR68ReadCount = 0;
@@ -619,6 +1014,7 @@ namespace TestPlatform
                 HengHuiPower1.SetVoltageCurrent(voltage, current);
                 HengHuiPower1.SetOvp(ovp);
                 HengHuiPower1.SetPower(outputOn);
+                RecordPowerOutput("VBUS", outputOn);
                 LogInfo?.Invoke($"已设置 VBUS 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
                 return true;
             }
@@ -633,9 +1029,16 @@ namespace TestPlatform
         {
             try
             {
+                string safetyError;
+                if (outputOn && !ValidatePowerSourceEnable("SECONDARY", voltage, out safetyError))
+                {
+                    LogError?.Invoke(safetyError);
+                    return false;
+                }
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerOutput("SECONDARY", outputOn);
                     _mockStringCurrent = outputOn ? current : 0;
                     LogInfo?.Invoke($"[调试模式] 模拟设置 String 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
                     return true;
@@ -644,6 +1047,7 @@ namespace TestPlatform
                 HengHuiPower2.SetVoltageCurrent(voltage, current);
                 HengHuiPower2.SetOvp(ovp);
                 HengHuiPower2.SetPower(outputOn);
+                RecordPowerOutput("SECONDARY", outputOn);
                 LogInfo?.Invoke($"已设置 String 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
                 return true;
             }
@@ -661,6 +1065,7 @@ namespace TestPlatform
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerOutput("LOAD", false);
                     LogInfo?.Invoke("[调试模式] 模拟复位电子负载 CV 0V/0A/0W");
                     return true;
                 }
@@ -670,6 +1075,7 @@ namespace TestPlatform
                 ElectronicLoad.SetVoltage(0);
                 ElectronicLoad.SetCurrent(0);
                 ElectronicLoad.SetPower(0);
+                RecordPowerOutput("LOAD", false);
                 return true;
             }
             catch (Exception ex)
@@ -683,9 +1089,16 @@ namespace TestPlatform
         {
             try
             {
+                string safetyError;
+                if (inputOn && !ValidateEmergencyAllowsEnergizing("开启电子负载输入", out safetyError))
+                {
+                    LogError?.Invoke(safetyError);
+                    return false;
+                }
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    RecordPowerOutput("LOAD", inputOn);
                     LogInfo?.Invoke($"[Debug] Mock electronic load CV {voltage}V/{current}A/{power}W, input {(inputOn ? "ON" : "OFF")}");
                     return true;
                 }
@@ -695,6 +1108,7 @@ namespace TestPlatform
                 ElectronicLoad.SetCurrent(current);
                 ElectronicLoad.SetPower(power);
                 ElectronicLoad.SetInputState(inputOn);
+                RecordPowerOutput("LOAD", inputOn);
                 return true;
             }
             catch (Exception ex)
@@ -727,7 +1141,9 @@ namespace TestPlatform
                 }
 
                 _mockShortProtectionVoltage = useNoContact ? 3.3 : 2.9;
-                string relay = GetConfiguredDaqRelayList("SKBCM125RlCortoDaqRelay", "@204");
+                string relay = GetConfiguredDaqRelayList(
+                    "SKBCM125RlCortoDaqRelay",
+                    Bcm125StationMap.ShortProtectionSelectorDaqRelay);
                 bool ok = await SetDaqRelaysAsync(relay, useNoContact, $"RL CORTO CH4 {pointName} {expectedContact}");
                 if (ok)
                     LogInfo?.Invoke($"短路保护信号 {pointName} 已切换到 {expectedContact}，万用表继电器 {relay}");
@@ -923,11 +1339,23 @@ namespace TestPlatform
                 if (SkipComInit)
                 {
                     await Task.Delay(50);
+                    int simulatedRelayCount = GetIntAppSetting("SKRelayCount", 16);
+                    for (int relayId = 1; relayId <= simulatedRelayCount; relayId++)
+                        RecordPowerRelay(relayId, false);
                     LogInfo?.Invoke("[调试模式] 模拟断开测试继电器(保留工装 Y1/Y2 状态)");
                     return true;
                 }
 
-                int relayCount = GetIntAppSetting("SKRelayCount", 64);
+                int relayCount = GetIntAppSetting("SKRelayCount", 16);
+                bool powerConfirmedOff = await VerifyPowerDomainsOffAsync(
+                    "ANS", "VBUS", "SECONDARY", "LOAD");
+                if (!powerConfirmedOff)
+                {
+                    LogInfo?.Invoke(
+                        "警告：集中掉电确认未通过；仍继续断开全部测试继电器以建立安全隔离，" +
+                        "但在重新确认掉电前禁止任何继电器闭合或仪器输出开启。");
+                }
+
                 bool allSuccess = true;
                 for (int relayId = 1; relayId <= relayCount; relayId++)
                 {
@@ -958,6 +1386,12 @@ namespace TestPlatform
         {
             try
             {
+                string safetyError;
+                if (close && !ValidateEmergencyAllowsEnergizing("闭合DAQ测试继电器 " + channelList, out safetyError))
+                {
+                    LogError?.Invoke(safetyError);
+                    return false;
+                }
                 if (string.IsNullOrWhiteSpace(channelList))
                 {
                     LogInfo?.Invoke($"{description}: no DAQ relay configured, skipped.");
@@ -1000,8 +1434,8 @@ namespace TestPlatform
         {
             try
             {
-                string channelA = GetAppSetting("SKPlacementRelayA", "@218");
-                string channelB = GetAppSetting("SKPlacementRelayB", "@219");
+                string channelA = GetAppSetting("SKPlacementRelayA", Bcm125StationMap.PlacementRelayA);
+                string channelB = GetAppSetting("SKPlacementRelayB", Bcm125StationMap.PlacementRelayB);
 
                 if (SkipComInit)
                 {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -10,6 +11,7 @@ namespace TestPlatform.TestSequences
     {
         public const string Normal = "NORMAL";
         public const string Rework = "REWORK";
+        public const string SingleChapter = "SINGLE_CHAPTER";
         public const string Engineering = "ENGINEERING";
     }
 
@@ -44,6 +46,11 @@ namespace TestPlatform.TestSequences
         public bool Mandatory { get; set; }
         public bool AlwaysRun { get; set; }
         public string RunCondition { get; set; }
+        public double? LowerLimit { get; set; }
+        public double? UpperLimit { get; set; }
+        public string Unit { get; set; }
+        public string ExpectedValue { get; set; }
+        public int? DelayMs { get; set; }
         public List<string> DependsOn { get; } = new List<string>();
     }
 
@@ -283,7 +290,12 @@ namespace TestPlatform.TestSequences
                             ReadBool(x, "Enabled", true)),
                         Mandatory = ReadBool(x, "Mandatory"),
                         AlwaysRun = ReadBool(x, "AlwaysRun"),
-                        RunCondition = Read(x, "RunCondition")
+                        RunCondition = Read(x, "RunCondition"),
+                        LowerLimit = ReadNullableDouble(x, "LowerLimit"),
+                        UpperLimit = ReadNullableDouble(x, "UpperLimit"),
+                        Unit = Read(x, "Unit"),
+                        ExpectedValue = Read(x, "ExpectedValue"),
+                        DelayMs = ReadNullableInt(x, "DelayMs")
                     };
                     AddCsv(step.DependsOn, Read(x, "DependsOn"));
                     return step;
@@ -557,6 +569,32 @@ namespace TestPlatform.TestSequences
         private static string Read(XElement element, string name)
         {
             return ((string)element?.Element(name) ?? string.Empty).Trim();
+        }
+
+        private static double? ReadNullableDouble(XElement element, string name)
+        {
+            string text = Read(element, name);
+            double value;
+            return double.TryParse(
+                text,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out value)
+                ? value
+                : (double?)null;
+        }
+
+        private static int? ReadNullableInt(XElement element, string name)
+        {
+            string text = Read(element, name);
+            int value;
+            return int.TryParse(
+                text,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out value)
+                ? value
+                : (int?)null;
         }
 
         private static bool ReadBool(XElement element, string name, bool defaultValue = false)

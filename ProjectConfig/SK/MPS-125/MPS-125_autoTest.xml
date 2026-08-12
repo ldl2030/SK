@@ -1,80 +1,3743 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TestItems>
+  <PlanMetadata>
+    <BoardType>MPS-125</BoardType>
+    <PlanVersion>2.0</PlanVersion>
+    <BaselineId>MPS125-PDF-REV3-DETAILED-20260731</BaselineId>
+  </PlanMetadata>
+  <Groups>
+    <Group>
+      <GroupId>MPS125.PRECHECK</GroupId>
+      <Name>PRECHECK</Name>
+      <SequenceOrder>1</SequenceOrder>
+      <Mandatory>true</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH06</GroupId>
+      <Name>CH6</Name>
+      <SequenceOrder>2</SequenceOrder>
+      <Mandatory>true</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH07</GroupId>
+      <Name>CH7</Name>
+      <SequenceOrder>3</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH08</GroupId>
+      <Name>CH8</Name>
+      <SequenceOrder>4</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH09</GroupId>
+      <Name>CH9</Name>
+      <SequenceOrder>5</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH10</GroupId>
+      <Name>CH10</Name>
+      <SequenceOrder>6</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH11</GroupId>
+      <Name>CH11</Name>
+      <SequenceOrder>7</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH12</GroupId>
+      <Name>CH12</Name>
+      <SequenceOrder>8</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH13</GroupId>
+      <Name>CH13</Name>
+      <SequenceOrder>9</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH14</GroupId>
+      <Name>CH14</Name>
+      <SequenceOrder>10</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH15</GroupId>
+      <Name>CH15</Name>
+      <SequenceOrder>11</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH16</GroupId>
+      <Name>CH16</Name>
+      <SequenceOrder>12</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CH17</GroupId>
+      <Name>CH17</Name>
+      <SequenceOrder>13</SequenceOrder>
+      <Mandatory>false</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+    <Group>
+      <GroupId>MPS125.CLEANUP</GroupId>
+      <Name>CLEANUP</Name>
+      <SequenceOrder>14</SequenceOrder>
+      <Mandatory>true</Mandatory>
+      <DefaultEnabled>true</DefaultEnabled>
+      <DependsOn />
+    </Group>
+  </Groups>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S001.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>1</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>镭雕扫描获取SN</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S002.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>2</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>急停状态检查（数字量8）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S003.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>3</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>接口A连接检查（数字量1）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S004.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>4</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>接口B连接检查（数字量2）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S005.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>5</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>接口C连接检查（数字量3）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S006.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>6</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
-    <Name>测试板安装检查（闭合218/219，数字量4）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>测试板安装检查（闭合318/319，数字量4）</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S007.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>7</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
     <Name>测试板型号识别（数字量5/6）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S008.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>8</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
-    <Name>下压许可检查并等待到位（闭合Y1/Y2，数字量4/7）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>下压许可检查并等待到位（数字量4/7）</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.CH06.S001.ACTION</StepId>
+    <GroupId>MPS125.CH06</GroupId>
+    <SequenceOrder>9</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
-    <Name>7.1 初始化-仪器在线检查</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>6.1 检查34901A/34903A/34907A、VBUS及VBATT电源在线</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.CH06.S002.ACTION</StepId>
+    <GroupId>MPS125.CH06</GroupId>
+    <SequenceOrder>10</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
-    <Name>7.2 初始化-关闭所有仪器输出</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>6.2 关闭VBUS/VBATT及其它仪器输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.CH06.S003.ACTION</StepId>
+    <GroupId>MPS125.CH06</GroupId>
+    <SequenceOrder>11</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
-    <Name>7.3 初始化-断开测试继电器（保持Y1/Y2下压）</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>6.3 断开MPS-125受控继电器1-6</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S001.ACTION</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>12</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>7.1 设置VBUS 137.5V/2A OVP300</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S002.ACTION</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>13</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>7.2 在VBUS关闭时闭合Relay_1 DUT供电及Relay_3 withdrawal接点</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S003.ACTION</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>14</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>7.1 功率路径闭合后打开VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S004.B01</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>15</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B01 7.3.I 测量+5V DAQ101</Name>
+    <LowerLimit>4800</LowerLimit>
+    <UpperLimit>5400</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S005.B02</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>16</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B02 7.3.II 测量+VCC DAQ102</Name>
+    <LowerLimit>14700</LowerLimit>
+    <UpperLimit>15300</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S006.B03</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>17</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B03 7.3.III 测量-VEE DAQ103</Name>
+    <LowerLimit>-15000</LowerLimit>
+    <UpperLimit>-13500</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S007.B04</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>18</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B04 7.3.IV 测量+5VI DAQ114</Name>
+    <LowerLimit>4900</LowerLimit>
+    <UpperLimit>5100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S008.B05</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>19</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B05 7.3.V 测量+VPWM DAQ113</Name>
+    <LowerLimit>12000</LowerLimit>
+    <UpperLimit>14000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S009.B06</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>20</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ111</Name>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>60</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S010.B07</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>21</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B07 7.3.VII 测量P+ DAQ104</Name>
+    <LowerLimit>137000</LowerLimit>
+    <UpperLimit>138000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S011.ACTION</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>22</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>7.4 关闭VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH07.S012.ACTION</StepId>
+    <GroupId>MPS125.CH07</GroupId>
+    <SequenceOrder>23</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>7.5 关闭本章仪器串口会话</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S001.ACTION</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>24</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>8.1/3 设置VBUS起始点5V/0.5A OVP300</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S002.ACTION</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>25</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>8.4 打开VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S003.ACTION</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>26</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>8.5 等待2000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>2000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S004.C01</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>27</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>C01 8.6-8.8 逐步升高VBUS并记录+5V超过4.8V时的点火电压</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>80000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S005.ACTION</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>28</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>8.9 关闭VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH08.S006.ACTION</StepId>
+    <GroupId>MPS125.CH08</GroupId>
+    <SequenceOrder>29</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>8.10 关闭串口会话</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S001.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>30</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.1 设置VBUS 137.5V/2A OVP300</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S002.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>31</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.1 打开VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S003.D01</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>32</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>D01 9.2.I 测量COM_USB DAQ105</Name>
+    <LowerLimit>4800</LowerLimit>
+    <UpperLimit>5400</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S004.D02</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>33</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>D02 9.2.II 测量3V3 DAQ115</Name>
+    <LowerLimit>3200</LowerLimit>
+    <UpperLimit>3400</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S005.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>34</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.3 等待3000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>3000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S006.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>35</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.4 初始化USB-B目标板串口115200 8N1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S007.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>36</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.5 发送EXIT进入MCU终端</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S008.D03</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>37</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>D03 9.6-9.7 发送R0并保存固件版本</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit>MCU fw version</Unit>
+    <ExpectedValue>mcu_app U.2.2.2</ExpectedValue>
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S009.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>38</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.8 关闭VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH09.S010.ACTION</StepId>
+    <GroupId>MPS125.CH09</GroupId>
+    <SequenceOrder>39</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>9.9 关闭目标板串口通信</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S001.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>40</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.1 断开Relay_2/2BIS使+5VEXT与GND_EXT浮空</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S002.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>41</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.2 设置VBUS 137.5V/2A OVP300</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S003.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>42</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.2 打开VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S004.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>43</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.3 文档标记为Step removed</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S005.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>44</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.4 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S006.E01</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>45</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>E01 10.5 读取R78 st_remoto（外部电源断开）</Name>
+    <LowerLimit>1</LowerLimit>
+    <UpperLimit>1</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S007.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>46</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.6 闭合Relay_2/2BIS连接外部5V和GND</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S008.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>47</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.7 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S009.E02</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>48</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>E02 10.8 读取R78 st_remoto（外部电源接通）</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>0</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH10.S010.ACTION</StepId>
+    <GroupId>MPS125.CH10</GroupId>
+    <SequenceOrder>49</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>10.9 再次断开Relay_2/2BIS</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S001.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>50</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S002.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>51</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S003.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>52</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.3 设置主开关1 PWM W101=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S004.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>53</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.4 设置主开关2 PWM W295=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S005.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>54</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.5 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S006.F01</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>55</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F01 11.6 读取R79 withdrawal_status</Name>
+    <LowerLimit>1</LowerLimit>
+    <UpperLimit>1</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S007.F02</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>56</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F02 11.7 测量OPEN_PREC_RL DAQ106</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S008.F03</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>57</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F03 11.8 U20.7 DAQ118采样16次/100ms取平均</Name>
+    <LowerLimit>10000</LowerLimit>
+    <UpperLimit>11000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S009.F04</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>58</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F04 11.9 U20.5 DAQ119采样16次/100ms取平均</Name>
+    <LowerLimit>10000</LowerLimit>
+    <UpperLimit>11000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S010.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>59</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.10 断开Relay_3 withdrawal接点</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S011.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>60</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.11 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S012.F05</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>61</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F05 11.12 读取R79 withdrawal_state</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>0</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S013.F06</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>62</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F06 11.13 测量OPEN_PREC_RL DAQ106</Name>
+    <LowerLimit>1000</LowerLimit>
+    <UpperLimit>1400</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S014.F07</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>63</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F07 11.14 U20.7 DAQ118采样16次/100ms取平均</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S015.F08</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>64</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F08 11.15 U20.5 DAQ119采样16次/100ms取平均</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S016.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>65</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.16 关闭主开关1 W101=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S017.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>66</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.17 关闭主开关2 W295=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S018.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>67</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.18 闭合Relay_4强制CONTACT_80V=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S019.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>68</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.19 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S020.F09</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>69</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F09 11.20 读取R357 80V_PRESENCE低态</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S021.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>70</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.21 断开Relay_4强制CONTACT_80V=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S022.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>71</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.22 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S023.F10</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>72</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>F10 11.23 读取R357 80V_PRESENCE高态</Name>
+    <LowerLimit>3900</LowerLimit>
+    <UpperLimit>4096</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH11.S024.ACTION</StepId>
+    <GroupId>MPS125.CH11</GroupId>
+    <SequenceOrder>73</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>11.24 恢复闭合Relay_3 withdrawal接点</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S001.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>74</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S002.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>75</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S003.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>76</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.3 闭合报警继电器 W89=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S004.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>77</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.4 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S005.G01</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>78</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>G01 12.5 测量LS1 COM-NO闭合电阻 DAQ107</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>5</UpperLimit>
+    <Unit>Ohm</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S006.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>79</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.6 断开报警继电器 W89=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S007.ACTION</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>80</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>12.7 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH12.S008.G02</StepId>
+    <GroupId>MPS125.CH12</GroupId>
+    <SequenceOrder>81</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>G02 12.8 测量LS1 COM-NO断开电阻 DAQ107</Name>
+    <LowerLimit>1000000</LowerLimit>
+    <UpperLimit>1000000000000</UpperLimit>
+    <Unit>Ohm</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S001.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>82</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S002.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>83</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S003.H01</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>84</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H01 13.3 U20.7静态采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S004.H02</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>85</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H02 13.4 U20.5静态采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S005.H03</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>86</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H03 13.5 通过1Ω分流测量MPS静态电流</Name>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S006.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>87</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.6 设置pmos_sw_mcu W96=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S007.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>88</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.7 设置主开关1 PWM W101=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S008.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>89</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.8 设置主开关2 PWM W295=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S009.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>90</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.9 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S010.H04</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>91</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H04 13.10 U20.7高驱动采样16次/100ms</Name>
+    <LowerLimit>10000</LowerLimit>
+    <UpperLimit>11000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S011.H05</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>92</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H05 13.11 U20.5高驱动采样16次/100ms</Name>
+    <LowerLimit>10000</LowerLimit>
+    <UpperLimit>11000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S012.H06</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>93</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H06 13.12 测量高驱动MPS电流</Name>
+    <LowerLimit>40</LowerLimit>
+    <UpperLimit>150</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S013.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>94</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.13 设置主开关1 PWM W101=200</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S014.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>95</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.14 设置主开关2 PWM W295=200</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S015.H07</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>96</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H07 13.15 U20.7低驱动采样16次/100ms</Name>
+    <LowerLimit>2900</LowerLimit>
+    <UpperLimit>3100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S016.H08</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>97</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H08 13.16 U20.5低驱动采样16次/100ms</Name>
+    <LowerLimit>2900</LowerLimit>
+    <UpperLimit>3100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S017.H09</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>98</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn>MPS125.CH13.S005.H03</DependsOn>
+    <Name>H09 13.17 测量低驱动电流并与H03比较</Name>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>70</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S018.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>99</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.18 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S019.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>100</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.19 关闭主开关1 W101=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S020.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>101</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.20 关闭主开关2 W295=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S021.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>102</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.21 关闭pmos_sw_mcu W96=5</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S022.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>103</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.22 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S023.H10</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>104</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H10 13.23 U20.7关闭后采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S024.H11</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>105</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H11 13.24 U20.5关闭后采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S025.H12</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>106</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>H12 13.25 测量关闭后MPS电流</Name>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH13.S026.ACTION</StepId>
+    <GroupId>MPS125.CH13</GroupId>
+    <SequenceOrder>107</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>13.26 安全确认主开关1 W101=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S001.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>108</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S002.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>109</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S003.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>110</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.3 设置pmos_sw_mcu W96=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S004.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>111</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.4 设置主开关1 W101=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S005.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>112</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.5 设置主开关2 W295=700</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S006.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>113</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.6 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S007.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>114</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.7 设置主开关1 W101=200</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S008.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>115</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.8 设置主开关2 W295=200</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S009.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>116</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.9 等待600ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>600</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S010.I01</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>117</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I01 14.10 U20.7采样16次/100ms</Name>
+    <LowerLimit>2800</LowerLimit>
+    <UpperLimit>3200</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S011.I02</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>118</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I02 14.11 U20.5采样16次/100ms</Name>
+    <LowerLimit>2800</LowerLimit>
+    <UpperLimit>3200</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S012.I03</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>119</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I03 14.12 读取R81 st_westngh</Name>
+    <LowerLimit>1</LowerLimit>
+    <UpperLimit>1</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S013.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>120</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.13 置位west_cmd W95=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S014.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>121</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.14 等待600ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>600</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S015.I04</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>122</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I04 14.15 U20.7急停后采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S016.I05</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>123</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I05 14.16 U20.5急停后采样16次/100ms</Name>
+    <LowerLimit>-100</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S017.I06</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>124</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>I06 14.17 读取R81 mcu_west_stat</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>0</UpperLimit>
+    <Unit>Logic (0/1)</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S018.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>125</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.18 关闭主开关1 W101=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S019.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>126</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.19 关闭主开关2 W295=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S020.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>127</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.20 清除west_cmd W95=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S021.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>128</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.21 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S022.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>129</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.22 关闭pmos_sw_mcu W96=5</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH14.S023.ACTION</StepId>
+    <GroupId>MPS125.CH14</GroupId>
+    <SequenceOrder>130</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>14.23 本章结束边界</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S001.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>131</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S002.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>132</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S003.J01</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>133</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>J01 15.3 读取R69 adc3 vbus+ PA3</Name>
+    <LowerLimit>2700</LowerLimit>
+    <UpperLimit>2840</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S004.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>134</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.4 关闭VBUS、闭合Relay_5后恢复137.5V输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S005.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>135</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.5 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S006.J02</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>136</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>J02 15.6 读取R68 VSensPrec PC1</Name>
+    <LowerLimit>2700</LowerLimit>
+    <UpperLimit>2840</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S007.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>137</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.7 设置VBATT 137.5V/0.1A OVP300</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S008.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>138</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.7 打开VBATT输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S009.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>139</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.8 等待5000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>5000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S010.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>140</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.9 闭合内部RL2 W94=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S011.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>141</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.10 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S012.J03</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>142</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>J03 15.11 读取R80 adc4 vstring1+ PA4</Name>
+    <LowerLimit>2700</LowerLimit>
+    <UpperLimit>2840</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S013.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>143</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.12 闭合内部RL1 W91=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S014.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>144</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.13 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S015.J04</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>145</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>J04 15.14 读取R70 adc2 vstring2+ PA2</Name>
+    <LowerLimit>2700</LowerLimit>
+    <UpperLimit>2840</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S016.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>146</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.15 DAQ116独立测量Gen VBUS参考电压</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S017.J05</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>147</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn>MPS125.CH15.S003.J01</DependsOn>
+    <Name>J05 15.16 计算Gain_VBUS=4096*VBUS/J01</Name>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S018.J06</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>148</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn>MPS125.CH15.S006.J02</DependsOn>
+    <Name>J06 15.17 计算Gain_VPREC=4096*VBUS/J02</Name>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S019.J07</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>149</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn>MPS125.CH15.S012.J03</DependsOn>
+    <Name>J07 15.18 计算Gain_VSTRING=4096*VBUS/J03</Name>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S020.J08</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>150</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn>MPS125.CH15.S015.J04</DependsOn>
+    <Name>J08 15.19 计算Gain_VSTRING2=4096*VBUS/J04</Name>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
+    <Unit>Count</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S021.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>151</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.20 断开内部RL1 W91=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S022.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>152</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.21 断开内部RL2 W94=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S023.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>153</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.22 关闭VBUS、断开Relay_5后恢复137.5V输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH15.S024.ACTION</StepId>
+    <GroupId>MPS125.CH15</GroupId>
+    <SequenceOrder>154</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>15.23 关闭VBATT输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S001.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>155</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S002.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>156</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S003.K01</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>157</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>K01 16.3 MCU_ISOBATT基线测量约8秒 DAQ117</Name>
+    <LowerLimit>1700</LowerLimit>
+    <UpperLimit>2200</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S004.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>158</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.4 设置VBATT 0V/0.1A OVP150并输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S005.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>159</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.5 在VBATT关闭时闭合Relay_6后输出0V</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S006.K02</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>160</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ117</Name>
+    <LowerLimit>3000</LowerLimit>
+    <UpperLimit>3300</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S007.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>161</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.7 设置VBATT 125V/0.1A OVP150并输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S008.K03</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>162</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>K03 16.8 MCU_ISOBATT@125V测量约8秒 DAQ117</Name>
+    <LowerLimit>400</LowerLimit>
+    <UpperLimit>800</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S009.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>163</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.9 先关闭VBATT再断开Relay_6 ISOBATT_INPUT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH16.S010.ACTION</StepId>
+    <GroupId>MPS125.CH16</GroupId>
+    <SequenceOrder>164</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.10 确认VBATT保持关闭</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S001.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>165</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.1 发送EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S002.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>166</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.2 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S003.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>167</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.3 进入SAFE终端 REMOTE 31</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S004.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>168</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.4 SAFE关闭risc_on W38=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S005.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>169</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.5 返回MCU终端 EXIT</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S006.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>170</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.6 发送DIAG ON</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S007.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>171</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.7 关闭PWM1 W99=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S008.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>172</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.8 关闭PWM2 W100=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S009.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>173</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.9 打开MCU risc_on W92=1</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S010.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>174</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.10 等待200ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>200</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S011.L01</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>175</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L01 17.11 读取R71 ridstrneg基线</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S012.L02</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>176</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L02 17.12-13 FBK_1 DAQ109采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S013.L03</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>177</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L03 17.12-14 FBK_2 DAQ110采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S014.L04</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>178</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L04 17.15 测量加热器关闭时MPS电流</Name>
+    <LowerLimit>18</LowerLimit>
+    <UpperLimit>60</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S015.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>179</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.16 激活PWM1 W99=1000</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S016.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>180</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.17 等待10000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>10000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S017.L05</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>181</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L05 17.18 读取R71 ridstrneg（PWM1开启）</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S018.L06</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>182</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L06 17.19-20 FBK_1 100%状态采样16次/100ms</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>600</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S019.L07</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>183</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L07 17.21 测量PWM1开启时MPS电流</Name>
+    <LowerLimit>100</LowerLimit>
+    <UpperLimit>200</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S020.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>184</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.22 关闭PWM1 W99=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S021.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>185</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.22 等待10000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>10000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S022.L08</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>186</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L08 17.23 FBK_1恢复0%采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S023.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>187</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.24 等待500ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>500</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S024.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>188</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.25 激活PWM2 W100=1000</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S025.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>189</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.26 等待10000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>10000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S026.L09</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>190</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L09 17.27 读取R71 ridstrneg（PWM2开启）</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S027.L10</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>191</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L10 17.28-29 FBK_2 100%状态采样16次/100ms</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>500</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S028.L11</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>192</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L11 17.30 测量PWM2开启时MPS电流</Name>
+    <LowerLimit>50</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S029.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>193</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.31 关闭两路加热器risc_on W92=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S030.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>194</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.31 等待10000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>10000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S031.L12</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>195</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L12 17.32 FBK_2恢复0%采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S032.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>196</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.33 等待1000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>1000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S033.L13</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>197</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L13 17.34 读取R71 ridstrneg（risc_on关闭）</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S034.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>198</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.35 确认PWM1关闭 W99=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S035.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>199</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.36 确认PWM2关闭 W100=0</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S036.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>200</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.36 等待10000ms</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs>10000</DelayMs>
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S037.L14</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>201</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L14 17.36-37 FBK_1最终采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S038.L15</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>202</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L15 17.36-38 FBK_2最终采样16次/100ms</Name>
+    <LowerLimit>7000</LowerLimit>
+    <UpperLimit>10000</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S039.L16</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>203</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>L16 17.39 测量最终MPS电流</Name>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>80</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S040.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>204</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.40 关闭VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S041.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>205</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.41 断开Relay_1 DUT供电路径</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S042.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>206</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.42 断开Relay_3 withdrawal接点</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CH17.S043.ACTION</StepId>
+    <GroupId>MPS125.CH17</GroupId>
+    <SequenceOrder>207</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>17.43 关闭目标板串口通信</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S001.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>208</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>发送主开关/加热器安全关闭命令</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S002.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>209</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>关闭VBUS输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S003.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>210</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>关闭VBATT输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S004.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>211</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>断开MPS-125功率继电器1-6</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S005.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>212</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>关闭所有仪器输出</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS125.CLEANUP.S006.ACTION</StepId>
+    <GroupId>MPS125.CLEANUP</GroupId>
+    <SequenceOrder>213</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>true</AlwaysRun>
+    <RunCondition>Always</RunCondition>
+    <DependsOn />
+    <Name>关闭目标板通信并释放治具</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue />
+    <DelayMs />
   </TestItem>
 </TestItems>

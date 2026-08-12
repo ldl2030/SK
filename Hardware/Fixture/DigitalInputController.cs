@@ -35,9 +35,27 @@ namespace TestPlatform
                 0x01
             };
 
-            // 使用 RelayController 中的基础串口通信方法
-            string responseHex = await RelayController.SendCommandWithCrcAsync(command, baudRate, comPort, 1000, logAction);
-            if (string.IsNullOrEmpty(responseHex) || responseHex.Length < 14) // Addr(2)+Fc(2)+Len(2)+Data(4)+CRC(4) = 14 hex chars
+            string responseHex = string.Empty;
+            const int maxAttempts = 3;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                responseHex = await RelayController.SendCommandWithCrcAsync(
+                    command,
+                    baudRate,
+                    comPort,
+                    1000,
+                    logAction);
+                if (!string.IsNullOrEmpty(responseHex) && responseHex.Length == 14)
+                    break;
+
+                if (attempt < maxAttempts)
+                {
+                    logAction?.Invoke($"数字量读取第{attempt}次失败，准备重试。");
+                    await Task.Delay(50);
+                }
+            }
+
+            if (string.IsNullOrEmpty(responseHex) || responseHex.Length != 14)
             {
                 logAction?.Invoke("读取数字量输入失败：无响应或数据长度不足");
                 return null;
@@ -45,6 +63,13 @@ namespace TestPlatform
 
             try
             {
+                string expectedPrefix = ((byte)address).ToString("X2") + "0402";
+                if (!responseHex.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    logAction?.Invoke($"数字量响应头错误：{responseHex}");
+                    return null;
+                }
+
                 // 解析返回的 16 位状态。数据部分在第 3、4 字节（索引 6 开始的 4 个字符）
                 string dataHex = responseHex.Substring(6, 4);
                 ushort states = Convert.ToUInt16(dataHex, 16);
@@ -55,7 +80,7 @@ namespace TestPlatform
                     results[i] = (states & (1 << i)) != 0;
                 }
                 
-                logAction?.Invoke($"成功读取 16 路输入状态: {Convert.ToString(states, 2).PadLeft(16, '0')}");
+                logAction?.Invoke($"成功读取16路输入原始电平(DI16→DI1): {Convert.ToString(states, 2).PadLeft(16, '0')}");
                 return results;
             }
             catch (Exception ex)

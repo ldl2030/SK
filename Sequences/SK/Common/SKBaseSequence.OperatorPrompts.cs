@@ -65,7 +65,16 @@ namespace TestPlatform.TestSequences
             TimeSpan minimum = TimeSpan.FromSeconds(Math.Max(0, minimumSeconds));
             TimeSpan elapsed = DateTime.Now - shownAt;
             if (elapsed < minimum)
-                await Task.Delay(minimum - elapsed, token);
+            {
+                try
+                {
+                    await Task.Delay(minimum - elapsed, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 安全取消时仍必须继续关闭非模态提示窗。
+                }
+            }
 
             await CloseNoticeAsync(dialog);
         }

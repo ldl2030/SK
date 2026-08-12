@@ -64,12 +64,6 @@ namespace TestPlatform
         public ProjectConfigWindow(string currentProjectName)
         {
             InitializeComponent();
-            cmbTestProfile.ItemsSource = new[]
-            {
-                new TestProfileOption(TestProfileIds.Normal, "常规"),
-                new TestProfileOption(TestProfileIds.Rework, "返修"),
-                new TestProfileOption(TestProfileIds.Engineering, "工程")
-            };
             cmbTestProfile.DisplayMemberPath = "Name";
             tvTestGroups.ItemsSource = testGroups;
             // 先初始化项目列表文件路径（必须）
@@ -351,6 +345,7 @@ namespace TestPlatform
                 {
                     TestPlanDefinition definition = TestPlanService.LoadDefinition(filePath);
                     testProfiles = TestPlanService.LoadProfiles(filePath);
+                    BindAvailableProfiles();
                     foreach (TestPlanGroupDefinition group in definition.Groups)
                     {
                         testGroups.Add(new TestGroupItem
@@ -523,8 +518,55 @@ namespace TestPlatform
                     x.ProfileId,
                     profileId,
                     StringComparison.OrdinalIgnoreCase));
-            cmbTestProfile.SelectedItem = option ?? cmbTestProfile.Items[0];
+            if (option == null && cmbTestProfile.Items.Count > 0)
+            {
+                option = cmbTestProfile.Items
+                    .Cast<TestProfileOption>()
+                    .FirstOrDefault(x => string.Equals(
+                        x.ProfileId,
+                        TestProfileIds.Normal,
+                        StringComparison.OrdinalIgnoreCase)) ??
+                    (TestProfileOption)cmbTestProfile.Items[0];
+                TestPlanRuntimeState.ActiveProfileId = option.ProfileId;
+                TestPlanRuntimeState.SetStepOverrides(null);
+            }
+
+            cmbTestProfile.SelectedItem = option;
             ApplySelectedProfile();
+        }
+
+        private void BindAvailableProfiles()
+        {
+            applyingProfile = true;
+            try
+            {
+                cmbTestProfile.ItemsSource = testProfiles.Values
+                    .OrderBy(profile => ProfileOrder(profile.ProfileId))
+                    .ThenBy(profile => profile.ProfileId, StringComparer.OrdinalIgnoreCase)
+                    .Select(profile => new TestProfileOption(
+                        profile.ProfileId,
+                        string.IsNullOrWhiteSpace(profile.Name)
+                            ? profile.ProfileId
+                            : profile.Name))
+                    .ToList();
+            }
+            finally
+            {
+                applyingProfile = false;
+            }
+        }
+
+        private static int ProfileOrder(string profileId)
+        {
+            if (string.Equals(profileId, TestProfileIds.Normal, StringComparison.OrdinalIgnoreCase))
+                return 0;
+            if (string.Equals(profileId, TestProfileIds.Rework, StringComparison.OrdinalIgnoreCase))
+                return 1;
+            if (string.Equals(profileId, TestProfileIds.SingleChapter, StringComparison.OrdinalIgnoreCase))
+                return 2;
+            if (string.Equals(profileId, TestProfileIds.Engineering, StringComparison.OrdinalIgnoreCase))
+                return 3;
+            return 4;
         }
 
         private void CmbTestProfile_SelectionChanged(object sender, SelectionChangedEventArgs e)

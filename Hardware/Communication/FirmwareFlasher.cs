@@ -12,7 +12,7 @@ namespace TestPlatform
     /// 内部代号: comm_ttl
     /// 专门用于目标板的底层固件烧录与升级。
     /// </summary>
-    public class FirmwareFlasher : IDisposable
+    public class FirmwareFlasher : IDisposable, IDeviceLogSource
     {
         private SerialPort _serialPort;
         public event Action<string> LogInfo;

@@ -11,6 +11,22 @@ namespace TestPlatform
         public static string uartComName { get; set; }
 
         public static string ledComName { get; set; }
+
+        public static string ansPowerComName { get; set; }
+
+        public static string hengHuiPowerAComName { get; set; }
+
+        public static string hengHuiPowerBComName { get; set; }
+
+        public static string electronicLoadComName { get; set; }
+
+        public static string daqComName { get; set; }
+
+        public static string digitalInputComName { get; set; }
+
+        public static string fixtureRelayComName { get; set; }
+
+        public static string relay16ComName { get; set; }
     }
 
     public static class CommandList
