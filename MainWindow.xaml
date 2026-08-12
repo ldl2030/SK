@@ -9,7 +9,7 @@
         MinHeight="640" MinWidth="900"
         WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
-        FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="14"
+        FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="13"
         Loaded="Window_Loaded">
     <Window.Resources>
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172033"/>
@@ -29,16 +29,16 @@
 
         <!-- 按钮样式：圆角、悬停变色 -->
         <Style TargetType="Button">
-            <Setter Property="MinHeight" Value="40"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="Margin" Value="5,2"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="3,2"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Background" Value="#E7F0FA"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -72,8 +72,8 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinHeight" Value="40"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{StaticResource PrimaryHoverBrush}"/>
@@ -86,8 +86,8 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="MinHeight" Value="48"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinHeight" Value="40"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{StaticResource DangerHoverBrush}"/>
@@ -101,8 +101,10 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushHighContrast}"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="GroupBox">
@@ -111,24 +113,24 @@
                                     BorderThickness="1" 
                                     CornerRadius="6" 
                                     Background="{TemplateBinding Background}"
-                                    Margin="0,10,0,0">
+                                    Margin="0,8,0,0">
                                 <Border BorderBrush="Transparent" 
                                         BorderThickness="1" 
                                         CornerRadius="5" 
                                         Margin="1">
-                                    <ScrollViewer Margin="5">
-                                        <ContentPresenter Margin="{TemplateBinding Padding}"/>
-                                    </ScrollViewer>
+                                    <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                                 </Border>
                             </Border>
                             <Border Background="{TemplateBinding Background}" 
                                     CornerRadius="4" 
                                     HorizontalAlignment="Left" 
-                                    Margin="10,0,0,0" 
-                                    Padding="6,2">
+                                    Margin="8,0,0,0"
+                                    Padding="5,1">
                                 <TextBlock Text="{TemplateBinding Header}" 
                                            FontWeight="Bold"
-                                           FontSize="14"
+                                           FontSize="13"
                                            Foreground="{StaticResource TextPrimaryBrush}"/>
                             </Border>
                         </Grid>
@@ -142,10 +144,10 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushHighContrast}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="RowHeight" Value="34"/>
+            <Setter Property="RowHeight" Value="28"/>
             <Setter Property="RowBackground" Value="White"/>
             <Setter Property="HeadersVisibility" Value="All"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
@@ -153,8 +155,8 @@
                         <Setter Property="Background" Value="#D7E4F2"/>
                         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                         <Setter Property="FontWeight" Value="Bold"/>
-                        <Setter Property="FontSize" Value="14"/>
-                        <Setter Property="Padding" Value="8,6"/>
+                        <Setter Property="FontSize" Value="13"/>
+                        <Setter Property="Padding" Value="6,4"/>
                         <Setter Property="BorderBrush" Value="{StaticResource BorderBrushHighContrast}"/>
                         <Setter Property="BorderThickness" Value="0,0,1,1"/>
                     </Style>
@@ -192,7 +194,7 @@
     <!-- 外层 Grid：用于同时承载主内容和启动覆盖层 -->
     <Grid>
         <!-- 主内容 Grid（原布局，添加名称以便动画） -->
-        <Grid x:Name="MainContentGrid" Margin="10" Opacity="0" RenderTransformOrigin="0.5,0.5">
+        <Grid x:Name="MainContentGrid" Margin="6" Opacity="0" RenderTransformOrigin="0.5,0.5">
             <Grid.RenderTransform>
                 <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
             </Grid.RenderTransform>
@@ -202,38 +204,38 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="110" MinHeight="80"/>
+                <RowDefinition Height="130" MinHeight="90"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="3*" MinWidth="560"/>
-                <ColumnDefinition Width="1.25*" MinWidth="280" MaxWidth="440"/>
+                <ColumnDefinition Width="3*" MinWidth="500"/>
+                <ColumnDefinition Width="1.15*" MinWidth="250" MaxWidth="380"/>
             </Grid.ColumnDefinitions>
 
             <!-- 工具栏 -->
             <ToolBarTray Grid.Row="0" Grid.ColumnSpan="2" Background="White">
-                <ToolBar Band="1" BandIndex="1" Height="48" Padding="2">
+                <ToolBar Band="1" BandIndex="1" Height="40" Padding="1">
                     <Label x:Name="toolStripLabel1" Content="Test System"
-                           FontWeight="Bold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"
-                           VerticalAlignment="Center" Margin="8,0,12,0"
+                           FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}"
+                           VerticalAlignment="Center" Margin="6,0,8,0"
                            ToolBar.OverflowMode="Never"/>
                     <Separator/>
-                    <Button x:Name="toolStripButton1" MinWidth="96" Click="toolStripButton1_Click"
+                    <Button x:Name="toolStripButton1" MinWidth="78" Click="toolStripButton1_Click"
                             ToolBar.OverflowMode="AsNeeded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolButtonIcon}" Foreground="#186A3B" Text="&#xE8F1;"/>
                             <TextBlock Text="登录" Foreground="#164E2D" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="toolStripButton2" MinWidth="112" Click="toolStripButton2_Click"
+                    <Button x:Name="toolStripButton2" MinWidth="92" Click="toolStripButton2_Click"
                             ToolBar.OverflowMode="AsNeeded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolButtonIcon}" Foreground="#0B5CAD" Text="&#xE71D;"/>
                             <TextBlock Text="项目配置" Foreground="#083F77" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="toolStripButton3" MinWidth="112" Click="toolStripButton3_Click"
+                    <Button x:Name="toolStripButton3" MinWidth="92" Click="toolStripButton3_Click"
                             ToolBar.OverflowMode="AsNeeded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolButtonIcon}" Foreground="#9A4D00" Text="&#xE115;"/>
@@ -241,7 +243,7 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="btnUtilityTools"
-                            MinWidth="112"
+                            MinWidth="92"
                             Click="BtnUtilityTools_Click"
                             ToolBar.OverflowMode="AsNeeded">
                         <Button.ContextMenu>
@@ -267,14 +269,14 @@
                         </StackPanel>
                     </Button>
                     <Separator/>
-                    <Button x:Name="btnCheckUpdate" MinWidth="112" Click="btnCheckUpdate_Click"
+                    <Button x:Name="btnCheckUpdate" MinWidth="92" Click="btnCheckUpdate_Click"
                             ToolBar.OverflowMode="AsNeeded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolButtonIcon}" Foreground="#0B5CAD" Text="&#xE72C;"/>
                             <TextBlock Text="检查更新" Foreground="#083F77" FontWeight="Bold"/>
                         </StackPanel>
                     </Button>
-                    <Button x:Name="toolStripButton5" MinWidth="88" ToolBar.OverflowMode="AsNeeded">
+                    <Button x:Name="toolStripButton5" MinWidth="70" ToolBar.OverflowMode="AsNeeded">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource ToolButtonIcon}" Foreground="#25364D" Text="&#xE946;"/>
                             <TextBlock Text="关于" Foreground="#25364D" FontWeight="Bold"/>
@@ -284,11 +286,11 @@
             </ToolBarTray>
 
             <!-- 进度条 -->
-            <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,5,0,10" Height="28">
-                <ProgressBar x:Name="progressBar1" Height="28" Value="0" 
+            <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,6" Height="22">
+                <ProgressBar x:Name="progressBar1" Height="22" Value="0"
                              Foreground="#4CAF50" Background="#E0E0E0"/>
                 <TextBlock x:Name="lblPercent" Text="0%" HorizontalAlignment="Center" 
-                           VerticalAlignment="Center" FontSize="14" FontWeight="SemiBold" 
+                           VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"
                            Foreground="White">
                     <TextBlock.Effect>
                         <DropShadowEffect ShadowDepth="1" BlurRadius="2" Opacity="0.8"/>
@@ -297,13 +299,13 @@
             </Grid>
 
             <!-- 表格内章节折叠区 -->
-            <Grid Grid.Row="2" Grid.Column="0" MinHeight="220" Margin="0,5,10,5">
+            <Grid Grid.Row="2" Grid.Column="0" MinHeight="180" Margin="0,3,6,3">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Padding="6" Margin="0,0,0,5"
+                <Border Grid.Row="0" Padding="4" Margin="0,0,0,3"
                         Background="{StaticResource SurfaceMutedBrush}"
                         BorderBrush="{StaticResource BorderBrushHighContrast}"
                         BorderThickness="1" CornerRadius="4">
@@ -322,17 +324,17 @@
                         <TextBlock Grid.Column="0" Text="查看" FontWeight="Bold"
                                    VerticalAlignment="Center" Margin="2,0,6,0"/>
                         <ComboBox x:Name="cmbRuntimeTreeChannel" Grid.Column="1"
-                                  MinHeight="28" FontWeight="SemiBold"
+                                  MinHeight="26" FontWeight="SemiBold"
                                   SelectionChanged="CmbRuntimeTreeChannel_SelectionChanged"/>
                         <TextBlock Grid.Column="3" Text="快速跳转" FontWeight="Bold"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <ComboBox x:Name="cmbRuntimeGroupJump" Grid.Column="4"
-                                  MinHeight="28"
+                                  MinHeight="26"
                                   DisplayMemberPath="DisplayName"
                                   SelectionChanged="CmbRuntimeGroupJump_SelectionChanged"/>
                         <Button x:Name="btnSetChapterDebug" Grid.Column="6"
                                 Content="设为单章调试"
-                                MinHeight="28" Padding="12,2"
+                                MinHeight="26" Padding="9,2"
                                 Click="BtnSetChapterDebug_Click"
                                 ToolTip="仅运行所选章节；安全前检与收尾仍会执行"/>
                         <TextBlock x:Name="txtRuntimeCurrentStep" Grid.Column="8"
@@ -345,7 +347,7 @@
                 </Border>
 
                 <DataGrid x:Name="dataGridView1" Grid.Row="1"
-                          MinHeight="220"
+                          MinHeight="180"
                           IsReadOnly="True" AutoGenerateColumns="False"
                           CanUserSortColumns="False"
                           CanUserReorderColumns="False"
@@ -374,7 +376,7 @@
                                                           Expanded="RuntimeGroupExpander_Expanded"
                                                           Collapsed="RuntimeGroupExpander_Collapsed">
                                                     <Expander.Header>
-                                                        <Border Padding="9,6" Margin="0,2"
+                                                        <Border Padding="7,4" Margin="0,1"
                                                                 CornerRadius="4"
                                                                 BorderThickness="1"
                                                                 BorderBrush="#B8C2D0">
@@ -412,7 +414,7 @@
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Text="{Binding Name}"
                                                                            FontWeight="Bold"
-                                                                           FontSize="13"
+                                                                           FontSize="12"
                                                                            Foreground="{StaticResource TextPrimaryBrush}"/>
                                                                 <TextBlock Grid.Column="1"
                                                                            Text="{Binding Items[0].GroupSummary}"
@@ -434,18 +436,18 @@
             </Grid>
 
             <!-- 右侧区域：SN输入 + 动态结果显示 -->
-            <Grid Grid.Row="2" Grid.Column="1" Margin="10,5,0,5" MinWidth="260">
+            <Grid Grid.Row="2" Grid.Column="1" Margin="6,3,0,3" MinWidth="250">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*" MinHeight="150"/>
+                    <RowDefinition Height="*" MinHeight="120"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <GroupBox Header="SN输入" Margin="5,0,5,5">
-                    <TextBox x:Name="txb_snInput" TextAlignment="Center" FontSize="18" FontWeight="Bold"
+                    <TextBox x:Name="txb_snInput" TextAlignment="Center" FontSize="16" FontWeight="Bold"
                              Foreground="{StaticResource TextPrimaryBrush}" Background="White"
                              BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="2"
-                             Padding="8" MinHeight="42" KeyDown="txb_snInput_KeyDown"
+                             Padding="5" MinHeight="36" KeyDown="txb_snInput_KeyDown"
                              VerticalContentAlignment="Center"/>
                 </GroupBox>
                 <GroupBox Header="结果显示" Grid.Row="1" Margin="5">
@@ -456,9 +458,9 @@
                                     <TextBox Text="{Binding DisplayText, UpdateSourceTrigger=PropertyChanged}" 
                                              Background="{Binding Background}"
                                              Foreground="{Binding DisplayForeground}"
-                                             FontSize="16" FontWeight="Bold" TextAlignment="Center"
+                                             FontSize="14" FontWeight="Bold" TextAlignment="Center"
                                              TextWrapping="Wrap" IsReadOnly="True"
-                                             MinHeight="88" Padding="8" Margin="0,5"
+                                             MinHeight="68" Padding="6" Margin="0,3"
                                              BorderBrush="{StaticResource BorderBrushHighContrast}" BorderThickness="2"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -466,8 +468,8 @@
                     </ScrollViewer>
                 </GroupBox>
                 <TextBox x:Name="txb_testTime" Grid.Row="2" TextAlignment="Center" IsReadOnly="True"
-                         FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"
-                         Height="38" Margin="5" Background="{StaticResource SurfaceMutedBrush}"
+                         FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"
+                         Height="32" Margin="3" Background="{StaticResource SurfaceMutedBrush}"
                          BorderBrush="{StaticResource BorderBrushHighContrast}"/>
                 <Grid Grid.Row="3" Margin="0,5,0,0">
                     <Grid.ColumnDefinitions>
@@ -483,10 +485,11 @@
                 </Grid>
             </Grid>
 
-            <!-- Activity Loading -->
-            <GroupBox Header="Activity Loading" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,5,0,5">
+            <!-- 活动日志 -->
+            <GroupBox Header="活动日志 / Activity" Grid.Row="3" Grid.ColumnSpan="2" Margin="0,3">
                 <RichTextBox x:Name="rictxB_log" VerticalScrollBarVisibility="Auto"
-                             FontFamily="Microsoft YaHei UI" FontSize="13"
+                             FontFamily="Microsoft YaHei UI" FontSize="12"
+                             IsReadOnly="True" Padding="4"
                              Background="#FFFFFF" Foreground="{StaticResource TextPrimaryBrush}"
                              BorderBrush="{StaticResource BorderBrushHighContrast}" BorderThickness="1"/>
             </GroupBox>

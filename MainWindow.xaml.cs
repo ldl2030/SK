@@ -2095,15 +2095,31 @@ namespace TestPlatform
                     : ReferenceEquals(effectiveColor, LogSuccess) ? "PASS" : "INFO";
             WriteLiveLog(level, message);
 
-            Dispatcher.Invoke(() =>
+            Action appendToActivityLog = () =>
             {
                 var tr = new TextRange(rictxB_log.Document.ContentEnd, rictxB_log.Document.ContentEnd)
                 {
                     Text = $"{DateTime.Now:HH:mm:ss} - {message}\n"
                 };
                 tr.ApplyPropertyValue(TextElement.ForegroundProperty, effectiveColor);
+                rictxB_log.CaretPosition = rictxB_log.Document.ContentEnd;
                 rictxB_log.ScrollToEnd();
-            });
+
+                // RichTextBox updates its internal ScrollViewer after layout. A second
+                // scroll at ContextIdle keeps the newest test item visible under bursts.
+                Dispatcher.BeginInvoke(
+                    DispatcherPriority.ContextIdle,
+                    new Action(() =>
+                    {
+                        rictxB_log.CaretPosition = rictxB_log.Document.ContentEnd;
+                        rictxB_log.ScrollToEnd();
+                    }));
+            };
+
+            if (Dispatcher.CheckAccess())
+                appendToActivityLog();
+            else
+                Dispatcher.Invoke(appendToActivityLog);
         }
 
         private static void WriteLiveLog(string level, string message)
