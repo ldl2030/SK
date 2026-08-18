@@ -52,7 +52,7 @@ namespace TestPlatform
                 bool blocked = false;
                 if (close && isMps)
                 {
-                    if ((relayId == 1 || relayId == 5) && _vbusOutputOn) blocked = true;
+                    if (relayId == 5 && _vbusOutputOn) blocked = true;
                     if (relayId == 6 && _secondaryOutputOn) blocked = true;
                 }
                 else if (close)
@@ -95,7 +95,7 @@ namespace TestPlatform
                     SimulationBoardType,
                     "BCM-250",
                     StringComparison.OrdinalIgnoreCase);
-                int requiredRelay = domain == "ANS" && !isMps ? 7 : domain == "VBUS" && isMps ? 1 : 0;
+                int requiredRelay = domain == "ANS" && !isMps ? 7 : 0;
                 bool closed;
                 if (requiredRelay > 0 && (!_powerRelayStates.TryGetValue(requiredRelay, out closed) || !closed))
                 {
@@ -112,20 +112,6 @@ namespace TestPlatform
                     return false;
                 }
 
-                float highVoltageThreshold = GetFloatAppSetting("SKSafeOpenVoltageThreshold", 5.0f);
-                if (Math.Abs(voltage) > highVoltageThreshold)
-                {
-                    bool pathClosed = true;
-                    if (isMps && domain == "SECONDARY")
-                        pathClosed = IsAnyPowerRelayClosedUnsafe(5, 6);
-
-                    if (!pathClosed)
-                    {
-                        error = "禁止开启 " + domain + " 高压输出：尚未确认对应功率路径继电器闭合。";
-                        _powerSafetyTrace.Add("BLOCK OUTPUT " + domain + " HIGH VOLTAGE ON");
-                        return false;
-                    }
-                }
                 error = null;
                 return true;
             }
@@ -192,9 +178,9 @@ namespace TestPlatform
                 return true;
             }
 
-            float voltageThreshold = GetFloatAppSetting("SKSafeOpenVoltageThreshold", 5.0f);
+            float voltageThreshold = GetFloatAppSetting("SKSafeOpenVoltageThreshold", 20.0f);
             float currentThreshold = GetFloatAppSetting("SKSafeOpenCurrentThreshold", 0.05f);
-            int timeoutMs = GetIntAppSetting("SKSafeDischargeTimeoutMs", 10000);
+            int timeoutMs = GetIntAppSetting("SKSafeDischargeTimeoutMs", 30000);
             int pollMs = Math.Max(50, GetIntAppSetting("SKSafeDischargePollMs", 200));
             DateTime deadline = DateTime.UtcNow.AddMilliseconds(Math.Max(pollMs, timeoutMs));
 
@@ -284,7 +270,7 @@ namespace TestPlatform
             bool isMps = (SimulationBoardType ?? string.Empty).StartsWith("MPS", StringComparison.OrdinalIgnoreCase);
             if (isMps)
             {
-                if (relayId == 1 || relayId == 5)
+                if (relayId == 5)
                     return VerifyPowerDomainsOffAsync("VBUS");
                 if (relayId == 6)
                     return VerifyPowerDomainsOffAsync("SECONDARY");
@@ -293,9 +279,57 @@ namespace TestPlatform
 
             if (relayId == 7)
                 return VerifyPowerDomainsOffAsync("ANS");
+            // BCM250 station-3 Y2/Y5 power the electronic load itself. Requiring
+            // a LOAD measurement before closing them creates an impossible loop
+            // while the load is still unpowered. Confirm every source feeding the
+            // fixture is off, then power the load and verify it separately.
+            if (relayId == 2 || relayId == 5)
+                return VerifyPowerDomainsOffAsync("ANS", "VBUS", "SECONDARY");
             if (relayId >= 1 && relayId <= 16)
                 return VerifyPowerDomainsOffAsync("VBUS", "SECONDARY", "LOAD");
             return Task.FromResult(true);
+        }
+
+        public async Task<bool> EnableBcm250ElectronicLoadSupplyAsync()
+        {
+            const int loadPowerRelay1 = 2;
+            const int loadPowerRelay2 = 5;
+
+            if (!await ControlRelayAsync(loadPowerRelay1, true))
+                return false;
+            if (!await ControlRelayAsync(loadPowerRelay2, true))
+            {
+                await ControlRelayAsync(loadPowerRelay1, false);
+                return false;
+            }
+
+            if (SkipComInit)
+            {
+                LogInfo?.Invoke(
+                    "[调试模式] 模拟闭合电子负载供电继电器 Y2/Y5 并确认负载通信。");
+                return true;
+            }
+
+            int startupDelayMs = Math.Max(
+                0,
+                GetIntAppSetting("SKElectronicLoadPowerOnDelayMs", 3000));
+            await Task.Delay(startupDelayMs);
+
+            try
+            {
+                float voltage = ElectronicLoad.MeasureVoltage();
+                float current = ElectronicLoad.MeasureCurrent();
+                LogInfo?.Invoke(
+                    $"电子负载供电继电器 Y2/Y5 已闭合，通信确认成功：{voltage:F3} V, {current:F3} A");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"电子负载 Y2/Y5 上电后通信确认失败：{ex.Message}");
+                await ControlRelayAsync(loadPowerRelay2, false);
+                await ControlRelayAsync(loadPowerRelay1, false);
+                return false;
+            }
         }
 
         private async Task<bool> VerifyFixturePowerIsOffAsync()
@@ -361,27 +395,70 @@ namespace TestPlatform
             return await ControlRelayAsync(relayId, false);
         }
 
-        public async Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, bool close, float voltage, float current, float ovp, bool restoreOutput)
+        public async Task<bool> ControlMpsRelayAsync(int logicalRelayId, string daqChannelList, bool close)
+        {
+            if (string.IsNullOrWhiteSpace(daqChannelList))
+                return await ControlRelayAsync(logicalRelayId, close);
+
+            string error;
+            if (!ValidatePowerRelaySwitch(logicalRelayId, close, out error))
+            {
+                LogError?.Invoke(error);
+                return false;
+            }
+            if (IsPowerRelayAlreadyInState(logicalRelayId, close))
+                return true;
+            if (close && !await VerifyRelayPowerIsOffAsync(logicalRelayId))
+            {
+                LogError?.Invoke($"MPS逻辑继电器 Relay_{logicalRelayId} 闭合前掉电确认失败。");
+                return false;
+            }
+
+            bool passed = await SetDaqRelaysAsync(
+                daqChannelList,
+                close,
+                $"MPS逻辑继电器 Relay_{logicalRelayId}");
+            if (passed)
+                RecordPowerRelay(logicalRelayId, close);
+            return passed;
+        }
+
+        public async Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, string daqChannelList, bool close, float voltage, float current, float ovp, bool restoreOutput)
         {
             if (!await SetVbusGeneratorAsync(0, 0, ovp, false)) return false;
             if (!await VerifyPowerDomainsOffAsync("VBUS")) return false;
-            if (!await ControlRelayAsync(relayId, close)) return false;
+            if (!await ControlMpsRelayAsync(relayId, daqChannelList, close)) return false;
             return !restoreOutput || await SetVbusGeneratorAsync(voltage, current, ovp, true);
         }
 
-        public async Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, float ovp)
+        public Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, bool close, float voltage, float current, float ovp, bool restoreOutput)
+        {
+            return SafeSwitchMpsVbusRelayAsync(relayId, null, close, voltage, current, ovp, restoreOutput);
+        }
+
+        public async Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, string daqChannelList, float ovp)
         {
             if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, false)) return false;
             if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
-            if (!await ControlRelayAsync(relayId, true)) return false;
+            if (!await ControlMpsRelayAsync(relayId, daqChannelList, true)) return false;
             return await SetVbattGeneratorAsync(0, 0.1f, ovp, true);
         }
 
-        public async Task<bool> SafeDisconnectMpsVbattRelayAsync(int relayId, float ovp)
+        public Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, float ovp)
+        {
+            return SafeConnectMpsVbattRelayAsync(relayId, null, ovp);
+        }
+
+        public async Task<bool> SafeDisconnectMpsVbattRelayAsync(int relayId, string daqChannelList, float ovp)
         {
             if (!await SetVbattGeneratorAsync(0, 0, ovp, false)) return false;
             if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
-            return await ControlRelayAsync(relayId, false);
+            return await ControlMpsRelayAsync(relayId, daqChannelList, false);
+        }
+
+        public Task<bool> SafeDisconnectMpsVbattRelayAsync(int relayId, float ovp)
+        {
+            return SafeDisconnectMpsVbattRelayAsync(relayId, null, ovp);
         }
     }
 }

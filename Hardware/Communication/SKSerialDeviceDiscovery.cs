@@ -278,16 +278,21 @@ namespace TestPlatform
         /// </summary>
         public static async Task<string> DiscoverMbdPortAsync(
             Action<string> logAction = null,
-            string preferredPort = null)
+            string preferredPort = null,
+            bool ignoreConfiguredPort = false,
+            bool allowUnverifiedFallback = true)
         {
             string[] portNames = SerialPort.GetPortNames()
                 .Where(name => GetComNumber(name) != int.MaxValue)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(GetComNumber)
                 .ThenBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            string configuredTargetBoardPort = string.IsNullOrWhiteSpace(preferredPort)
-                ? GetSetting("TargetBoardPort", null)
-                : preferredPort.Trim();
+            string configuredTargetBoardPort = ignoreConfiguredPort
+                ? null
+                : string.IsNullOrWhiteSpace(preferredPort)
+                    ? GetSetting("TargetBoardPort", null)
+                    : preferredPort.Trim();
             var excludedPorts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ComName.ansPowerComName,
@@ -304,11 +309,6 @@ namespace TestPlatform
 
             string[] candidates = portNames
                 .Where(portName => !excludedPorts.Contains(portName))
-                .Where(portName => string.IsNullOrWhiteSpace(configuredTargetBoardPort) ||
-                    string.Equals(
-                        portName,
-                        configuredTargetBoardPort,
-                        StringComparison.OrdinalIgnoreCase))
                 .OrderBy(portName => string.Equals(
                     portName,
                     configuredTargetBoardPort,
@@ -327,7 +327,7 @@ namespace TestPlatform
             PortProbe[] matches = probes.Where(probe => probe.Kind == "MBD").ToArray();
             if (matches.Length != 1)
             {
-                if (matches.Length == 0)
+                if (matches.Length == 0 && allowUnverifiedFallback)
                 {
                     string configuredCandidate = candidates.FirstOrDefault(portName =>
                         !string.IsNullOrWhiteSpace(configuredTargetBoardPort) &&
@@ -345,6 +345,13 @@ namespace TestPlatform
                             "先按MBD UART接入，后续EXIT/R14/R15真实命令负责确认通信。");
                         return fallbackPort;
                     }
+                }
+
+                if (matches.Length == 0 && !allowUnverifiedFallback)
+                {
+                    logAction?.Invoke(
+                        "MPS-250要求严格MBD响应，未收到COMMAND ERROR + Ready.，" +
+                        "不会使用唯一候选口或固定COM口兜底。");
                 }
 
                 logAction?.Invoke(matches.Length == 0

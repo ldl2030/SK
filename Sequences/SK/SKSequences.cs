@@ -14,6 +14,7 @@ namespace TestPlatform.TestSequences
         
         // 期望放上的板子类型，由子类指定，用于产线防呆
         public abstract string ExpectedBoardType { get; }
+        protected virtual bool SkipFirmwareProgramming => false;
 
         public event Action<string> LogInfo;
         public event Action<string> LogWarning;
@@ -79,6 +80,13 @@ namespace TestPlatform.TestSequences
 
             // 获取所需的 7 个串口号
             ISet<string> requiredPorts = context.RequiredComPorts;
+            if (SkipFirmwareProgramming && requiredPorts != null)
+            {
+                requiredPorts = new HashSet<string>(
+                    requiredPorts.Where(port =>
+                        !string.Equals(port, "uartComName", StringComparison.OrdinalIgnoreCase)),
+                    StringComparer.OrdinalIgnoreCase);
+            }
             string ansPort = ResolveProjectPort(requiredPorts, "ansPowerComName", ComName.ansPowerComName, "AnsPort");
             string henghui1Port = ResolveProjectPort(requiredPorts, "hengHuiPowerAComName", ComName.hengHuiPowerAComName, "HengHui1Port");
             string henghui2Port = ResolveProjectPort(requiredPorts, "hengHuiPowerBComName", ComName.hengHuiPowerBComName, "HengHui2Port");
@@ -95,6 +103,7 @@ namespace TestPlatform.TestSequences
                 deviceManager.LogInfo = msg => LogInfo?.Invoke(msg);
                 deviceManager.LogError = msg => LogError?.Invoke(msg);
                 deviceManager.SimulationBoardType = ExpectedBoardType;
+                deviceManager.SkipFirmwareProgramming = SkipFirmwareProgramming;
                 LogWarning?.Invoke(
                     $">> SK execution mode: {deviceManager.ExecutionModeName}. " +
                     "Switch App.config SKExecutionMode between Simulation and Hardware.");
@@ -215,6 +224,20 @@ namespace TestPlatform.TestSequences
                                 : "测试初始化安全输出复位失败";
                         await deviceManager.EmergencyStopOutputsAsync(ExpectedBoardType, reason);
                         LogError?.Invoke("测试初始化安全检查失败，禁止进入安装和下压流程。");
+                        return false;
+                    }
+
+                    if (string.Equals(
+                            ExpectedBoardType,
+                            "BCM-250",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        !await deviceManager.EnableBcm250ElectronicLoadSupplyAsync())
+                    {
+                        await deviceManager.EmergencyStopOutputsAsync(
+                            ExpectedBoardType,
+                            "电子负载 Y2/Y5 上电或通信确认失败");
+                        LogError?.Invoke(
+                            "电子负载供电初始化失败，禁止进入后续功率继电器测试。");
                         return false;
                     }
 
@@ -456,13 +479,9 @@ namespace TestPlatform.TestSequences
             string runtimePort,
             string appSettingKey)
         {
-            if (requiredPorts != null &&
-                requiredPorts.Count > 0 &&
-                !requiredPorts.Contains(propertyName))
-            {
-                return null;
-            }
-
+            // RequiredComPorts controls whether a connection failure blocks startup.
+            // It must not hide configured optional instruments: later test chapters may
+            // need them, so SK441Device gets a chance to connect them opportunistically.
             return FirstNonEmpty(
                 runtimePort,
                 System.Configuration.ConfigurationManager.AppSettings[appSettingKey]);
@@ -893,6 +912,15 @@ namespace TestPlatform.TestSequences
                 _rl4OffTask = null;
                 _allInstrumentsOffTask = null;
                 _ansPowerOffTask = null;
+            }
+        }
+
+        protected bool HasFixtureReleaseStarted
+        {
+            get
+            {
+                lock (_fixtureReleaseSync)
+                    return _fixtureReleaseCommandTask != null;
             }
         }
 

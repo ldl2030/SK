@@ -20,6 +20,29 @@ namespace TestPlatform.TestSequences
 
         protected override void AddElectricalTestSteps(List<TestStepItem> steps, TestSequenceContext context, SK441Device device)
         {
+            steps.Add(new TestStepItem
+            {
+                Name = "人工插入USB-B通讯线并确认",
+                StepId = "MPS250.PRECHECK.S009.ACTION",
+                ExpectedGroupId = Mps250GroupIds.Precheck,
+                RowIndex = steps.Count,
+                SafetyCritical = true,
+                Action = async token =>
+                {
+                    device.PrepareMpsUsbBManualConnection(ExpectedBoardType);
+                    bool confirmed = await ConfirmOperatorActionAsync(
+                        "治具已下压到位。\n\n" +
+                        "请现在插入 MPS-250 的 USB-B 通讯线。\n" +
+                        "确认插接到位后点击“已插入”，也可以直接按 Enter。\n\n" +
+                        "按 Esc 或点击“取消”将终止本次测试。",
+                        "已插入");
+                    if (!confirmed)
+                        return new StepResult { IsPass = false, Value = "操作员取消插线" };
+
+                    token.ThrowIfCancellationRequested();
+                    return new StepResult { IsPass = true, Value = "USB-B已插入" };
+                }
+            });
             AssignPlanGroupToRange(steps, context, Mps250GroupIds.Precheck, 0, steps.Count);
             IReadOnlyList<Mps250ActionDefinition> catalog = Mps250ActionCatalog.Create();
 
@@ -85,8 +108,8 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.AllOutputsOff:
                     passed = await device.TurnOffAllInstrumentsAsync();
                     break;
-                case Mps250ActionKind.PowerRelays:
-                    passed = await SetPowerRelaysAsync(device, ParseRelayList(action.Argument), action.State);
+                case Mps250ActionKind.DaqRelays:
+                    passed = await SetMpsRelaysAsync(device, ParseRelayList(action.Argument), action.State);
                     break;
                 case Mps250ActionKind.CheckMbdCommunication:
                     passed = await device.CheckMbdCommunicationAsync();
@@ -96,6 +119,25 @@ namespace TestPlatform.TestSequences
                     break;
                 case Mps250ActionKind.MbdCommand:
                     passed = await SendCommandsAsync(device, action.Argument);
+                    break;
+                case Mps250ActionKind.MbdCleanupIfConnected:
+                    if (HasFixtureReleaseStarted || device.IsEmergencyStopLatched)
+                    {
+                        await device.CloseTargetBoardCommunicationAsync();
+                        OnLogWarning(
+                            "MPS-250治具已开始释放或急停已触发，USB-B会随下压解除而断开；" +
+                            "跳过MBD安全关闭命令，不再重新枚举串口。");
+                        return BasicResult(true, "治具已释放，跳过MBD命令", action);
+                    }
+                    if (!device.IsTargetBoardCommunicationConnected)
+                    {
+                        OnLogWarning(
+                            "MPS-250目标板通信当前未连接；跳过MBD安全关闭命令，" +
+                            "不重新枚举串口。硬件输出与继电器收尾继续执行。");
+                        return BasicResult(true, "USB已断开，跳过MBD命令", action);
+                    }
+                    passed = await device.SendMbdCleanupCommandsOnCurrentConnectionAsync(
+                        action.Argument);
                     break;
                 case Mps250ActionKind.SetVbus:
                     passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
@@ -107,14 +149,26 @@ namespace TestPlatform.TestSequences
                     {
                         double[] values = ParseNumbers(action.Argument);
                         passed = values.Length >= 5 && await device.SafeSwitchMpsVbusRelayAsync(
-                            (int)values[0], action.State, (float)values[1], (float)values[2], (float)values[3], values[4] > 0);
+                            (int)values[0],
+                            Mps250StationMap.GetDaqRelayChannels((int)values[0]),
+                            action.State,
+                            (float)values[1],
+                            (float)values[2],
+                            (float)values[3],
+                            values[4] > 0);
                         break;
                     }
                 case Mps250ActionKind.SafeVbattConnect:
-                    passed = await device.SafeConnectMpsVbattRelayAsync(ParseInt(action.Argument), 300);
+                    passed = await device.SafeConnectMpsVbattRelayAsync(
+                        ParseInt(action.Argument),
+                        Mps250StationMap.GetDaqRelayChannels(ParseInt(action.Argument)),
+                        300);
                     break;
                 case Mps250ActionKind.SafeVbattDisconnect:
-                    passed = await device.SafeDisconnectMpsVbattRelayAsync(ParseInt(action.Argument), 300);
+                    passed = await device.SafeDisconnectMpsVbattRelayAsync(
+                        ParseInt(action.Argument),
+                        Mps250StationMap.GetDaqRelayChannels(ParseInt(action.Argument)),
+                        300);
                     break;
                 case Mps250ActionKind.DaqVoltage:
                     await device.MeasureDaqChannelVoltageAsync(ParseInt(action.Argument));
@@ -216,7 +270,7 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.SafeVbusRelay:
                 case Mps250ActionKind.SafeVbattConnect:
                 case Mps250ActionKind.SafeVbattDisconnect:
-                case Mps250ActionKind.PowerRelays:
+                case Mps250ActionKind.DaqRelays:
                 case Mps250ActionKind.DaqVoltage:
                 case Mps250ActionKind.DaqAverageVoltage:
                 case Mps250ActionKind.DaqShuntCurrent:
@@ -229,26 +283,24 @@ namespace TestPlatform.TestSequences
             }
         }
 
-        private static async Task<bool> SetPowerRelaysAsync(SK441Device device, int[] ids, bool state)
+        private static async Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)
         {
             bool passed = true;
             foreach (int id in ids)
-                passed = await device.ControlRelayAsync(id, state) && passed;
+                passed = await device.ControlMpsRelayAsync(
+                    id,
+                    Mps250StationMap.GetDaqRelayChannels(id),
+                    state) && passed;
             return passed;
         }
 
         private static async Task<double> ReadDaqAverageAsync(SK441Device device, int channel, int count, int intervalMs, CancellationToken token)
         {
-            double sum = 0;
-            int samples = Math.Max(1, count);
-            for (int i = 0; i < samples; i++)
-            {
-                token.ThrowIfCancellationRequested();
-                sum += await device.MeasureDaqChannelVoltageAsync(channel);
-                if (intervalMs > 0 && i + 1 < samples)
-                    await Task.Delay(intervalMs, token);
-            }
-            return sum / samples;
+            return await device.MeasureDaqChannelVoltageAverageAsync(
+                channel,
+                Math.Max(1, count),
+                intervalMs,
+                token);
         }
 
         private static async Task<double> ReadMbdAverageAsync(SK441Device device, string command, int count, int intervalMs, CancellationToken token)
@@ -307,7 +359,9 @@ namespace TestPlatform.TestSequences
         private static double SimulationValue(string resultId, double? lower, double? upper)
         {
             if (string.Equals(resultId, "H02", StringComparison.OrdinalIgnoreCase))
-                return 30.0;
+                return lower.HasValue && upper.HasValue
+                    ? lower.Value + ((upper.Value - lower.Value) * 0.25)
+                    : 25.0;
             if (lower.HasValue && upper.HasValue)
                 return lower.Value == upper.Value ? lower.Value : lower.Value + ((upper.Value - lower.Value) * 0.5);
             if (lower.HasValue)

@@ -29,7 +29,7 @@ namespace Mps125StructureTests
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
 
-                Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, full simulation and J08 fault cleanup.");
+                Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, DAQ-only functional relays, USB-B precheck, full simulation and J08 fault cleanup.");
                 return 0;
             }
             catch (Exception ex)
@@ -55,8 +55,9 @@ namespace Mps125StructureTests
             Require(steps.Count == 213, "Expected 213 rows, got " + steps.Count + ".");
             Require(definitions.Count == steps.Count, "Code/XML row count mismatch.");
             Require(definitions.Select(x => x.StepId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 213, "StepIds are not unique.");
+            Require(definitions.Any(x => x.StepId == "MPS125.PRECHECK.S009.ACTION"), "MPS-125 USB-B insertion row is missing.");
             Require(definitions.Count(x => x.AlwaysRun) == 6, "Expected six cleanup rows.");
-            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(17)) == 43, "Chapter 17 must expose 43 detailed rows.");
+            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(17)) == 42, "Chapter 17 must expose 42 detailed rows after removing nonexistent Relay_1.");
 
             var resultIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Mps125ActionDefinition item in Mps125ActionCatalog.Create().Where(x => x.IsResult))
@@ -84,10 +85,24 @@ namespace Mps125StructureTests
         {
             IReadOnlyList<Mps125ActionDefinition> catalog = Mps125ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps125ActionKind.SetVbatt), "VBATT source B actions missing.");
-            Require(catalog.Where(x => x.Kind == Mps125ActionKind.DaqShuntCurrent).All(x => x.Channel == 111 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ111/1 ohm shunt.");
-            Require(catalog.Any(x => x.Kind == Mps125ActionKind.DaqResistance && x.Channel == 107), "Alarm resistance mapping missing.");
+            Require(catalog.Where(x => x.Kind == Mps125ActionKind.DaqShuntCurrent).All(x => x.Channel == 117 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ117/1 ohm shunt.");
+            Require(catalog.Any(x => x.Kind == Mps125ActionKind.DaqResistance && x.Channel == 118), "Alarm resistance mapping missing.");
             Require(catalog.Where(x => x.Kind == Mps125ActionKind.MbdCommand).All(x => x.AlwaysRun || (x.Argument ?? "").IndexOf(';') < 0), "Normal commands must be one UI row each.");
-            Require(Mps125StationMap.VbusReference == 116, "VBUS reference mapping changed.");
+            Require(Mps125StationMap.VpPlus == 104, "VP+ mapping must be DAQ104.");
+            Require(Mps125StationMap.McuIsoBatt == 105, "MCU_ISOBATT mapping must be DAQ105.");
+            Require(Mps125StationMap.HeaterFeedback1 == 107 && Mps125StationMap.HeaterFeedback2 == 108, "FBK mapping must be DAQ107/108.");
+            Require(Mps125StationMap.U20Pin7 == 109 && Mps125StationMap.U20Pin5 == 110, "U20.7/U20.5 mapping must be DAQ109/110.");
+            Require(Mps125StationMap.ComUsb == 111, "COM_USB mapping must be DAQ111.");
+            Require(Mps125StationMap.PPlus == 113 && Mps125StationMap.VbusReference == 113, "P+/VBUS reference mapping must be DAQ113.");
+            Require(Mps125StationMap.Vpwm == 114, "VPWM mapping must be DAQ114.");
+            Require(Mps125StationMap.VbusShunt == 117, "VBUS shunt mapping must be DAQ117.");
+            Require(Mps125StationMap.FiveVoltIsolated == 119 && Mps125StationMap.ThreeVoltThree == 120, "+5VI/3V3 mapping must be DAQ119/120.");
+            Require(Mps125StationMap.AllControlledRelays == "2,3,4,5,6", "MPS-125 must not declare logical Relay_1.");
+            Require(Mps125StationMap.WithdrawalDaqRelay == "@301", "Relay_3 must use DAQ301.");
+            Require(Mps125StationMap.ExternalPowerDaqRelays == "@305,306", "Relay_2/2BIS must use DAQ305/306.");
+            Require(!catalog.Where(x => x.Kind == Mps125ActionKind.DaqRelays)
+                .SelectMany(x => (x.Argument ?? "").Split(','))
+                .Any(x => x.Trim() == "1"), "MPS-125 catalog must not operate Relay_1/high-power Y1.");
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Mps125ActionDefinition item in catalog)
@@ -108,17 +123,19 @@ namespace Mps125StructureTests
         private static void ValidatePowerSafety()
         {
             var device = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-125" };
-            Require(!device.SetVbusGeneratorAsync(137.5f, 2, 300, true).GetAwaiter().GetResult(), "VBUS energized before Relay_1 closed.");
-            Require(!device.SetVbattGeneratorAsync(125, 0.1f, 150, true).GetAwaiter().GetResult(), "High-voltage VBATT energized before Relay_5/Relay_6 closed.");
-            Require(device.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(), "Cannot reset outputs.");
-            Require(device.SafeSwitchMpsVbusRelayAsync(1, true, 137.5f, 2, 300, true).GetAwaiter().GetResult(), "Safe MPS VBUS connection failed.");
+            Require(device.SetVbusGeneratorAsync(137.5f, 2, 300, true).GetAwaiter().GetResult(), "MPS VBUS must enable directly without a high-power relay.");
+            Require(device.SetVbattGeneratorAsync(125, 0.1f, 150, true).GetAwaiter().GetResult(), "MPS VBATT must enable directly without a high-power relay.");
+            Require(device.SetVbattGeneratorAsync(0, 0, 150, false).GetAwaiter().GetResult(), "Cannot turn off direct VBATT output.");
             Require(!device.StopFixturePressDownAsync("MPS-125").GetAwaiter().GetResult(), "Fixture released while VBUS was energized.");
-            Require(device.ControlRelayAsync(1, false).GetAwaiter().GetResult(), "Safe Relay_1 opening was blocked while VBUS was energized.");
-            Require(device.ControlRelayAsync(3, true).GetAwaiter().GetResult(), "Relay_3 live functional switching was incorrectly blocked.");
-            Require(device.SafeDisconnectMpsVbattRelayAsync(6, 150).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");
+            Require(!device.ControlMpsRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 closed while VBUS was energized.");
+            Require(device.ControlMpsRelayAsync(3, Mps125StationMap.WithdrawalDaqRelay, true).GetAwaiter().GetResult(), "Relay_3/DAQ301 live functional switching was incorrectly blocked.");
+            Require(device.SafeSwitchMpsVbusRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true, 137.5f, 2, 300, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 safe switching failed.");
+            Require(device.SetVbusGeneratorAsync(0, 0, 300, false).GetAwaiter().GetResult(), "Cannot turn off VBUS.");
+            Require(device.SafeConnectMpsVbattRelayAsync(6, Mps125StationMap.IsoBattDaqRelay, 150).GetAwaiter().GetResult(), "Relay_6/DAQ304 safe connection failed.");
+            Require(device.SafeDisconnectMpsVbattRelayAsync(6, Mps125StationMap.IsoBattDaqRelay, 150).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");
             Require(device.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(), "Cannot power off before fixture release.");
-            Require(device.ControlRelayAsync(1, false).GetAwaiter().GetResult(), "Cannot open Relay_1 after VBUS power-off.");
             Require(device.StopFixturePressDownAsync("MPS-125").GetAwaiter().GetResult(), "Fixture remained locked after safe power-off.");
+            Require(!device.GetPowerSafetyTrace().Any(x => x.Contains("RELAY 1 ")), "MPS-125 touched nonexistent high-power Relay_1.");
             Require(device.GetPowerSafetyTrace().Any(x => x.StartsWith("BLOCK", StringComparison.Ordinal)), "No unsafe VBUS action was recorded.");
 
             var emergency = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-125" };
@@ -143,7 +160,9 @@ namespace Mps125StructureTests
                 var grid = new RecordingGrid();
                 var context = new TestSequenceContext { SN = injectFault ? "MPS125-FAULT" : "MPS125-PASS", TestPlan = plan, StopOnFail = true };
                 bool passed = new SKMPS125Sequence(grid).RunAsync(context).GetAwaiter().GetResult();
-                Require(passed != injectFault, injectFault ? "Injected-fault run passed." : "Full simulation failed.");
+                Require(passed != injectFault, injectFault
+                    ? "Injected-fault run passed."
+                    : "Full simulation failed. Failed steps: " + string.Join(", ", grid.FailedStepIds));
                 Require(grid.CleanupCompleted == 6, "Not all cleanup rows executed.");
                 if (injectFault)
                     Require(grid.FailedStepIds.Contains(faultStep), "Injected J08 failure was not reported.");

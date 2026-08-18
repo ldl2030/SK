@@ -7,17 +7,31 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using SkiaSharp;
 
 namespace TestPlatform
 {
     /// <summary>
-    /// Generates the customer-compatible BCM-UP125 per-DUT TXT/PDF report.
-    /// Only the 176 procedure STEP rows in BCM-125_report.psv are exported.
+    /// Generates the customer-compatible BCM/MPS per-DUT TXT/PDF report.
+    /// Only the procedure STEP rows in the board-specific report PSV are exported.
     /// </summary>
     public static class Bcm125LegacyReportExporter
     {
         public const int ExpectedReportItemCount = 176;
+        public const int Bcm250ExpectedReportItemCount = 91;
+        public const int Mps250ExpectedReportItemCount = 60;
+
+        private sealed class ReportProfile
+        {
+            public string BoardFolder { get; set; }
+            public string DefinitionFileName { get; set; }
+            public string AutoTestFileName { get; set; }
+            public string OutputModelName { get; set; }
+            public int ExpectedItemCount { get; set; }
+            public bool LimitsBeforeUnit { get; set; }
+            public bool UseSpacedFailureFileName { get; set; }
+        }
 
         public sealed class ExportResult
         {
@@ -82,7 +96,7 @@ namespace TestPlatform
             try
             {
                 if (sourceTable == null)
-                    return Fail("DataGrid数据为空，无法生成BCM-125报告。");
+                    return Fail("DataGrid数据为空，无法生成BCM报告。");
 
                 string valueColumn = $"Channel{channelIndex + 1}Value";
                 string resultColumn = $"Channel{channelIndex + 1}Result";
@@ -96,14 +110,24 @@ namespace TestPlatform
                 if (string.IsNullOrWhiteSpace(baseDirectory))
                     baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
+                ReportProfile profile = ResolveProfile(projectName);
                 string definitionPath = Path.Combine(
                     baseDirectory,
                     "ProjectConfig",
                     "SK",
-                    "BCM-125",
-                    "BCM-125_report.psv");
+                    profile.BoardFolder,
+                    profile.DefinitionFileName);
 
-                IReadOnlyList<ReportDefinition> definitions = LoadDefinitions(definitionPath);
+                IReadOnlyList<ReportDefinition> definitions = LoadDefinitions(
+                    definitionPath,
+                    Path.Combine(
+                        baseDirectory,
+                        "ProjectConfig",
+                        "SK",
+                        profile.BoardFolder,
+                        profile.AutoTestFileName),
+                    profile.ExpectedItemCount,
+                    profile.OutputModelName);
                 Dictionary<string, DataRow> rowsByStepId = sourceTable.AsEnumerable()
                     .Where(row => !string.IsNullOrWhiteSpace(row["StepId"]?.ToString()))
                     .GroupBy(
@@ -146,7 +170,9 @@ namespace TestPlatform
 
                 bool reportRowsPassed = reportRows.All(row => row.Passed);
                 bool dutPassed = testResult && reportRowsPassed;
-                string finalResult = dutPassed ? "PASSED" : "NOT_PASSED";
+                string finalResult = dutPassed
+                    ? "PASSED"
+                    : profile.UseSpacedFailureFileName ? "NOT PASSED" : "NOT_PASSED";
 
                 string safeProjectName = SanitizeFileName(
                     string.IsNullOrWhiteSpace(projectName) ? "SK_BCM-125" : projectName);
@@ -165,7 +191,7 @@ namespace TestPlatform
                 Directory.CreateDirectory(reportDirectory);
 
                 string baseFileName =
-                    $"BCM_UP125_{safeOperatorCode}_{safeSn}_{testEndTime:yyyy_MM_dd_HH_mm}_{finalResult}";
+                    $"{profile.OutputModelName}_{safeOperatorCode}_{safeSn}_{testEndTime:yyyy_MM_dd_HH_mm}_{finalResult}";
                 string reportBasePath = BuildUniqueBasePath(reportDirectory, baseFileName);
                 string textFilePath = reportBasePath + ".txt";
                 string pdfFilePath = reportBasePath + ".pdf";
@@ -173,11 +199,13 @@ namespace TestPlatform
                 string pdfTempPath = pdfFilePath + ".tmp";
 
                 IReadOnlyList<string> reportLines = BuildReportLines(
+                    profile.OutputModelName,
                     safeOperatorCode,
                     safeSn,
                     testEndTime,
                     dutPassed,
-                    reportRows);
+                    reportRows,
+                    profile.LimitsBeforeUnit);
 
                 try
                 {
@@ -210,10 +238,14 @@ namespace TestPlatform
             }
         }
 
-        private static IReadOnlyList<ReportDefinition> LoadDefinitions(string definitionPath)
+        private static IReadOnlyList<ReportDefinition> LoadDefinitions(
+            string definitionPath,
+            string autoTestPath,
+            int expectedItemCount,
+            string outputModelName)
         {
             if (!File.Exists(definitionPath))
-                throw new FileNotFoundException("找不到BCM-125报告定义文件。", definitionPath);
+                throw new FileNotFoundException("找不到BCM报告定义文件。", definitionPath);
 
             var definitions = new List<ReportDefinition>();
             int lineNumber = 0;
@@ -251,10 +283,10 @@ namespace TestPlatform
                 });
             }
 
-            if (definitions.Count != ExpectedReportItemCount)
+            if (definitions.Count != expectedItemCount)
             {
                 throw new InvalidDataException(
-                    $"BCM-125报告定义应包含{ExpectedReportItemCount}项，实际为{definitions.Count}项。");
+                    $"{outputModelName}报告定义应包含{expectedItemCount}项，实际为{definitions.Count}项。");
             }
 
             string[] duplicateCodes = definitions
@@ -273,20 +305,71 @@ namespace TestPlatform
             if (duplicateStepIds.Length > 0)
                 throw new InvalidDataException("报告StepId重复：" + string.Join("、", duplicateStepIds));
 
+            SynchronizeLimitsFromXml(definitions, autoTestPath);
             return definitions;
         }
 
+        private static void SynchronizeLimitsFromXml(
+            IReadOnlyList<ReportDefinition> definitions,
+            string autoTestPath)
+        {
+            if (!File.Exists(autoTestPath))
+                throw new FileNotFoundException("找不到客户报告对应的自动测试XML。", autoTestPath);
+
+            Dictionary<string, XElement> xmlSteps = XDocument.Load(autoTestPath)
+                .Descendants("TestItem")
+                .Where(item => item.Element("StepId") != null)
+                .ToDictionary(
+                    item => item.Element("StepId").Value.Trim(),
+                    item => item,
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (ReportDefinition definition in definitions)
+            {
+                if (!xmlSteps.TryGetValue(definition.StepId, out XElement xmlStep))
+                    throw new InvalidDataException("报告StepId在自动测试XML中不存在：" + definition.StepId);
+
+                string xmlLower = xmlStep.Element("LowerLimit")?.Value?.Trim() ?? "";
+                string xmlUpper = xmlStep.Element("UpperLimit")?.Value?.Trim() ?? "";
+                definition.LowerLimit = ScaleLimit(xmlLower, definition.ScaleFactor);
+                definition.UpperLimit = string.IsNullOrWhiteSpace(xmlUpper) &&
+                                        !string.IsNullOrWhiteSpace(xmlLower)
+                    ? "any"
+                    : ScaleLimit(xmlUpper, definition.ScaleFactor);
+            }
+        }
+
+        private static string ScaleLimit(string rawLimit, double scaleFactor)
+        {
+            if (string.IsNullOrWhiteSpace(rawLimit))
+                return "";
+            if (!double.TryParse(
+                rawLimit.Replace(',', '.'),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double value))
+            {
+                throw new InvalidDataException("自动测试XML报告阈值无效：" + rawLimit);
+            }
+
+            return (value * scaleFactor)
+                .ToString("0.########", CultureInfo.InvariantCulture)
+                .Replace('.', ',');
+        }
+
         private static IReadOnlyList<string> BuildReportLines(
+            string outputModelName,
             string operatorCode,
             string sn,
             DateTime testEndTime,
             bool dutPassed,
-            IReadOnlyList<ReportRow> rows)
+            IReadOnlyList<ReportRow> rows,
+            bool limitsBeforeUnit)
         {
             string finalResult = dutPassed ? "PASSED" : "NOT PASSED";
             var lines = new List<string>
             {
-                $"BCM_UP125, Codice operatore: {operatorCode}, Seriale: {sn}, Data: {testEndTime:yyyy_MM_dd_HH_mm}, {finalResult}",
+                $"{outputModelName}, Codice operatore: {operatorCode}, Seriale: {sn}, Data: {testEndTime:yyyy_MM_dd_HH_mm}, {finalResult}",
                 ""
             };
 
@@ -294,7 +377,7 @@ namespace TestPlatform
             {
                 lines.Add(group.Key + ":");
                 foreach (ReportRow row in group)
-                    lines.Add(FormatReportRow(row));
+                    lines.Add(FormatReportRow(row, limitsBeforeUnit));
 
                 lines.Add("");
                 bool groupPassed = group.All(row => row.Passed);
@@ -306,19 +389,32 @@ namespace TestPlatform
             return lines;
         }
 
-        private static string FormatReportRow(ReportRow row)
+        private static string FormatReportRow(ReportRow row, bool limitsBeforeUnit)
         {
             ReportDefinition definition = row.Definition;
-            string valueWithUnit = string.IsNullOrWhiteSpace(definition.Unit)
-                ? row.Value
-                : $"{row.Value} {definition.Unit}";
-
-            string left =
-                $"{definition.Code,-7} {definition.ProcedureRef,-7} {definition.SymbolicName} = {valueWithUnit}";
             string limits = string.IsNullOrWhiteSpace(definition.LowerLimit) &&
                             string.IsNullOrWhiteSpace(definition.UpperLimit)
                 ? ""
                 : $"[{definition.LowerLimit}; {definition.UpperLimit}]";
+
+            if (limitsBeforeUnit)
+            {
+                string measurement = row.Value;
+                if (!string.IsNullOrWhiteSpace(limits))
+                    measurement += " " + limits;
+                if (!string.IsNullOrWhiteSpace(definition.Unit))
+                    measurement += " " + definition.Unit;
+
+                string mpsLine =
+                    $"{definition.Code,-7} {definition.ProcedureRef,-7} {definition.SymbolicName} = {measurement}";
+                return $"{mpsLine,-92}{(row.Passed ? "PASSED" : "NOT PASSED")}";
+            }
+
+            string valueWithUnit = string.IsNullOrWhiteSpace(definition.Unit)
+                ? row.Value
+                : $"{row.Value} {definition.Unit}";
+            string left =
+                $"{definition.Code,-7} {definition.ProcedureRef,-7} {definition.SymbolicName} = {valueWithUnit}";
 
             return $"{left,-68}{limits,-22}{(row.Passed ? "PASSED" : "NOT PASSED")}";
         }
@@ -433,7 +529,57 @@ namespace TestPlatform
                     return candidate;
             }
 
-            throw new IOException("同一分钟内的同名BCM-125报告数量过多。");
+            throw new IOException("同一分钟内的同名BCM报告数量过多。");
+        }
+
+        private static ReportProfile ResolveProfile(string projectName)
+        {
+            string normalized = (projectName ?? string.Empty)
+                .Replace("_", string.Empty)
+                .Replace("-", string.Empty)
+                .Replace(" ", string.Empty)
+                .ToUpperInvariant();
+
+            if (normalized.Contains("BCM250") || normalized.Contains("BCMUP250"))
+            {
+                return new ReportProfile
+                {
+                    BoardFolder = "BCM-250",
+                    DefinitionFileName = "BCM-250_report.psv",
+                    AutoTestFileName = "BCM-250_autoTest.xml",
+                    OutputModelName = "BCM_UP250",
+                    ExpectedItemCount = Bcm250ExpectedReportItemCount
+                };
+            }
+
+            if (normalized.Contains("BCM125") || normalized.Contains("BCMUP125"))
+            {
+                return new ReportProfile
+                {
+                    BoardFolder = "BCM-125",
+                    DefinitionFileName = "BCM-125_report.psv",
+                    AutoTestFileName = "BCM-125_autoTest.xml",
+                    OutputModelName = "BCM_UP125",
+                    ExpectedItemCount = ExpectedReportItemCount
+                };
+            }
+
+            if (normalized.Contains("MPS250") || normalized.Contains("MPSUP250"))
+            {
+                return new ReportProfile
+                {
+                    BoardFolder = "MPS-250",
+                    DefinitionFileName = "MPS-250_report.psv",
+                    AutoTestFileName = "MPS-250_autoTest.xml",
+                    OutputModelName = "MPS_UP250",
+                    ExpectedItemCount = Mps250ExpectedReportItemCount,
+                    LimitsBeforeUnit = true,
+                    UseSpacedFailureFileName = true
+                };
+            }
+
+            throw new InvalidOperationException(
+                $"BCM/MPS TXT/PDF报告模式不支持项目“{projectName}”。");
         }
 
         private static string SanitizeFileName(string value)

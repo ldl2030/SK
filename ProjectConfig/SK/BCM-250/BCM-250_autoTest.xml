@@ -499,7 +499,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>B06 3.VI 通过2.2R分流测量+VCC电流</Name>
+    <Name>B06 3.VI 通过2.0R分流测量+VCC电流</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>100</UpperLimit>
     <LowerLimit>30</LowerLimit>
@@ -514,7 +514,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>B07 3.VII 通过0.47R分流测量+5V电流</Name>
+    <Name>B07 3.VII 通过0.4R分流测量+5V电流</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>50</UpperLimit>
     <LowerLimit>15</LowerLimit>
@@ -1031,7 +1031,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>E01 4 读取R0并核对BCM固件版本</Name>
-    <ExpectedValue>BCM_250_V5.HEX</ExpectedValue>
+    <ExpectedValue>stcu_UP250_V5</ExpectedValue>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>firmware</Unit>
@@ -6439,11 +6439,10 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24. 33 等待500ms</Name>
+    <Name>24. 33 关闭CCB后再进入15V/0A工作点：W69=1</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
-    <DelayMs>500</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH24.S035.ACTION</StepId>
@@ -6542,7 +6541,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24. 41 等待2000ms</Name>
+    <Name>24. 41 重新打开CCB并等待2000ms：W69=0</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7239,7 +7238,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 26 设置电子负载250V/10A/2500W</Name>
+    <Name>25. 26 设置电子负载250V/7A/2000W</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7296,7 +7295,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 30 设置W13=267500</Name>
+    <Name>25. 30 设置W13=267000</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7382,7 +7381,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 36 设置电子负载255V</Name>
+    <Name>25. 36 负载保持ON并将CV更新为255V</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

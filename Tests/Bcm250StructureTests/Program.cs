@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -48,7 +49,9 @@ namespace Bcm250StructureTests
                 ValidateDigitalInputChannelPolarity();
                 ValidateStructure(plan, steps);
                 ValidateVariableDependencies();
+                ValidateProgrammingSkipOption();
                 ValidatePowerSafety();
+                ValidateCustomerReport(root, plan);
                 RunSimulation(context, steps);
                 RunFaultInjection(steps, "Q16");
                 RunEndToEndSimulation(xmlPath);
@@ -64,6 +67,135 @@ namespace Bcm250StructureTests
                 Console.Error.WriteLine("FAIL BCM250 structure: " + Unwrap(ex).Message);
                 return 1;
             }
+        }
+
+        private static void ValidateCustomerReport(string root, ResolvedTestPlan plan)
+        {
+            string definitionPath = Path.Combine(
+                root,
+                "ProjectConfig",
+                "SK",
+                "BCM-250",
+                "BCM-250_report.psv");
+            string[] definitionLines = File.ReadAllLines(definitionPath)
+                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+                .ToArray();
+            Require(
+                definitionLines.Length == Bcm125LegacyReportExporter.Bcm250ExpectedReportItemCount,
+                "BCM250 customer report definition must contain exactly 91 output rows.");
+            Require(
+                definitionLines.Select(line => line.Split('|')[0]).Distinct(StringComparer.OrdinalIgnoreCase).Count() ==
+                definitionLines.Length,
+                "BCM250 customer report codes must be unique.");
+            Require(
+                definitionLines.Select(line => line.Split('|')[1]).Distinct(StringComparer.OrdinalIgnoreCase).Count() ==
+                definitionLines.Length,
+                "BCM250 customer report StepIds must be unique.");
+
+            foreach (string line in definitionLines)
+            {
+                string[] fields = line.Split('|');
+                Require(fields.Length == 9, "BCM250 customer report row must contain 9 fields: " + line);
+                TestPlanStepDefinition step = plan.GetStep(fields[1]);
+                double scale = double.Parse(fields[8], System.Globalization.CultureInfo.InvariantCulture);
+                ValidateScaledReportLimit(fields[0], "lower", step.LowerLimit, fields[6], scale);
+                ValidateScaledReportLimit(fields[0], "upper", step.UpperLimit, fields[7], scale);
+            }
+
+            var table = new DataTable();
+            table.Columns.Add("StepId", typeof(string));
+            table.Columns.Add("Channel1Value", typeof(string));
+            table.Columns.Add("Channel1Result", typeof(string));
+            foreach (string line in definitionLines)
+            {
+                string[] fields = line.Split('|');
+                string value = fields[0] == "M02" ? "125000" : "1";
+                table.Rows.Add(fields[1], value, "PASS");
+            }
+
+            string requestedQaRoot = Environment.GetEnvironmentVariable("TESTPLATFORM_BCM250_REPORT_QA_ROOT");
+            bool keepQaReport = !string.IsNullOrWhiteSpace(requestedQaRoot);
+            string temporaryRoot = keepQaReport
+                ? Path.GetFullPath(requestedQaRoot)
+                : Path.Combine(
+                    Path.GetTempPath(),
+                    "TestPlatform_BCM250_Report_" + Guid.NewGuid().ToString("N"));
+            string temporaryConfigDirectory = Path.Combine(
+                temporaryRoot,
+                "ProjectConfig",
+                "SK",
+                "BCM-250");
+            Directory.CreateDirectory(temporaryConfigDirectory);
+            File.Copy(
+                definitionPath,
+                Path.Combine(temporaryConfigDirectory, "BCM-250_report.psv"));
+            File.Copy(
+                Path.Combine(
+                    root,
+                    "ProjectConfig",
+                    "SK",
+                    "BCM-250",
+                    "BCM-250_autoTest.xml"),
+                Path.Combine(temporaryConfigDirectory, "BCM-250_autoTest.xml"));
+
+            try
+            {
+                Bcm125LegacyReportExporter.ExportResult result =
+                    Bcm125LegacyReportExporter.SaveAsync(
+                        table,
+                        0,
+                        "2295",
+                        "C1110400103",
+                        true,
+                        "BCM-250",
+                        new DateTime(2025, 12, 18, 13, 10, 0),
+                        temporaryRoot)
+                    .GetAwaiter()
+                    .GetResult();
+
+                Require(result.Success, "BCM250 TXT/PDF report generation failed: " + result.ErrorMessage);
+                Require(result.DutPassed, "BCM250 all-pass report was not marked PASSED.");
+                Require(File.Exists(result.TextFilePath), "BCM250 TXT report was not created.");
+                Require(File.Exists(result.PdfFilePath), "BCM250 PDF report was not created.");
+                string reportText = File.ReadAllText(result.TextFilePath);
+                Require(
+                    reportText.StartsWith("BCM_UP250, Codice operatore: 2295, Seriale: C1110400103"),
+                    "BCM250 report header does not match the customer format.");
+                Require(
+                    reportText.Contains("M02") && reportText.Contains("vmid_125V = 125 V"),
+                    "BCM250 report did not convert the M02 measurement from mV to V.");
+                Require(
+                    new FileInfo(result.PdfFilePath).Length > 1000,
+                    "BCM250 PDF report is unexpectedly empty.");
+            }
+            finally
+            {
+                if (!keepQaReport && Directory.Exists(temporaryRoot))
+                    Directory.Delete(temporaryRoot, true);
+            }
+        }
+
+        private static void ValidateScaledReportLimit(
+            string code,
+            string limitName,
+            double? xmlLimit,
+            string reportLimit,
+            double scale)
+        {
+            if (!xmlLimit.HasValue)
+            {
+                Require(string.IsNullOrWhiteSpace(reportLimit),
+                    $"BCM250 report {code} unexpectedly declares a {limitName} limit.");
+                return;
+            }
+
+            Require(!string.IsNullOrWhiteSpace(reportLimit),
+                $"BCM250 report {code} is missing its {limitName} limit.");
+            double parsed = double.Parse(
+                reportLimit.Replace(',', '.'),
+                System.Globalization.CultureInfo.InvariantCulture);
+            Require(Math.Abs(parsed - xmlLimit.Value * scale) < 0.0000001,
+                $"BCM250 report {code} {limitName} limit does not match the XML plan after scaling.");
         }
 
         private static void ValidateMbdSerialIdentification()
@@ -112,6 +244,43 @@ namespace Bcm250StructureTests
                 out string rangeError);
             Require(!rangeOk && rangeError == "RANGE ERROR",
                 "MBD RANGE ERROR was incorrectly accepted as command success.");
+
+            const string exitAtRootResponse =
+                "COMMAND ERROR\r000014 chars answered. Ready.\r";
+            Require(
+                MbdResponseParser.IsSuccessfulCommandResponse(
+                    "EXIT ",
+                    exitAtRootResponse,
+                    out string exitError) &&
+                string.IsNullOrEmpty(exitError),
+                "EXIT at the MBD root terminal must accept COMMAND ERROR + Ready as an idempotent success.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "DIAG ON",
+                    exitAtRootResponse,
+                    out string diagError) &&
+                diagError == "COMMAND ERROR",
+                "COMMAND ERROR must remain a failure for non-EXIT commands.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "EXIT",
+                    "COMMAND ERROR\r",
+                    out string incompleteExitError) &&
+                incompleteExitError == "COMMAND ERROR",
+                "EXIT COMMAND ERROR without the Ready terminal prompt must remain a failure.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "EXIT",
+                    "RANGE ERROR\rReady.\r",
+                    out string exitRangeError) &&
+                exitRangeError == "RANGE ERROR",
+                "EXIT must not hide non-idempotent MBD errors.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "EXIT",
+                    "COMMAND ERROR\rWRITE ERROR\rReady.\r",
+                    out string mixedExitError),
+                "EXIT must not accept COMMAND ERROR when another MBD error is present.");
 
             bool registerMismatchRejected = false;
             try
@@ -349,6 +518,10 @@ namespace Bcm250StructureTests
             Require(Bcm250StationMap.PlacementDetectionDaqRelays == "318,319", "Placement relays must use DAQ 318/319.");
             Require(Math.Abs(Bcm250StationMap.StringShuntOhms - 0.0203111) < 1e-9,
                 "String shunt value changed.");
+            Require(Math.Abs(Bcm250StationMap.VccShuntOhms - 2.0) < 1e-12,
+                "BCM250 +VCC shunt must use the station-confirmed 2.0 ohm value.");
+            Require(Math.Abs(Bcm250StationMap.FiveVoltShuntOhms - 0.4) < 1e-12,
+                "BCM250 +5V shunt must use the station-confirmed 0.4 ohm value.");
 
             IReadOnlyList<Bcm250ActionDefinition> catalogue = Bcm250ActionCatalog.Create();
             int[] measuredShuntChannels = catalogue
@@ -362,6 +535,50 @@ namespace Bcm250StructureTests
                     .Where(x => x.Kind == Bcm250ActionKind.DaqShuntCurrent)
                     .All(x => measuredShuntChannels.Contains(x.Channel)),
                 "A BCM250 shunt-current action has no preceding measured-resistance channel.");
+            Require(catalogue.Any(x =>
+                    x.Kind == Bcm250ActionKind.DaqShuntCurrent &&
+                    x.Channel == Bcm250StationMap.VccShuntDaqChannel &&
+                    Math.Abs(x.Scale - 2.0) < 1e-12),
+                "BCM250 +VCC current action did not retain the 2.0 ohm single-chapter fallback.");
+            Require(catalogue.Any(x =>
+                    x.Kind == Bcm250ActionKind.DaqShuntCurrent &&
+                    x.Channel == Bcm250StationMap.FiveVoltShuntDaqChannel &&
+                    Math.Abs(x.Scale - 0.4) < 1e-12),
+                "BCM250 +5V current action did not retain the 0.4 ohm single-chapter fallback.");
+
+            Bcm250ActionDefinition[] chapter24 = catalogue
+                .Where(x => x.Chapter == 24)
+                .ToArray();
+            int ccbOnIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase));
+            int ccbOffBefore15VIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(x.Argument, "W69=1", StringComparison.OrdinalIgnoreCase) &&
+                x.Name.IndexOf("33 关闭CCB后", StringComparison.Ordinal) >= 0);
+            int fifteenVoltIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.SetVbus &&
+                x.Name.IndexOf("34 设置VSTR_NEG 15V", StringComparison.Ordinal) >= 0);
+            Require(
+                ccbOnIndex >= 0 &&
+                ccbOffBefore15VIndex > ccbOnIndex &&
+                fifteenVoltIndex > ccbOffBefore15VIndex,
+                "BCM250 CH24 must close CCB before entering the 15V/0A verification point.");
+
+            int stringSixAmpIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.SetString &&
+                x.Name.IndexOf("40 设置String发生器5V/6A", StringComparison.Ordinal) >= 0);
+            int ccbOnBeforeSixAmpIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase) &&
+                x.Name.IndexOf("41 重新打开CCB", StringComparison.Ordinal) >= 0);
+            int r11Index = Array.FindIndex(chapter24, x =>
+                string.Equals(x.ResultId, "R11", StringComparison.OrdinalIgnoreCase));
+            Require(
+                stringSixAmpIndex >= 0 &&
+                ccbOnBeforeSixAmpIndex > stringSixAmpIndex &&
+                r11Index > ccbOnBeforeSixAmpIndex,
+                "BCM250 CH24 must reopen CCB and settle before R11-R14.");
         }
 
         private static void ValidateLimit(
@@ -470,6 +687,39 @@ namespace Bcm250StructureTests
                 Require(pass, "End-to-end simulation did not pass.");
                 Require(passGrid.CleanupCompleted == 6,
                     "Passing run did not execute all cleanup steps.");
+
+                TestPlanDefinition singleDefinition = TestPlanService.LoadDefinition(xmlPath);
+                var chapter8Overrides = singleDefinition.Steps.ToDictionary(
+                    step => step.StepId,
+                    step => step.GroupId == Bcm250GroupIds.Chapter(8) ||
+                            step.GroupId == Bcm250GroupIds.Precheck ||
+                            step.GroupId == Bcm250GroupIds.Cleanup,
+                    StringComparer.OrdinalIgnoreCase);
+                var chapter8Grid = new RecordingGrid();
+                var chapter8Context = new TestSequenceContext
+                {
+                    SN = "BCM250-CH08-SHUNT-FALLBACK",
+                    TestPlan = TestPlanService.Resolve(
+                        xmlPath,
+                        TestProfileIds.SingleChapter,
+                        chapter8Overrides),
+                    StopOnFail = true
+                };
+                bool chapter8Pass = new SKBCM250Sequence(chapter8Grid)
+                    .RunAsync(chapter8Context)
+                    .GetAwaiter()
+                    .GetResult();
+                Require(chapter8Pass,
+                    "BCM250 CH8 single-chapter run did not use nominal shunt fallback values.");
+                Require(chapter8Grid.PassedStepIds.Any(x =>
+                            x.StartsWith(Bcm250GroupIds.Chapter(8) + ".", StringComparison.OrdinalIgnoreCase) &&
+                            x.EndsWith(".B06", StringComparison.OrdinalIgnoreCase)) &&
+                        chapter8Grid.PassedStepIds.Any(x =>
+                            x.StartsWith(Bcm250GroupIds.Chapter(8) + ".", StringComparison.OrdinalIgnoreCase) &&
+                            x.EndsWith(".B07", StringComparison.OrdinalIgnoreCase)),
+                    "BCM250 CH8 single-chapter run did not execute the shunt-current rows.");
+                Require(chapter8Grid.CleanupCompleted == 6,
+                    "BCM250 CH8 single-chapter run did not execute all cleanup steps.");
 
                 ResolvedTestPlan faultPlan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal);
                 string faultStep = faultPlan.Definition.Steps.Single(
@@ -611,6 +861,25 @@ namespace Bcm250StructureTests
             Require(fixtureTrace.Contains("FIXTURE STATION 1 RELAY 1 CLOSED") && fixtureTrace.Contains("FIXTURE STATION 1 RELAY 1 OPEN"), "BCM-250 fixture Y1 emergency mapping failed.");
             Require(!fixtureTrace.Any(x => x.Contains("RELAY 2")), "BCM-250 incorrectly used fixture Y2 for press-down.");
             Require(!emergency.SetVbusGeneratorAsync(275, 1, 300, true).GetAwaiter().GetResult(), "Emergency latch allowed VBUS output ON.");
+        }
+
+        private static void ValidateProgrammingSkipOption()
+        {
+            var sequence = new SKBCM250Sequence(skipFirmwareProgramming: true);
+            PropertyInfo skipProperty = typeof(SKBCM250Sequence).GetProperty(
+                "SkipFirmwareProgramming",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Require(skipProperty != null && (bool)skipProperty.GetValue(sequence),
+                "BCM250 sequence did not retain the firmware-programming skip option.");
+
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "BCM-250",
+                SkipFirmwareProgramming = true
+            };
+            Require(!device.IsTtlProgrammingRequired,
+                "BCM250 programming skip option did not remove the TTL requirement.");
         }
 
         private static void Require(bool condition, string message)

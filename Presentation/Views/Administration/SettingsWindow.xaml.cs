@@ -48,6 +48,8 @@ namespace TestPlatform
             chkPromptOnFail.IsChecked = CurrentSettings.PromptOnFail;
             chkContinueAfterPowerCriticalFailure.IsChecked =
                 CurrentSettings.ContinueAfterPowerCriticalFailure;
+            chkSkipFirmwareProgramming.IsChecked =
+                CurrentSettings.SkipFirmwareProgramming;
             chkAllowEmptySN.IsChecked = CurrentSettings.AllowEmptySN;
             // 外观
             rbLightTheme.IsChecked = CurrentSettings.LightTheme;
@@ -170,6 +172,8 @@ namespace TestPlatform
             CurrentSettings.PromptOnFail = chkPromptOnFail.IsChecked ?? true;
             CurrentSettings.ContinueAfterPowerCriticalFailure =
                 chkContinueAfterPowerCriticalFailure.IsChecked ?? false;
+            CurrentSettings.SkipFirmwareProgramming =
+                chkSkipFirmwareProgramming.IsChecked ?? false;
             CurrentSettings.AllowEmptySN = chkAllowEmptySN.IsChecked ?? false;
 
             // 外观
@@ -202,7 +206,7 @@ namespace TestPlatform
             //保存报告的模式
 
             CurrentSettings.ReportSaveMode = cmbReportSaveMode.SelectedIndex == 2
-                ? ReportSaveMode.Bcm125TxtPdf
+                ? ReportSaveMode.CustomerTxtPdf
                 : cmbReportSaveMode.SelectedIndex == 1
                     ? ReportSaveMode.SingleExcel
                     : ReportSaveMode.AppendCsv;
@@ -370,6 +374,11 @@ namespace TestPlatform
         /// Engineering-only override. Safety-critical failures still stop.
         /// </summary>
         public bool ContinueAfterPowerCriticalFailure { get; set; } = false;
+
+        /// <summary>
+        /// Skip physical firmware-programming steps for every project.
+        /// </summary>
+        public bool SkipFirmwareProgramming { get; set; } = false;
 
         // SMB 相关设置
         public bool SMBEnabled { get; set; } = false;

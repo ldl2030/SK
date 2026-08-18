@@ -21,7 +21,7 @@ namespace TestPlatform.TestSequences
     {
         CheckInstruments,
         AllOutputsOff,
-        PowerRelays,
+        DaqRelays,
         CheckMbdCommunication,
         CloseMbdCommunication,
         MbdCommand,

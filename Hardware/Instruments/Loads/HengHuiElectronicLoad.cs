@@ -110,11 +110,43 @@ namespace TestPlatform
         }
 
         /// <summary>
+        /// Clear latched input protection (OCP/OPP/OVP) before a new load attempt.
+        /// </summary>
+        public void ClearInputProtection()
+        {
+            SendCommand("INP:PROT:CLE");
+        }
+
+        public bool GetInputState()
+        {
+            string response = QueryWithRetry("INP?").Trim().ToUpperInvariant();
+            if (response == "1" || response == "ON" || response.EndsWith(" 1") || response.EndsWith(":ON"))
+                return true;
+            if (response == "0" || response == "OFF" || response.EndsWith(" 0") || response.EndsWith(":OFF"))
+                return false;
+            throw new FormatException($"KUNKIN 7303 returned invalid input state: '{response}'.");
+        }
+
+        /// <summary>
         /// 设置负载工作模式: CURR(定电流), VOLT(定电压), RES(定电阻), POW(定功率), DYN(动态)
         /// </summary>
         public void SetMode(string mode)
         {
             SendCommand($"MODE {mode}");
+        }
+
+        public string GetMode()
+        {
+            string response = QueryWithRetry("MODE?").Trim().ToUpperInvariant();
+            if (response.Contains("CV") || response.Contains("VOLT"))
+                return "CV";
+            if (response.Contains("CW") || response.Contains("CP") || response.Contains("POW"))
+                return "CW";
+            if (response.Contains("CC") || response.Contains("CURR"))
+                return "CC";
+            if (response.Contains("CR") || response.Contains("RES"))
+                return "CR";
+            throw new FormatException($"KUNKIN 7303 returned invalid operating mode: '{response}'.");
         }
 
         // ===================== 基本带载参数设置 =====================
@@ -131,7 +163,7 @@ namespace TestPlatform
 
         public void SetCurrentProtection(float currentLimit)
         {
-            SendCommand($"CURR:PROT {currentLimit.ToString("0000")}");
+            SendCommand($"CURR:PROT {currentLimit.ToString("0.###", CultureInfo.InvariantCulture)}");
         }
 
         public void SetVoltage(float voltage)
@@ -161,7 +193,7 @@ namespace TestPlatform
 
         public void SetPowerProtection(float powerLimit)
         {
-            SendCommand($"POW:PROT {powerLimit.ToString("0000")}");
+            SendCommand($"POW:PROT {powerLimit.ToString("0.###", CultureInfo.InvariantCulture)}");
         }
 
         public void SetResistance(float resistance)

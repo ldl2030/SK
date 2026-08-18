@@ -2,8 +2,8 @@
 <TestItems>
   <PlanMetadata>
     <BoardType>MPS-125</BoardType>
-    <PlanVersion>2.0</PlanVersion>
-    <BaselineId>MPS125-PDF-REV3-DETAILED-20260731</BaselineId>
+    <PlanVersion>2.2</PlanVersion>
+    <BaselineId>MPS125-PDF-REV3-DAQ-RELAYS-20260814</BaselineId>
   </PlanMetadata>
   <Groups>
     <Group>
@@ -256,6 +256,23 @@
     <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS125.PRECHECK.S009.ACTION</StepId>
+    <GroupId>MPS125.PRECHECK</GroupId>
+    <SequenceOrder>9</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>人工插入USB-B通讯线并确认</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue>USB-B已插入</ExpectedValue>
+    <DelayMs />
+  </TestItem>
+  <TestItem>
     <StepId>MPS125.CH06.S001.ACTION</StepId>
     <GroupId>MPS125.CH06</GroupId>
     <SequenceOrder>9</SequenceOrder>
@@ -299,7 +316,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>6.3 断开MPS-125受控继电器1-6</Name>
+    <Name>6.3 断开DAQ301-306功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -333,7 +350,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>7.2 在VBUS关闭时闭合Relay_1 DUT供电及Relay_3 withdrawal接点</Name>
+    <Name>7.2 闭合Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -418,7 +435,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B04 7.3.IV 测量+5VI DAQ114</Name>
+    <Name>B04 7.3.IV 测量+5VI DAQ119</Name>
     <LowerLimit>4900</LowerLimit>
     <UpperLimit>5100</UpperLimit>
     <Unit>mV</Unit>
@@ -435,7 +452,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B05 7.3.V 测量+VPWM DAQ113</Name>
+    <Name>B05 7.3.V 测量VPWM DAQ114</Name>
     <LowerLimit>12000</LowerLimit>
     <UpperLimit>14000</UpperLimit>
     <Unit>mV</Unit>
@@ -452,7 +469,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ111</Name>
+    <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ117</Name>
     <LowerLimit>19</LowerLimit>
     <UpperLimit>60</UpperLimit>
     <Unit>mA</Unit>
@@ -469,7 +486,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B07 7.3.VII 测量P+ DAQ104</Name>
+    <Name>B07 7.3.VII 测量P+ DAQ113</Name>
     <LowerLimit>137000</LowerLimit>
     <UpperLimit>138000</UpperLimit>
     <Unit>mV</Unit>
@@ -656,7 +673,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>D01 9.2.I 测量COM_USB DAQ105</Name>
+    <Name>D01 9.2.I 测量COM_USB DAQ111</Name>
     <LowerLimit>4800</LowerLimit>
     <UpperLimit>5400</UpperLimit>
     <Unit>mV</Unit>
@@ -673,7 +690,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>D02 9.2.II 测量3V3 DAQ115</Name>
+    <Name>D02 9.2.II 测量3V3 DAQ120</Name>
     <LowerLimit>3200</LowerLimit>
     <UpperLimit>3400</UpperLimit>
     <Unit>mV</Unit>
@@ -792,7 +809,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.1 断开Relay_2/2BIS使+5VEXT与GND_EXT浮空</Name>
+    <Name>10.1 断开Relay_2/2BIS(DAQ305/306)使+5VEXT与GND_EXT浮空</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -894,7 +911,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.6 闭合Relay_2/2BIS连接外部5V和GND</Name>
+    <Name>10.6 闭合Relay_2/2BIS(DAQ305/306)连接外部5V和GND</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -945,7 +962,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.9 再次断开Relay_2/2BIS</Name>
+    <Name>10.9 再次断开Relay_2/2BIS(DAQ305/306)</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1081,7 +1098,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F03 11.8 U20.7 DAQ118采样16次/100ms取平均</Name>
+    <Name>F03 11.8 U20.7 DAQ109采样16次/100ms取平均</Name>
     <LowerLimit>10000</LowerLimit>
     <UpperLimit>11000</UpperLimit>
     <Unit>mV</Unit>
@@ -1098,7 +1115,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F04 11.9 U20.5 DAQ119采样16次/100ms取平均</Name>
+    <Name>F04 11.9 U20.5 DAQ110采样16次/100ms取平均</Name>
     <LowerLimit>10000</LowerLimit>
     <UpperLimit>11000</UpperLimit>
     <Unit>mV</Unit>
@@ -1115,7 +1132,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.10 断开Relay_3 withdrawal接点</Name>
+    <Name>11.10 断开Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1183,7 +1200,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F07 11.14 U20.7 DAQ118采样16次/100ms取平均</Name>
+    <Name>F07 11.14 U20.7 DAQ109采样16次/100ms取平均</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -1200,7 +1217,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F08 11.15 U20.5 DAQ119采样16次/100ms取平均</Name>
+    <Name>F08 11.15 U20.5 DAQ110采样16次/100ms取平均</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -1251,7 +1268,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.18 闭合Relay_4强制CONTACT_80V=0</Name>
+    <Name>11.18 闭合Relay_4(DAQ302)强制CONTACT_80V=0</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1302,7 +1319,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.21 断开Relay_4强制CONTACT_80V=1</Name>
+    <Name>11.21 断开Relay_4(DAQ302)强制CONTACT_80V=1</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1353,7 +1370,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.24 恢复闭合Relay_3 withdrawal接点</Name>
+    <Name>11.24 恢复闭合Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1438,7 +1455,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>G01 12.5 测量LS1 COM-NO闭合电阻 DAQ107</Name>
+    <Name>G01 12.5 测量LSI.COM触点闭合电阻 DAQ118</Name>
     <LowerLimit>0</LowerLimit>
     <UpperLimit>5</UpperLimit>
     <Unit>Ohm</Unit>
@@ -1489,7 +1506,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>G02 12.8 测量LS1 COM-NO断开电阻 DAQ107</Name>
+    <Name>G02 12.8 测量LSI.COM触点断开电阻 DAQ118</Name>
     <LowerLimit>1000000</LowerLimit>
     <UpperLimit>1000000000000</UpperLimit>
     <Unit>Ohm</Unit>
@@ -2390,7 +2407,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.4 关闭VBUS、闭合Relay_5后恢复137.5V输出</Name>
+    <Name>15.4 关闭VBUS、闭合Relay_5(DAQ303)后恢复137.5V输出</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2594,7 +2611,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.15 DAQ116独立测量Gen VBUS参考电压</Name>
+    <Name>15.15 DAQ113独立测量P+参考电压</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2713,7 +2730,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.22 关闭VBUS、断开Relay_5后恢复137.5V输出</Name>
+    <Name>15.22 关闭VBUS、断开Relay_5(DAQ303)后恢复137.5V输出</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2781,7 +2798,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K01 16.3 MCU_ISOBATT基线测量约8秒 DAQ117</Name>
+    <Name>K01 16.3 MCU_ISOBATT基线测量约8秒 DAQ105</Name>
     <LowerLimit>1700</LowerLimit>
     <UpperLimit>2200</UpperLimit>
     <Unit>mV</Unit>
@@ -2815,7 +2832,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.5 在VBATT关闭时闭合Relay_6后输出0V</Name>
+    <Name>16.5 在VBATT关闭时闭合Relay_6(DAQ304)后输出0V</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2832,7 +2849,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ117</Name>
+    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ105</Name>
     <LowerLimit>3000</LowerLimit>
     <UpperLimit>3300</UpperLimit>
     <Unit>mV</Unit>
@@ -2866,7 +2883,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K03 16.8 MCU_ISOBATT@125V测量约8秒 DAQ117</Name>
+    <Name>K03 16.8 MCU_ISOBATT@125V测量约8秒 DAQ105</Name>
     <LowerLimit>400</LowerLimit>
     <UpperLimit>800</UpperLimit>
     <Unit>mV</Unit>
@@ -2883,7 +2900,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.9 先关闭VBATT再断开Relay_6 ISOBATT_INPUT</Name>
+    <Name>16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3104,7 +3121,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L02 17.12-13 FBK_1 DAQ109采样16次/100ms</Name>
+    <Name>L02 17.12-13 FBK_1 DAQ107采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -3121,7 +3138,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L03 17.12-14 FBK_2 DAQ110采样16次/100ms</Name>
+    <Name>L03 17.12-14 FBK_2 DAQ108采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -3590,14 +3607,14 @@
   <TestItem>
     <StepId>MPS125.CH17.S041.ACTION</StepId>
     <GroupId>MPS125.CH17</GroupId>
-    <SequenceOrder>205</SequenceOrder>
+    <SequenceOrder>206</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>17.41 断开Relay_1 DUT供电路径</Name>
+    <Name>17.42 断开Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3606,23 +3623,6 @@
   </TestItem>
   <TestItem>
     <StepId>MPS125.CH17.S042.ACTION</StepId>
-    <GroupId>MPS125.CH17</GroupId>
-    <SequenceOrder>206</SequenceOrder>
-    <DefaultEnabled>true</DefaultEnabled>
-    <Enabled>true</Enabled>
-    <Mandatory>false</Mandatory>
-    <AlwaysRun>false</AlwaysRun>
-    <RunCondition>Selected</RunCondition>
-    <DependsOn />
-    <Name>17.42 断开Relay_3 withdrawal接点</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
-    <ExpectedValue />
-    <DelayMs />
-  </TestItem>
-  <TestItem>
-    <StepId>MPS125.CH17.S043.ACTION</StepId>
     <GroupId>MPS125.CH17</GroupId>
     <SequenceOrder>207</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -3699,7 +3699,7 @@
     <AlwaysRun>true</AlwaysRun>
     <RunCondition>Always</RunCondition>
     <DependsOn />
-    <Name>断开MPS-125功率继电器1-6</Name>
+    <Name>断开DAQ301-306功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />

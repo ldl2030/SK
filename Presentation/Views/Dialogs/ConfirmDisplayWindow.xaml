@@ -7,7 +7,7 @@
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         FontFamily="Microsoft YaHei UI, Segoe UI"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        Topmost="True">
+        Topmost="True" PreviewKeyDown="Window_PreviewKeyDown">
     <Window.Resources>
         <Storyboard x:Key="FadeIn">
             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.2"/>
@@ -86,9 +86,9 @@
             </ScrollViewer>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button x:Name="btnYes" Content="确认" Style="{StaticResource ModernButton}" MinWidth="120" Margin="0,0,15,0" Click="BtnYes_Click"/>
+                <Button x:Name="btnYes" Content="确认" Style="{StaticResource ModernButton}" MinWidth="120" Margin="0,0,15,0" IsDefault="True" Click="BtnYes_Click"/>
                 <Button x:Name="btnNo" Content="取消" Style="{StaticResource ModernButton}" MinWidth="120"
-                        Background="#B42318" Foreground="White" Click="BtnNo_Click"/>
+                        Background="#B42318" Foreground="White" IsCancel="True" Click="BtnNo_Click"/>
             </StackPanel>
         </Grid>
     </Border>

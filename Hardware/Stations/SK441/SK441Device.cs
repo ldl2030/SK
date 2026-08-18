@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TestPlatform
@@ -42,9 +44,39 @@ namespace TestPlatform
         // App.config: SKExecutionMode=Simulation|Hardware
         // 临时覆盖: TESTPLATFORM_SK_MODE=Simulation|Hardware
         public bool SkipComInit { get; set; } = ResolveSimulationMode();
+        public bool SkipFirmwareProgramming { get; set; }
 
         public string ExecutionModeName => SkipComInit ? "Simulation" : "Hardware";
-        public bool IsTtlProgrammingRequired => GetBoolAppSetting("SKRequireTtl", true);
+        public bool IsTtlProgrammingRequired =>
+            !SkipFirmwareProgramming && GetBoolAppSetting("SKRequireTtl", true);
+
+        public async Task<bool> FlashBcm250FirmwareAsync(
+            string firmwareFileName,
+            CancellationToken cancellationToken)
+        {
+            string port = string.IsNullOrWhiteSpace(ComName.uartComName)
+                ? GetAppSetting("TtlPort")
+                : ComName.uartComName;
+            if (string.IsNullOrWhiteSpace(port))
+            {
+                LogError?.Invoke("BCM250烧录失败：未配置独立TTL串口 TtlPort。");
+                return false;
+            }
+
+            string configuredPath = GetAppSetting("SKBCM250FirmwarePath");
+            string firmwarePath = string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, firmwareFileName)
+                : Environment.ExpandEnvironmentVariables(configuredPath.Trim());
+            if (!Path.IsPathRooted(firmwarePath))
+                firmwarePath = Path.GetFullPath(Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    firmwarePath));
+
+            return await Flasher.FlashFirmwareAsync(
+                firmwarePath,
+                port,
+                cancellationToken);
+        }
         public bool IsEmergencyStopTriggered(bool logicalState)
         {
             return GetBoolAppSetting("SKEmergencyStopActiveHigh", true)
@@ -246,17 +278,28 @@ namespace TestPlatform
             }
 
             bool allSuccess = true;
-            Action<string, Action> connect = (deviceName, action) =>
+            Action<string, bool, Action> connect = (deviceName, required, action) =>
             {
                 try
                 {
                     action();
-                    LogInfo?.Invoke($"{deviceName}连接成功");
+                    LogInfo?.Invoke(required
+                        ? $"{deviceName}连接成功"
+                        : $"可选设备 {deviceName} 已提前连接成功");
                 }
                 catch (Exception ex)
                 {
-                    allSuccess = false;
-                    LogError?.Invoke($"{deviceName}连接失败：{ex.Message}");
+                    if (required)
+                    {
+                        allSuccess = false;
+                        LogError?.Invoke($"{deviceName}连接失败：{ex.Message}");
+                    }
+                    else
+                    {
+                        LogInfo?.Invoke(
+                            $"警告：可选设备 {deviceName} 提前连接失败；当前初始化继续，" +
+                            $"后续使用前仍会检查在线状态：{ex.Message}");
+                    }
                 }
             };
 
@@ -270,22 +313,28 @@ namespace TestPlatform
 
             LogInfo?.Invoke(
                 "MBD USB-B暂不连接：将在DUT上电并等待启动完成后的通信步骤中自动识别。");
-            if (isRequired("uartComName") && !string.IsNullOrWhiteSpace(ttlPort))
-                connect("固件烧录TTL", () => Flasher.Connect(ttlPort));
+            bool ttlRequired = requireTtl && isRequired("uartComName");
+            if ((ttlRequired || !string.IsNullOrWhiteSpace(ttlPort)) &&
+                !string.IsNullOrWhiteSpace(ttlPort))
+                connect("固件烧录TTL", ttlRequired, () => Flasher.Connect(ttlPort));
             else if (isRequired("uartComName"))
-                LogInfo?.Invoke("独立TTL未连接：按SKRequireTtl=false跳过烧录，继续实机测试。");
-            if (isRequired("ansPowerComName"))
-                connect("ANS电源", () => AnsPower.Connect(ansPort, address: (byte)ansAddress));
-            if (isRequired("hengHuiPowerAComName"))
-                connect("恒辉8602电源A (SCPI 9600 8N1)", () => HengHuiPower1.Connect(henghui1Port));
-            if (isRequired("hengHuiPowerBComName"))
-                connect("恒辉8602电源B (SCPI 9600 8N1)", () => HengHuiPower2.Connect(henghui2Port));
-            if (isRequired("electronicLoadComName"))
+                LogInfo?.Invoke("独立TTL未连接：已配置跳过烧录，继续实机测试。");
+            if (isRequired("ansPowerComName") || !string.IsNullOrWhiteSpace(ansPort))
+                connect("ANS电源", isRequired("ansPowerComName"),
+                    () => AnsPower.Connect(ansPort, address: (byte)ansAddress));
+            if (isRequired("hengHuiPowerAComName") || !string.IsNullOrWhiteSpace(henghui1Port))
+                connect("恒辉8602电源A (SCPI 9600 8N1)", isRequired("hengHuiPowerAComName"),
+                    () => HengHuiPower1.Connect(henghui1Port));
+            if (isRequired("hengHuiPowerBComName") || !string.IsNullOrWhiteSpace(henghui2Port))
+                connect("恒辉8602电源B (SCPI 9600 8N1)", isRequired("hengHuiPowerBComName"),
+                    () => HengHuiPower2.Connect(henghui2Port));
+            if (isRequired("electronicLoadComName") || !string.IsNullOrWhiteSpace(loadPort))
                 connect(
                     "KUNKIN 7303电子负载",
+                    isRequired("electronicLoadComName"),
                     () => ElectronicLoad.Connect(loadPort, electronicLoadBaudRate));
-            if (isRequired("daqComName"))
-                connect("GWInstek DAQ-9600", () =>
+            if (isRequired("daqComName") || !string.IsNullOrWhiteSpace(daqPort))
+                connect("GWInstek DAQ-9600", isRequired("daqComName"), () =>
             {
                 Daq.Connect(daqPort);
                 string daqIdn = Daq.GetIdn();
@@ -494,7 +543,80 @@ namespace TestPlatform
             catch (Exception ex)
             {
                 LogError?.Invoke($"DAQ 通道 {channel} 测量失败: {ex.Message}");
-                return 0.0;
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Measure a required number of DAQ samples and return their average.
+        /// The DAQ state/error queue is prepared once for the whole series.
+        /// Any failed sample invalidates the series; a failed read must never
+        /// be substituted with 0 and included in the average.
+        /// </summary>
+        public async Task<double> MeasureDaqChannelVoltageAverageAsync(
+            int channel,
+            int sampleCount,
+            int intervalMs,
+            CancellationToken token)
+        {
+            if (sampleCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(sampleCount), "DAQ sample count must be greater than zero.");
+
+            if (SkipComInit)
+            {
+                double mockTotal = 0.0;
+                for (int index = 0; index < sampleCount; index++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    mockTotal += await MeasureDaqChannelVoltageAsync(channel);
+                    if (intervalMs > 0 && index + 1 < sampleCount)
+                        await Task.Delay(intervalMs, token);
+                }
+                return mockTotal / sampleCount;
+            }
+
+            string channelList = "@" + channel.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            double total = 0.0;
+            int currentSample = 0;
+            try
+            {
+                Daq.PrepareVoltageDcMeasurementSeries(channelList);
+                for (int index = 0; index < sampleCount; index++)
+                {
+                    token.ThrowIfCancellationRequested();
+                    currentSample = index + 1;
+                    double value = Daq.ReadVoltageDcMeasurementSeriesSample(
+                        out string rawResponse);
+                    total += value;
+                    LogInfo?.Invoke(
+                        $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次测量电压: " +
+                        $"{value:0.######}V (原始响应: {rawResponse})");
+
+                    if (intervalMs > 0 && index + 1 < sampleCount)
+                        await Task.Delay(intervalMs, token);
+                }
+
+                return total / sampleCount;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    Daq.RecoverVoltageDcMeasurement();
+                }
+                catch (Exception recoveryEx)
+                {
+                    LogError?.Invoke($"DAQ 通道 {channel} 测量失败后恢复失败: {recoveryEx.Message}");
+                }
+
+                string message =
+                    $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次测量失败，整批平均值无效: {ex.Message}";
+                LogError?.Invoke(message);
+                throw new InvalidOperationException(message, ex);
             }
         }
 
@@ -882,23 +1004,30 @@ namespace TestPlatform
                     return true;
                 }
 
-                if (!await EnsureMbdConnectedAsync())
-                    return false;
-
                 int timeoutMs = Math.Max(
                     100,
                     GetIntAppSetting("SKMbdCommandTimeoutMs", 700));
-                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
+                string response = await SendMbdCommandWithRecoveryAsync(command, timeoutMs);
                 await Task.Delay(Math.Max(0, waitAfterMs));
 
                 string responseError;
+                bool acceptedExitNoOp = MbdResponseParser.IsAcceptedExitNoOpResponse(
+                    command,
+                    response);
                 if (!MbdResponseParser.IsSuccessfulCommandResponse(
+                    command,
                     response,
                     out responseError))
                 {
                     LogError?.Invoke(
                         $"USB-B/MBD 命令失败: {command}，设备返回={responseError}，原始响应={response}");
                     return false;
+                }
+
+                if (acceptedExitNoOp)
+                {
+                    LogInfo?.Invoke(
+                        "USB-B/MBD EXIT 返回 COMMAND ERROR + Ready：设备已处于MBD终端，按成功处理。");
                 }
 
                 return true;
@@ -908,6 +1037,54 @@ namespace TestPlatform
                 LogError?.Invoke($"USB-B/MBD 鍛戒护鍙戦€佸け璐?({command}): {ex.Message}");
                 return false;
             }
+        }
+
+        public bool IsTargetBoardCommunicationConnected =>
+            SkipComInit || (TargetBoard != null && TargetBoard.IsConnected);
+
+        public async Task<bool> SendMbdCleanupCommandsOnCurrentConnectionAsync(string commands)
+        {
+            if (SkipComInit)
+            {
+                foreach (string command in (commands ?? string.Empty)
+                    .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    ApplyMockMbdCommandState(command.Trim());
+                }
+                LogInfo?.Invoke("[调试模式] 模拟在当前MBD连接上发送安全收尾命令。");
+                return true;
+            }
+
+            if (TargetBoard == null || !TargetBoard.IsConnected)
+            {
+                LogInfo?.Invoke("MBD当前未连接，安全收尾不重新枚举串口。");
+                return true;
+            }
+
+            int timeoutMs = Math.Max(
+                100,
+                GetIntAppSetting("SKMbdCommandTimeoutMs", 700));
+            foreach (string item in (commands ?? string.Empty)
+                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string command = item.Trim();
+                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
+                string responseError;
+                if (!MbdResponseParser.IsSuccessfulCommandResponse(
+                    command,
+                    response,
+                    out responseError))
+                {
+                    LogError?.Invoke(
+                        $"MBD安全收尾命令未确认：{command}，设备返回={responseError}；" +
+                        "不重新枚举串口，继续硬件断电收尾。");
+                    TargetBoard.Disconnect();
+                    return false;
+                }
+            }
+
+            LogInfo?.Invoke("已通过当前MBD连接发送主开关/加热器安全关闭命令。");
+            return true;
         }
 
         public async Task<string> QueryMbdCommandAsync(string command, int waitAfterMs)
@@ -922,13 +1099,10 @@ namespace TestPlatform
                     return mock;
                 }
 
-                if (!await EnsureMbdConnectedAsync())
-                    return null;
-
                 int timeoutMs = Math.Max(
                     100,
                     GetIntAppSetting("SKMbdCommandTimeoutMs", 700));
-                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
+                string response = await SendMbdCommandWithRecoveryAsync(command, timeoutMs);
                 await Task.Delay(Math.Max(0, waitAfterMs));
                 return response;
             }
@@ -947,11 +1121,33 @@ namespace TestPlatform
                 return true;
             }
 
-            bool ok = await EnsureMbdConnectedAsync();
+            int probeTimeoutMs = Math.Max(
+                500,
+                GetIntAppSetting("SKMbdProbeTimeoutMs", 2000));
+            string response = await SendMbdCommandWithRecoveryAsync(string.Empty, probeTimeoutMs);
+            bool ok = !string.IsNullOrWhiteSpace(response);
             LogInfo?.Invoke(ok
                 ? $"USB-B/MBD 串口通信正常：{ComName.testComName}"
                 : "USB-B/MBD 串口识别或连接失败");
             return ok;
+        }
+
+        public void PrepareMpsUsbBManualConnection(string boardType)
+        {
+            if (SkipComInit)
+                return;
+
+            TargetBoard?.Disconnect();
+            _targetBoardPortCandidate = null;
+            ComName.testComName = null;
+            LogInfo?.Invoke(
+                $"{boardType}等待人工插入USB-B；已清除固定/历史MBD串口候选。" +
+                "DUT上电启动后将从现有未占用COM口中自动识别MBD。");
+        }
+
+        public void PrepareMps250UsbBManualConnection()
+        {
+            PrepareMpsUsbBManualConnection("MPS-250");
         }
 
         private async Task<bool> EnsureMbdConnectedAsync()
@@ -959,9 +1155,14 @@ namespace TestPlatform
             if (TargetBoard != null && TargetBoard.IsConnected)
                 return true;
 
+            bool isManualMpsUsbB =
+                string.Equals(SimulationBoardType, "MPS-125", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(SimulationBoardType, "MPS-250", StringComparison.OrdinalIgnoreCase);
             string detectedPort = await SKSerialDeviceDiscovery.DiscoverMbdPortAsync(
-                null,
-                _targetBoardPortCandidate);
+                message => LogInfo?.Invoke(message),
+                isManualMpsUsbB ? null : _targetBoardPortCandidate,
+                ignoreConfiguredPort: isManualMpsUsbB,
+                allowUnverifiedFallback: !isManualMpsUsbB);
             if (string.IsNullOrWhiteSpace(detectedPort))
             {
                 LogError?.Invoke(
@@ -983,6 +1184,62 @@ namespace TestPlatform
                 LogError?.Invoke($"连接MBD UART失败 ({detectedPort})：{ex.Message}");
                 return false;
             }
+        }
+
+        private async Task<string> SendMbdCommandWithRecoveryAsync(
+            string command,
+            int normalTimeoutMs)
+        {
+            if (await EnsureMbdConnectedAsync())
+            {
+                string response = await TargetBoard.SendCommandAsync(command, normalTimeoutMs);
+                if (!string.IsNullOrWhiteSpace(response))
+                    return response;
+
+                LogInfo?.Invoke(
+                    $"USB-B/MBD 首次命令无响应，准备释放旧句柄并重新枚举：{command}");
+            }
+
+            TargetBoard?.Disconnect();
+            int recoveryTimeoutMs = Math.Max(
+                1000,
+                GetIntAppSetting("SKMbdRecoveryTimeoutMs", 15000));
+            int retryIntervalMs = Math.Max(
+                100,
+                GetIntAppSetting("SKMbdRecoveryRetryMs", 750));
+            int recoveryCommandTimeoutMs = Math.Max(
+                normalTimeoutMs,
+                GetIntAppSetting("SKMbdRecoveryCommandTimeoutMs", 2000));
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(recoveryTimeoutMs);
+            int attempt = 0;
+
+            while (DateTime.UtcNow <= deadline)
+            {
+                attempt++;
+                if (attempt > 1)
+                    await Task.Delay(retryIntervalMs);
+
+                LogInfo?.Invoke(
+                    $"USB-B/MBD 恢复尝试 {attempt}：重新枚举COM并发送 {command}");
+                if (!await EnsureMbdConnectedAsync())
+                    continue;
+
+                string response = await TargetBoard.SendCommandAsync(
+                    command,
+                    recoveryCommandTimeoutMs);
+                if (!string.IsNullOrWhiteSpace(response))
+                {
+                    LogInfo?.Invoke(
+                        $"USB-B/MBD 已恢复：{ComName.testComName}，尝试次数={attempt}");
+                    return response;
+                }
+
+                TargetBoard?.Disconnect();
+            }
+
+            LogError?.Invoke(
+                $"USB-B/MBD 在 {recoveryTimeoutMs} ms 内未恢复：{command}");
+            return null;
         }
 
         public string GetBcm125ExpectedFirmwareVersion()
@@ -1071,10 +1328,10 @@ namespace TestPlatform
                 }
 
                 ElectronicLoad.SetInputState(false);
+                ElectronicLoad.ClearInputProtection();
+                ElectronicLoad.SetCurrent(0);
                 ElectronicLoad.SetMode("CV");
                 ElectronicLoad.SetVoltage(0);
-                ElectronicLoad.SetCurrent(0);
-                ElectronicLoad.SetPower(0);
                 RecordPowerOutput("LOAD", false);
                 return true;
             }
@@ -1103,12 +1360,89 @@ namespace TestPlatform
                     return true;
                 }
 
-                ElectronicLoad.SetMode("CV");
-                ElectronicLoad.SetVoltage(voltage);
-                ElectronicLoad.SetCurrent(current);
-                ElectronicLoad.SetPower(power);
-                ElectronicLoad.SetInputState(inputOn);
-                RecordPowerOutput("LOAD", inputOn);
+                bool loadWasAlreadyOn;
+                lock (_powerSafetySync)
+                    loadWasAlreadyOn = _electronicLoadOn;
+
+                // POW is a constant-power operating setpoint on this load and
+                // changes the active mode to CW. Configure limits first, then
+                // select CV last so the requested voltage remains authoritative.
+                float effectiveCurrent = current;
+                if (voltage > 0 && current > 0 && power > 0 && voltage * current > power)
+                {
+                    double derated = Math.Floor((power / voltage) * 0.95 * 10.0) / 10.0;
+                    effectiveCurrent = (float)Math.Max(0.1, Math.Min(current, derated));
+                    LogInfo?.Invoke(
+                        $"电子负载CV电流设定由{current:0.###}A降额为{effectiveCurrent:0.###}A，" +
+                        $"避免{voltage:0.###}V×{current:0.###}A超过{power:0.###}W功率上限。");
+                }
+
+                if (inputOn && loadWasAlreadyOn)
+                {
+                    // Keep the load conducting while moving the CV operating point.
+                    // Toggling INP and rewriting protection values here can latch the
+                    // KUNKIN 7303 over-power alarm during the 250 V -> 255 V transition.
+                    ElectronicLoad.SetVoltage(voltage);
+                    LogInfo?.Invoke(
+                        $"电子负载保持输入ON，仅更新CV电压为{voltage:0.###}V；" +
+                        "不重新写入电流/功率保护，也不在运行中切断负载。");
+                }
+                else
+                {
+                    ElectronicLoad.SetInputState(false);
+                    RecordPowerOutput("LOAD", false);
+                    ElectronicLoad.ClearInputProtection();
+                    ElectronicLoad.SetCurrent(effectiveCurrent);
+                    if (effectiveCurrent > 0)
+                        ElectronicLoad.SetCurrentProtection(effectiveCurrent);
+                    if (power > 0)
+                        ElectronicLoad.SetPowerProtection(power);
+                    ElectronicLoad.SetMode("CV");
+                    ElectronicLoad.SetVoltage(voltage);
+                    if (inputOn)
+                        ElectronicLoad.ClearInputProtection();
+                    ElectronicLoad.SetInputState(inputOn);
+                    RecordPowerOutput("LOAD", inputOn);
+                }
+
+                int readbackDelayMs = Math.Max(
+                    0,
+                    GetIntAppSetting("SKElectronicLoadReadbackDelayMs", 300));
+                if (readbackDelayMs > 0)
+                    await Task.Delay(readbackDelayMs);
+
+                string actualMode = ElectronicLoad.GetMode();
+                bool actualInputOn = ElectronicLoad.GetInputState();
+                RecordPowerOutput("LOAD", actualInputOn);
+                float measuredVoltage = ElectronicLoad.MeasureVoltage();
+                float measuredCurrent = ElectronicLoad.MeasureCurrent();
+                float measuredPower = ElectronicLoad.MeasurePower();
+                if (float.IsNaN(measuredVoltage) || float.IsInfinity(measuredVoltage) ||
+                    float.IsNaN(measuredCurrent) || float.IsInfinity(measuredCurrent) ||
+                    float.IsNaN(measuredPower) || float.IsInfinity(measuredPower))
+                {
+                    LogError?.Invoke("电子负载回读包含非有限值，设置结果无效。");
+                    return false;
+                }
+
+                LogInfo?.Invoke(
+                    $"电子负载真实状态回读：模式={actualMode}，输入={(actualInputOn ? "ON" : "OFF")}，" +
+                    $"设定={voltage:0.###}V/{effectiveCurrent:0.###}A，保护={power:0.###}W，" +
+                    $"实测={measuredVoltage:0.###}V/{measuredCurrent:0.###}A/{measuredPower:0.###}W");
+
+                if (!string.Equals(actualMode, "CV", StringComparison.OrdinalIgnoreCase))
+                {
+                    LogError?.Invoke($"电子负载模式回读失败：要求CV，设备实际为{actualMode}。");
+                    return false;
+                }
+                if (actualInputOn != inputOn)
+                {
+                    LogError?.Invoke(
+                        $"电子负载输入状态回读失败：要求{(inputOn ? "ON" : "OFF")}，" +
+                        $"设备实际为{(actualInputOn ? "ON" : "OFF")}。");
+                    return false;
+                }
+
                 return true;
             }
             catch (Exception ex)

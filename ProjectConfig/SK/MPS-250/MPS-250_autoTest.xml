@@ -2,8 +2,8 @@
 <TestItems>
   <PlanMetadata>
     <BoardType>MPS-250</BoardType>
-    <PlanVersion>2.0</PlanVersion>
-    <BaselineId>MPS250-PDF-REV3-DETAILED-20260803</BaselineId>
+    <PlanVersion>2.1</PlanVersion>
+    <BaselineId>MPS250-PDF-REV3-DAQ-RELAYS-20260814</BaselineId>
   </PlanMetadata>
   <Groups>
     <Group>
@@ -256,9 +256,26 @@
     <DelayMs />
   </TestItem>
   <TestItem>
+    <StepId>MPS250.PRECHECK.S009.ACTION</StepId>
+    <GroupId>MPS250.PRECHECK</GroupId>
+    <SequenceOrder>9</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>true</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>人工插入USB-B通讯线并确认</Name>
+    <LowerLimit />
+    <UpperLimit />
+    <Unit />
+    <ExpectedValue>USB-B已插入</ExpectedValue>
+    <DelayMs />
+  </TestItem>
+  <TestItem>
     <StepId>MPS250.CH06.S001.ACTION</StepId>
     <GroupId>MPS250.CH06</GroupId>
-    <SequenceOrder>9</SequenceOrder>
+    <SequenceOrder>10</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
@@ -275,7 +292,7 @@
   <TestItem>
     <StepId>MPS250.CH06.S002.ACTION</StepId>
     <GroupId>MPS250.CH06</GroupId>
-    <SequenceOrder>10</SequenceOrder>
+    <SequenceOrder>11</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
@@ -292,14 +309,14 @@
   <TestItem>
     <StepId>MPS250.CH06.S003.ACTION</StepId>
     <GroupId>MPS250.CH06</GroupId>
-    <SequenceOrder>11</SequenceOrder>
+    <SequenceOrder>12</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>6.3 断开MPS-250受控继电器1-6</Name>
+    <Name>6.3 断开DAQ301-306功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -309,7 +326,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S001.ACTION</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>12</SequenceOrder>
+    <SequenceOrder>13</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -326,14 +343,14 @@
   <TestItem>
     <StepId>MPS250.CH07.S002.ACTION</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>13</SequenceOrder>
+    <SequenceOrder>14</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>7.2 在VBUS关闭时闭合Relay_1 DUT供电及Relay_3 withdrawal接点</Name>
+    <Name>7.2 闭合Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -343,7 +360,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S003.ACTION</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>14</SequenceOrder>
+    <SequenceOrder>15</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -360,7 +377,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S004.B01</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>15</SequenceOrder>
+    <SequenceOrder>16</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -377,7 +394,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S005.B02</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>16</SequenceOrder>
+    <SequenceOrder>17</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -394,7 +411,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S006.B03</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>17</SequenceOrder>
+    <SequenceOrder>18</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -411,14 +428,14 @@
   <TestItem>
     <StepId>MPS250.CH07.S007.B04</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>18</SequenceOrder>
+    <SequenceOrder>19</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B04 7.3.IV 测量+5VI DAQ114</Name>
+    <Name>B04 7.3.IV 测量+5VI DAQ119</Name>
     <LowerLimit>4900</LowerLimit>
     <UpperLimit>5100</UpperLimit>
     <Unit>mV</Unit>
@@ -428,23 +445,6 @@
   <TestItem>
     <StepId>MPS250.CH07.S008.B05</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>19</SequenceOrder>
-    <DefaultEnabled>true</DefaultEnabled>
-    <Enabled>true</Enabled>
-    <Mandatory>false</Mandatory>
-    <AlwaysRun>false</AlwaysRun>
-    <RunCondition>Selected</RunCondition>
-    <DependsOn />
-    <Name>B05 7.3.V 测量+VPWM DAQ113</Name>
-    <LowerLimit>12000</LowerLimit>
-    <UpperLimit>14000</UpperLimit>
-    <Unit>mV</Unit>
-    <ExpectedValue />
-    <DelayMs />
-  </TestItem>
-  <TestItem>
-    <StepId>MPS250.CH07.S009.B06</StepId>
-    <GroupId>MPS250.CH07</GroupId>
     <SequenceOrder>20</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
@@ -452,15 +452,15 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ111</Name>
-    <LowerLimit>10</LowerLimit>
-    <UpperLimit>60</UpperLimit>
-    <Unit>mA</Unit>
+    <Name>B05 7.3.V 测量VPWM DAQ114</Name>
+    <LowerLimit>12000</LowerLimit>
+    <UpperLimit>14500</UpperLimit>
+    <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
   </TestItem>
   <TestItem>
-    <StepId>MPS250.CH07.S010.B07</StepId>
+    <StepId>MPS250.CH07.S009.B06</StepId>
     <GroupId>MPS250.CH07</GroupId>
     <SequenceOrder>21</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -469,9 +469,26 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>B07 7.3.VII 测量P+ DAQ104</Name>
-    <LowerLimit>137000</LowerLimit>
-    <UpperLimit>138000</UpperLimit>
+    <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ117</Name>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>40</UpperLimit>
+    <Unit>mA</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS250.CH07.S010.B07</StepId>
+    <GroupId>MPS250.CH07</GroupId>
+    <SequenceOrder>22</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>B07 7.3.VII 测量P+ DAQ113</Name>
+    <LowerLimit>270000</LowerLimit>
+    <UpperLimit>280000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -479,7 +496,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S011.ACTION</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>22</SequenceOrder>
+    <SequenceOrder>23</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -496,7 +513,7 @@
   <TestItem>
     <StepId>MPS250.CH07.S012.ACTION</StepId>
     <GroupId>MPS250.CH07</GroupId>
-    <SequenceOrder>23</SequenceOrder>
+    <SequenceOrder>24</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -513,7 +530,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S001.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>24</SequenceOrder>
+    <SequenceOrder>25</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -530,7 +547,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S002.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>25</SequenceOrder>
+    <SequenceOrder>26</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -547,7 +564,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S003.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>26</SequenceOrder>
+    <SequenceOrder>27</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -564,7 +581,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S004.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>27</SequenceOrder>
+    <SequenceOrder>28</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -581,7 +598,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S005.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>28</SequenceOrder>
+    <SequenceOrder>29</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -598,7 +615,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S006.C01</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>29</SequenceOrder>
+    <SequenceOrder>30</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -615,7 +632,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S007.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>30</SequenceOrder>
+    <SequenceOrder>31</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -632,7 +649,7 @@
   <TestItem>
     <StepId>MPS250.CH08.S008.ACTION</StepId>
     <GroupId>MPS250.CH08</GroupId>
-    <SequenceOrder>31</SequenceOrder>
+    <SequenceOrder>32</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -649,7 +666,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S001.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>32</SequenceOrder>
+    <SequenceOrder>33</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -666,7 +683,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S002.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>33</SequenceOrder>
+    <SequenceOrder>34</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -683,14 +700,14 @@
   <TestItem>
     <StepId>MPS250.CH09.S003.D01</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>34</SequenceOrder>
+    <SequenceOrder>35</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>D01 9.2.I 测量COM_USB DAQ105</Name>
+    <Name>D01 9.2.I 测量COM_USB DAQ111</Name>
     <LowerLimit>4800</LowerLimit>
     <UpperLimit>5400</UpperLimit>
     <Unit>mV</Unit>
@@ -700,14 +717,14 @@
   <TestItem>
     <StepId>MPS250.CH09.S004.D02</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>35</SequenceOrder>
+    <SequenceOrder>36</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>D02 9.2.II 测量3V3 DAQ115</Name>
+    <Name>D02 9.2.II 测量3V3 DAQ120</Name>
     <LowerLimit>3200</LowerLimit>
     <UpperLimit>3400</UpperLimit>
     <Unit>mV</Unit>
@@ -717,7 +734,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S005.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>36</SequenceOrder>
+    <SequenceOrder>37</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -734,7 +751,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S006.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>37</SequenceOrder>
+    <SequenceOrder>38</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -751,7 +768,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S007.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>38</SequenceOrder>
+    <SequenceOrder>39</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -768,7 +785,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S008.D03</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>39</SequenceOrder>
+    <SequenceOrder>40</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -785,7 +802,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S009.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>40</SequenceOrder>
+    <SequenceOrder>41</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -802,7 +819,7 @@
   <TestItem>
     <StepId>MPS250.CH09.S010.ACTION</StepId>
     <GroupId>MPS250.CH09</GroupId>
-    <SequenceOrder>41</SequenceOrder>
+    <SequenceOrder>42</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -819,14 +836,14 @@
   <TestItem>
     <StepId>MPS250.CH10.S001.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>42</SequenceOrder>
+    <SequenceOrder>43</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.1 断开Relay_2/2BIS使+5VEXT与GND_EXT浮空</Name>
+    <Name>10.1 断开Relay_2/2BIS(DAQ305/306)使+5VEXT与GND_EXT浮空</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -836,7 +853,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S002.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>43</SequenceOrder>
+    <SequenceOrder>44</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -853,7 +870,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S003.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>44</SequenceOrder>
+    <SequenceOrder>45</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -870,7 +887,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S004.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>45</SequenceOrder>
+    <SequenceOrder>46</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -887,7 +904,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S005.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>46</SequenceOrder>
+    <SequenceOrder>47</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -904,7 +921,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S006.E01</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>47</SequenceOrder>
+    <SequenceOrder>48</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -921,14 +938,14 @@
   <TestItem>
     <StepId>MPS250.CH10.S007.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>48</SequenceOrder>
+    <SequenceOrder>49</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.6 闭合Relay_2/2BIS连接外部5V和GND</Name>
+    <Name>10.6 闭合Relay_2/2BIS(DAQ305/306)连接外部5V和GND</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -938,7 +955,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S008.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>49</SequenceOrder>
+    <SequenceOrder>50</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -955,7 +972,7 @@
   <TestItem>
     <StepId>MPS250.CH10.S009.E02</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>50</SequenceOrder>
+    <SequenceOrder>51</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -972,14 +989,14 @@
   <TestItem>
     <StepId>MPS250.CH10.S010.ACTION</StepId>
     <GroupId>MPS250.CH10</GroupId>
-    <SequenceOrder>51</SequenceOrder>
+    <SequenceOrder>52</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>10.9 再次断开Relay_2/2BIS</Name>
+    <Name>10.9 再次断开Relay_2/2BIS(DAQ305/306)</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -989,7 +1006,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S001.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>52</SequenceOrder>
+    <SequenceOrder>53</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1006,7 +1023,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S002.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>53</SequenceOrder>
+    <SequenceOrder>54</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1023,7 +1040,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S003.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>54</SequenceOrder>
+    <SequenceOrder>55</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1040,7 +1057,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S004.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>55</SequenceOrder>
+    <SequenceOrder>56</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1057,7 +1074,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S005.F01</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>56</SequenceOrder>
+    <SequenceOrder>57</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1074,7 +1091,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S006.F02</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>57</SequenceOrder>
+    <SequenceOrder>58</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1091,14 +1108,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S007.F03</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>58</SequenceOrder>
+    <SequenceOrder>59</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F03 11.7 U24.7 DAQ108采样16次/100ms取平均</Name>
+    <Name>F03 11.7 U24.7 DAQ109采样16次/100ms取平均</Name>
     <LowerLimit>10000</LowerLimit>
     <UpperLimit>11000</UpperLimit>
     <Unit>mV</Unit>
@@ -1108,14 +1125,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S008.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>59</SequenceOrder>
+    <SequenceOrder>60</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.8 断开Relay_3 withdrawal接点</Name>
+    <Name>11.8 断开Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1125,7 +1142,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S009.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>60</SequenceOrder>
+    <SequenceOrder>61</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1142,7 +1159,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S010.F04</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>61</SequenceOrder>
+    <SequenceOrder>62</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1159,7 +1176,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S011.F05</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>62</SequenceOrder>
+    <SequenceOrder>63</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1176,14 +1193,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S012.F06</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>63</SequenceOrder>
+    <SequenceOrder>64</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F06 11.12 U24.7 DAQ108采样16次/100ms取平均</Name>
+    <Name>F06 11.12 U24.7 DAQ109采样16次/100ms取平均</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -1193,7 +1210,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S013.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>64</SequenceOrder>
+    <SequenceOrder>65</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1210,14 +1227,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S014.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>65</SequenceOrder>
+    <SequenceOrder>66</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.14 闭合Relay_4强制CONTACT_80V=0</Name>
+    <Name>11.14 闭合Relay_4(DAQ302)强制CONTACT_80V=0</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1227,7 +1244,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S015.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>66</SequenceOrder>
+    <SequenceOrder>67</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1244,7 +1261,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S016.F07</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>67</SequenceOrder>
+    <SequenceOrder>68</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1261,14 +1278,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S017.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>68</SequenceOrder>
+    <SequenceOrder>69</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.17 断开Relay_4强制CONTACT_80V=1</Name>
+    <Name>11.17 断开Relay_4(DAQ302)强制CONTACT_80V=1</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1278,7 +1295,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S018.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>69</SequenceOrder>
+    <SequenceOrder>70</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1295,7 +1312,7 @@
   <TestItem>
     <StepId>MPS250.CH11.S019.F08</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>70</SequenceOrder>
+    <SequenceOrder>71</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1312,14 +1329,14 @@
   <TestItem>
     <StepId>MPS250.CH11.S020.ACTION</StepId>
     <GroupId>MPS250.CH11</GroupId>
-    <SequenceOrder>71</SequenceOrder>
+    <SequenceOrder>72</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.20 恢复闭合Relay_3 withdrawal接点</Name>
+    <Name>11.20 恢复闭合Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1329,7 +1346,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S001.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>72</SequenceOrder>
+    <SequenceOrder>73</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1346,7 +1363,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S002.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>73</SequenceOrder>
+    <SequenceOrder>74</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1363,7 +1380,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S003.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>74</SequenceOrder>
+    <SequenceOrder>75</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1380,7 +1397,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S004.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>75</SequenceOrder>
+    <SequenceOrder>76</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1397,14 +1414,14 @@
   <TestItem>
     <StepId>MPS250.CH12.S005.G01</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>76</SequenceOrder>
+    <SequenceOrder>77</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>G01 12.5 测量LS1 COM-NO闭合电阻 DAQ107</Name>
+    <Name>G01 12.5 测量LS1 COM-NO闭合电阻 DAQ118</Name>
     <LowerLimit>0</LowerLimit>
     <UpperLimit>5</UpperLimit>
     <Unit>Ohm</Unit>
@@ -1414,7 +1431,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S006.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>77</SequenceOrder>
+    <SequenceOrder>78</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1431,7 +1448,7 @@
   <TestItem>
     <StepId>MPS250.CH12.S007.ACTION</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>78</SequenceOrder>
+    <SequenceOrder>79</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1448,16 +1465,16 @@
   <TestItem>
     <StepId>MPS250.CH12.S008.G02</StepId>
     <GroupId>MPS250.CH12</GroupId>
-    <SequenceOrder>79</SequenceOrder>
+    <SequenceOrder>80</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>G02 12.8 测量LS1 COM-NO断开电阻 DAQ107</Name>
-    <LowerLimit>1000000</LowerLimit>
-    <UpperLimit>1000000000000</UpperLimit>
+    <Name>G02 12.8 测量LS1 COM-NO断开电阻 DAQ118</Name>
+    <LowerLimit>1000</LowerLimit>
+    <UpperLimit />
     <Unit>Ohm</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1465,7 +1482,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S001.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>80</SequenceOrder>
+    <SequenceOrder>81</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1482,7 +1499,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S002.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>81</SequenceOrder>
+    <SequenceOrder>82</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1499,7 +1516,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S003.H01</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>82</SequenceOrder>
+    <SequenceOrder>83</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1516,7 +1533,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S004.H02</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>83</SequenceOrder>
+    <SequenceOrder>84</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1524,8 +1541,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H02 13.4 通过1Ω分流测量MPS静态电流</Name>
-    <LowerLimit>19</LowerLimit>
-    <UpperLimit>100</UpperLimit>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>40</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1533,7 +1550,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S005.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>84</SequenceOrder>
+    <SequenceOrder>85</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1550,7 +1567,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S006.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>85</SequenceOrder>
+    <SequenceOrder>86</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1567,7 +1584,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S007.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>86</SequenceOrder>
+    <SequenceOrder>87</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1584,7 +1601,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S008.H03</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>87</SequenceOrder>
+    <SequenceOrder>88</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1601,7 +1618,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S009.H04</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>88</SequenceOrder>
+    <SequenceOrder>89</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1609,8 +1626,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H04 13.9 测量高驱动MPS电流</Name>
-    <LowerLimit>40</LowerLimit>
-    <UpperLimit>150</UpperLimit>
+    <LowerLimit>30</LowerLimit>
+    <UpperLimit>60</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1618,7 +1635,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S010.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>89</SequenceOrder>
+    <SequenceOrder>90</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1635,7 +1652,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S011.H05</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>90</SequenceOrder>
+    <SequenceOrder>91</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1652,7 +1669,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S012.H06</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>91</SequenceOrder>
+    <SequenceOrder>92</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1660,8 +1677,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH13.S004.H02</DependsOn>
     <Name>H06 13.12 测量低驱动电流并与H02比较</Name>
-    <LowerLimit>19</LowerLimit>
-    <UpperLimit>70</UpperLimit>
+    <LowerLimit>15</LowerLimit>
+    <UpperLimit>45</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1669,7 +1686,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S013.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>92</SequenceOrder>
+    <SequenceOrder>93</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1686,7 +1703,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S014.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>93</SequenceOrder>
+    <SequenceOrder>94</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1703,7 +1720,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S015.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>94</SequenceOrder>
+    <SequenceOrder>95</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1720,7 +1737,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S016.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>95</SequenceOrder>
+    <SequenceOrder>96</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1737,7 +1754,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S017.H07</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>96</SequenceOrder>
+    <SequenceOrder>97</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1754,7 +1771,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S018.H08</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>97</SequenceOrder>
+    <SequenceOrder>98</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1762,8 +1779,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H08 13.18 测量关闭后MPS电流（PDF H8）</Name>
-    <LowerLimit>19</LowerLimit>
-    <UpperLimit>100</UpperLimit>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>40</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1771,7 +1788,7 @@
   <TestItem>
     <StepId>MPS250.CH13.S019.ACTION</StepId>
     <GroupId>MPS250.CH13</GroupId>
-    <SequenceOrder>98</SequenceOrder>
+    <SequenceOrder>99</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1788,7 +1805,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S001.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>99</SequenceOrder>
+    <SequenceOrder>100</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1805,7 +1822,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S002.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>100</SequenceOrder>
+    <SequenceOrder>101</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1822,7 +1839,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S003.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>101</SequenceOrder>
+    <SequenceOrder>102</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1839,7 +1856,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S004.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>102</SequenceOrder>
+    <SequenceOrder>103</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1856,7 +1873,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S005.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>103</SequenceOrder>
+    <SequenceOrder>104</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1873,7 +1890,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S006.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>104</SequenceOrder>
+    <SequenceOrder>105</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1890,7 +1907,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S007.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>105</SequenceOrder>
+    <SequenceOrder>106</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1907,7 +1924,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S008.I01</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>106</SequenceOrder>
+    <SequenceOrder>107</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1924,7 +1941,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S009.I02</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>107</SequenceOrder>
+    <SequenceOrder>108</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1941,7 +1958,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S010.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>108</SequenceOrder>
+    <SequenceOrder>109</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1958,7 +1975,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S011.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>109</SequenceOrder>
+    <SequenceOrder>110</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1975,7 +1992,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S012.I03</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>110</SequenceOrder>
+    <SequenceOrder>111</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -1992,7 +2009,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S013.I04</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>111</SequenceOrder>
+    <SequenceOrder>112</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2009,7 +2026,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S014.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>112</SequenceOrder>
+    <SequenceOrder>113</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2026,7 +2043,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S015.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>113</SequenceOrder>
+    <SequenceOrder>114</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2043,7 +2060,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S016.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>114</SequenceOrder>
+    <SequenceOrder>115</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2060,7 +2077,7 @@
   <TestItem>
     <StepId>MPS250.CH14.S017.ACTION</StepId>
     <GroupId>MPS250.CH14</GroupId>
-    <SequenceOrder>115</SequenceOrder>
+    <SequenceOrder>116</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2077,7 +2094,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S001.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>116</SequenceOrder>
+    <SequenceOrder>117</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2094,7 +2111,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S002.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>117</SequenceOrder>
+    <SequenceOrder>118</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2111,7 +2128,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S003.J01</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>118</SequenceOrder>
+    <SequenceOrder>119</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2128,14 +2145,14 @@
   <TestItem>
     <StepId>MPS250.CH15.S004.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>119</SequenceOrder>
+    <SequenceOrder>120</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.4 关闭VBUS、闭合Relay_5后恢复275V输出</Name>
+    <Name>15.4 关闭VBUS、闭合Relay_5(DAQ303)后恢复275V输出</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2145,7 +2162,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S005.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>120</SequenceOrder>
+    <SequenceOrder>121</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2162,7 +2179,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S006.J02</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>121</SequenceOrder>
+    <SequenceOrder>122</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2179,7 +2196,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S007.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>122</SequenceOrder>
+    <SequenceOrder>123</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2196,7 +2213,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S008.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>123</SequenceOrder>
+    <SequenceOrder>124</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2213,7 +2230,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S009.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>124</SequenceOrder>
+    <SequenceOrder>125</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2230,7 +2247,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S010.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>125</SequenceOrder>
+    <SequenceOrder>126</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2247,7 +2264,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S011.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>126</SequenceOrder>
+    <SequenceOrder>127</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2264,7 +2281,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S012.J03</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>127</SequenceOrder>
+    <SequenceOrder>128</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2281,14 +2298,14 @@
   <TestItem>
     <StepId>MPS250.CH15.S013.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>128</SequenceOrder>
+    <SequenceOrder>129</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.12 DAQ116独立测量Gen VBUS参考电压</Name>
+    <Name>15.12 DAQ113独立测量P+ VBUS参考电压</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2298,7 +2315,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S014.J04</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>129</SequenceOrder>
+    <SequenceOrder>130</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2306,8 +2323,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S003.J01</DependsOn>
     <Name>J04 15.13 计算Gain_VBUS=4096*VBUS/J01</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2315,7 +2332,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S015.J05</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>130</SequenceOrder>
+    <SequenceOrder>131</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2323,8 +2340,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S006.J02</DependsOn>
     <Name>J05 15.14 计算Gain_VPREC=4096*VBUS/J02</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2332,7 +2349,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S016.J06</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>131</SequenceOrder>
+    <SequenceOrder>132</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2340,8 +2357,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S012.J03</DependsOn>
     <Name>J06 15.15-16 计算单路Gain_VSTRING2=4096*VBUS/J03</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2349,7 +2366,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S017.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>132</SequenceOrder>
+    <SequenceOrder>133</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2366,14 +2383,14 @@
   <TestItem>
     <StepId>MPS250.CH15.S018.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>133</SequenceOrder>
+    <SequenceOrder>134</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>15.18 关闭VBUS、断开Relay_5后恢复275V输出</Name>
+    <Name>15.18 关闭VBUS、断开Relay_5(DAQ303)后恢复275V输出</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2383,7 +2400,7 @@
   <TestItem>
     <StepId>MPS250.CH15.S019.ACTION</StepId>
     <GroupId>MPS250.CH15</GroupId>
-    <SequenceOrder>134</SequenceOrder>
+    <SequenceOrder>135</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2400,7 +2417,7 @@
   <TestItem>
     <StepId>MPS250.CH16.S001.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>135</SequenceOrder>
+    <SequenceOrder>136</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2417,7 +2434,7 @@
   <TestItem>
     <StepId>MPS250.CH16.S002.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>136</SequenceOrder>
+    <SequenceOrder>137</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2434,16 +2451,16 @@
   <TestItem>
     <StepId>MPS250.CH16.S003.K01</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>137</SequenceOrder>
+    <SequenceOrder>138</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K01 16.3 MCU_ISOBATT/TP230基线测量约8秒 DAQ117</Name>
-    <LowerLimit>1700</LowerLimit>
-    <UpperLimit>2200</UpperLimit>
+    <Name>K01 16.3 MCU_ISOBATT/TP230基线测量约8秒 DAQ105</Name>
+    <LowerLimit>1400</LowerLimit>
+    <UpperLimit>1900</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2451,7 +2468,7 @@
   <TestItem>
     <StepId>MPS250.CH16.S004.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>138</SequenceOrder>
+    <SequenceOrder>139</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2468,14 +2485,14 @@
   <TestItem>
     <StepId>MPS250.CH16.S005.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>139</SequenceOrder>
+    <SequenceOrder>140</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.5 在VBATT关闭时闭合Relay_6后输出0V</Name>
+    <Name>16.5 在VBATT关闭时闭合Relay_6(DAQ304)后输出0V</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2485,14 +2502,14 @@
   <TestItem>
     <StepId>MPS250.CH16.S006.K02</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>140</SequenceOrder>
+    <SequenceOrder>141</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ117</Name>
+    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ105</Name>
     <LowerLimit>3000</LowerLimit>
     <UpperLimit>3300</UpperLimit>
     <Unit>mV</Unit>
@@ -2502,7 +2519,7 @@
   <TestItem>
     <StepId>MPS250.CH16.S007.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>141</SequenceOrder>
+    <SequenceOrder>142</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2519,23 +2536,6 @@
   <TestItem>
     <StepId>MPS250.CH16.S008.K03</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>142</SequenceOrder>
-    <DefaultEnabled>true</DefaultEnabled>
-    <Enabled>true</Enabled>
-    <Mandatory>false</Mandatory>
-    <AlwaysRun>false</AlwaysRun>
-    <RunCondition>Selected</RunCondition>
-    <DependsOn />
-    <Name>K03 16.8 MCU_ISOBATT@250V测量约8秒 DAQ117</Name>
-    <LowerLimit>400</LowerLimit>
-    <UpperLimit>800</UpperLimit>
-    <Unit>mV</Unit>
-    <ExpectedValue />
-    <DelayMs />
-  </TestItem>
-  <TestItem>
-    <StepId>MPS250.CH16.S009.ACTION</StepId>
-    <GroupId>MPS250.CH16</GroupId>
     <SequenceOrder>143</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
@@ -2543,7 +2543,24 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.9 先关闭VBATT再断开Relay_6 ISOBATT_INPUT</Name>
+    <Name>K03 16.8 MCU_ISOBATT@250V测量约8秒 DAQ105</Name>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>300</UpperLimit>
+    <Unit>mV</Unit>
+    <ExpectedValue />
+    <DelayMs />
+  </TestItem>
+  <TestItem>
+    <StepId>MPS250.CH16.S009.ACTION</StepId>
+    <GroupId>MPS250.CH16</GroupId>
+    <SequenceOrder>144</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Enabled>true</Enabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <RunCondition>Selected</RunCondition>
+    <DependsOn />
+    <Name>16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2553,7 +2570,7 @@
   <TestItem>
     <StepId>MPS250.CH16.S010.ACTION</StepId>
     <GroupId>MPS250.CH16</GroupId>
-    <SequenceOrder>144</SequenceOrder>
+    <SequenceOrder>145</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2570,7 +2587,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S001.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>145</SequenceOrder>
+    <SequenceOrder>146</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2587,7 +2604,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S002.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>146</SequenceOrder>
+    <SequenceOrder>147</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2604,7 +2621,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S003.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>147</SequenceOrder>
+    <SequenceOrder>148</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2621,7 +2638,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S004.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>148</SequenceOrder>
+    <SequenceOrder>149</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2638,7 +2655,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S005.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>149</SequenceOrder>
+    <SequenceOrder>150</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2655,7 +2672,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S006.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>150</SequenceOrder>
+    <SequenceOrder>151</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2672,7 +2689,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S007.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>151</SequenceOrder>
+    <SequenceOrder>152</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2689,7 +2706,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S008.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>152</SequenceOrder>
+    <SequenceOrder>153</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2706,7 +2723,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S009.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>153</SequenceOrder>
+    <SequenceOrder>154</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2723,7 +2740,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S010.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>154</SequenceOrder>
+    <SequenceOrder>155</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2740,7 +2757,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S011.L01</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>155</SequenceOrder>
+    <SequenceOrder>156</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2757,14 +2774,14 @@
   <TestItem>
     <StepId>MPS250.CH17.S012.L02</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>156</SequenceOrder>
+    <SequenceOrder>157</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L02 17.12-13 FBK_1 DAQ109采样16次/100ms</Name>
+    <Name>L02 17.12-13 FBK_1 DAQ107采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -2774,14 +2791,14 @@
   <TestItem>
     <StepId>MPS250.CH17.S013.L03</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>157</SequenceOrder>
+    <SequenceOrder>158</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L03 17.12-14 FBK_2 DAQ110采样16次/100ms</Name>
+    <Name>L03 17.12-14 FBK_2 DAQ108采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -2791,7 +2808,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S014.L04</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>158</SequenceOrder>
+    <SequenceOrder>159</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2799,8 +2816,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L04 17.15 测量加热器关闭时MPS电流</Name>
-    <LowerLimit>18</LowerLimit>
-    <UpperLimit>60</UpperLimit>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>40</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2808,7 +2825,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S015.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>159</SequenceOrder>
+    <SequenceOrder>160</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2825,7 +2842,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S016.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>160</SequenceOrder>
+    <SequenceOrder>161</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2842,7 +2859,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S017.L05</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>161</SequenceOrder>
+    <SequenceOrder>162</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2859,7 +2876,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S018.L06</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>162</SequenceOrder>
+    <SequenceOrder>163</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2868,7 +2885,7 @@
     <DependsOn />
     <Name>L06 17.19-20 FBK_1 100%状态采样16次/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>600</UpperLimit>
+    <UpperLimit>200</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -2876,7 +2893,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S019.L07</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>163</SequenceOrder>
+    <SequenceOrder>164</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2884,8 +2901,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L07 17.21 测量PWM1开启时MPS电流</Name>
-    <LowerLimit>100</LowerLimit>
-    <UpperLimit>200</UpperLimit>
+    <LowerLimit>230</LowerLimit>
+    <UpperLimit>300</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2893,7 +2910,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S020.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>164</SequenceOrder>
+    <SequenceOrder>165</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2910,7 +2927,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S021.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>165</SequenceOrder>
+    <SequenceOrder>166</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2927,7 +2944,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S022.L08</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>166</SequenceOrder>
+    <SequenceOrder>167</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2936,7 +2953,7 @@
     <DependsOn />
     <Name>L08 17.23 FBK_1恢复0%采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -2944,7 +2961,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S023.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>167</SequenceOrder>
+    <SequenceOrder>168</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2961,7 +2978,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S024.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>168</SequenceOrder>
+    <SequenceOrder>169</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2978,7 +2995,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S025.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>169</SequenceOrder>
+    <SequenceOrder>170</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -2995,7 +3012,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S026.L09</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>170</SequenceOrder>
+    <SequenceOrder>171</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3012,7 +3029,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S027.L10</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>171</SequenceOrder>
+    <SequenceOrder>172</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3021,7 +3038,7 @@
     <DependsOn />
     <Name>L10 17.28-29 FBK_2 100%状态采样16次/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>500</UpperLimit>
+    <UpperLimit>200</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3029,7 +3046,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S028.L11</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>172</SequenceOrder>
+    <SequenceOrder>173</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3037,8 +3054,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L11 17.30 测量PWM2开启时MPS电流</Name>
-    <LowerLimit>50</LowerLimit>
-    <UpperLimit>100</UpperLimit>
+    <LowerLimit>110</LowerLimit>
+    <UpperLimit>160</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3046,7 +3063,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S029.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>173</SequenceOrder>
+    <SequenceOrder>174</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3063,7 +3080,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S030.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>174</SequenceOrder>
+    <SequenceOrder>175</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3080,7 +3097,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S031.L12</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>175</SequenceOrder>
+    <SequenceOrder>176</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3089,7 +3106,7 @@
     <DependsOn />
     <Name>L12 17.32 FBK_2恢复0%采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3097,7 +3114,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S032.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>176</SequenceOrder>
+    <SequenceOrder>177</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3114,7 +3131,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S033.L13</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>177</SequenceOrder>
+    <SequenceOrder>178</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3131,7 +3148,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S034.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>178</SequenceOrder>
+    <SequenceOrder>179</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3148,7 +3165,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S035.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>179</SequenceOrder>
+    <SequenceOrder>180</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3165,7 +3182,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S036.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>180</SequenceOrder>
+    <SequenceOrder>181</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3182,7 +3199,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S037.L14</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>181</SequenceOrder>
+    <SequenceOrder>182</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3191,7 +3208,7 @@
     <DependsOn />
     <Name>L14 17.36-37 FBK_1最终采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3199,7 +3216,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S038.L15</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>182</SequenceOrder>
+    <SequenceOrder>183</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3208,7 +3225,7 @@
     <DependsOn />
     <Name>L15 17.36-38 FBK_2最终采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3216,7 +3233,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S039.L16</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>183</SequenceOrder>
+    <SequenceOrder>184</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3233,7 +3250,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S040.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>184</SequenceOrder>
+    <SequenceOrder>185</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3250,14 +3267,14 @@
   <TestItem>
     <StepId>MPS250.CH17.S041.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>185</SequenceOrder>
+    <SequenceOrder>187</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>17.41 断开Relay_1 DUT供电路径</Name>
+    <Name>17.42 断开Relay_3(DAQ301) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3267,24 +3284,7 @@
   <TestItem>
     <StepId>MPS250.CH17.S042.ACTION</StepId>
     <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>186</SequenceOrder>
-    <DefaultEnabled>true</DefaultEnabled>
-    <Enabled>true</Enabled>
-    <Mandatory>false</Mandatory>
-    <AlwaysRun>false</AlwaysRun>
-    <RunCondition>Selected</RunCondition>
-    <DependsOn />
-    <Name>17.42 断开Relay_3 withdrawal接点</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
-    <ExpectedValue />
-    <DelayMs />
-  </TestItem>
-  <TestItem>
-    <StepId>MPS250.CH17.S043.ACTION</StepId>
-    <GroupId>MPS250.CH17</GroupId>
-    <SequenceOrder>187</SequenceOrder>
+    <SequenceOrder>188</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>false</Mandatory>
@@ -3301,14 +3301,14 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S001.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>188</SequenceOrder>
+    <SequenceOrder>189</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
     <AlwaysRun>true</AlwaysRun>
     <RunCondition>Always</RunCondition>
     <DependsOn />
-    <Name>发送主开关/加热器安全关闭命令</Name>
+    <Name>若USB仍连接则发送主开关/加热器安全关闭命令</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3318,7 +3318,7 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S002.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>189</SequenceOrder>
+    <SequenceOrder>190</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
@@ -3335,7 +3335,7 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S003.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>190</SequenceOrder>
+    <SequenceOrder>191</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
@@ -3352,14 +3352,14 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S004.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>191</SequenceOrder>
+    <SequenceOrder>192</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
     <AlwaysRun>true</AlwaysRun>
     <RunCondition>Always</RunCondition>
     <DependsOn />
-    <Name>断开MPS-250功率继电器1-6</Name>
+    <Name>断开DAQ301-306功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3369,7 +3369,7 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S005.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>192</SequenceOrder>
+    <SequenceOrder>193</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>
@@ -3386,7 +3386,7 @@
   <TestItem>
     <StepId>MPS250.CLEANUP.S006.ACTION</StepId>
     <GroupId>MPS250.CLEANUP</GroupId>
-    <SequenceOrder>193</SequenceOrder>
+    <SequenceOrder>194</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Enabled>true</Enabled>
     <Mandatory>true</Mandatory>

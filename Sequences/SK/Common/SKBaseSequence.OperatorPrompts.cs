@@ -42,6 +42,13 @@ namespace TestPlatform.TestSequences
 
         protected async Task<bool> ConfirmFixturePressDownAsync(string message)
         {
+            return await ConfirmOperatorActionAsync(message, "确认下压");
+        }
+
+        protected async Task<bool> ConfirmOperatorActionAsync(
+            string message,
+            string confirmLabel = "确认")
+        {
             if (Application.Current == null)
                 return await ConfirmAsync(message);
 
@@ -51,7 +58,7 @@ namespace TestPlatform.TestSequences
                 {
                     Owner = Application.Current.MainWindow
                 };
-                dialog.SetButtonLabels("确认下压", "取消");
+                dialog.SetButtonLabels(confirmLabel, "取消");
                 return dialog.ShowDialog() == true;
             });
         }

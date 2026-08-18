@@ -518,7 +518,7 @@
                                             <ComboBox x:Name="cmbReportSaveMode" Grid.Row="0" Grid.Column="1" Height="36" Margin="0" HorizontalAlignment="Stretch">
                                                 <ComboBoxItem Content="累加 CSV 文件（当前模式）"/>
                                                 <ComboBoxItem Content="每个 SN 保存单个 Excel 文件"/>
-                                                <ComboBoxItem Content="BCM-125 TXT + PDF"/>
+                                                <ComboBoxItem Content="BCM / MPS 客户 TXT + PDF"/>
                                             </ComboBox>
                                             <TextBlock Grid.Row="0" Grid.Column="2" Text="CSV适合长期累加统计，Excel适合单台产品追溯。" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center" Margin="14,0,0,0" TextWrapping="Wrap"/>
 
@@ -529,7 +529,7 @@
                                             <TextBox x:Name="txtReportOperatorCode" Grid.Row="2" Grid.Column="1" Height="36" Margin="0,12,0,0"/>
                                             <TextBlock Grid.Row="2" Grid.Column="2" Margin="14,12,0,0" VerticalAlignment="Center"
                                                        Foreground="{StaticResource TextSecondary}" TextWrapping="Wrap"
-                                                       Text="用于 BCM-125 TXT/PDF 文件名和报告首行，例如 1105。"/>
+                                                       Text="用于 BCM-125/BCM-250 TXT/PDF 文件名和报告首行，例如 1105。"/>
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -625,6 +625,7 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <CheckBox x:Name="chkStopOnFail" Grid.Row="0" Grid.Column="0" Content="失败时停止整个测试" IsChecked="True"/>
                                         <CheckBox x:Name="chkPromptOnFail" Grid.Row="0" Grid.Column="2" Content="失败时弹窗提示" IsChecked="True"/>
@@ -642,6 +643,10 @@
                                                   Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
                                                   Content="工程模式：供电关键步骤失败后继续（高风险）"
                                                   ToolTip="仅在工程 Profile 且未勾选失败时停止整个测试时生效；急停、治具和接口等安全关键失败仍会停止。"/>
+                                        <CheckBox x:Name="chkSkipFirmwareProgramming"
+                                                  Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                                                  Content="所有项目：跳过固件烧录"
+                                                  ToolTip="勾选后，所有板型均不执行固件烧录；BCM250 也不再要求连接 TTL 烧录串口，烧录结果记录为已跳过。"/>
                                     </Grid>
                                 </Grid>
                             </Border>

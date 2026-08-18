@@ -19,8 +19,8 @@ namespace TestPlatform.TestSequences
         public const int FiveVoltShuntDaqChannel = 117;
         public const int VccShuntDaqChannel = 119;
 
-        public const double VccShuntOhms = 2.2;
-        public const double FiveVoltShuntOhms = 0.47;
+        public const double VccShuntOhms = 2.0;
+        public const double FiveVoltShuntOhms = 0.4;
         public const double StringShuntOhms = 0.0203111;
         public const double InternalStringShuntOhms = 1.0;
         public const double StringTestShuntOhms = 125.0;
@@ -33,6 +33,7 @@ namespace TestPlatform.TestSequences
 
         public const int InternalOneOhmRelay = 3;
         public const int DutPowerRelay = 7;
+        public const string ElectronicLoadPowerRelays = "2,5";
         public const int Rl2B = 8;
         public const int Rl1aB = 9;
         public const int Rl2A = 10;
@@ -46,7 +47,8 @@ namespace TestPlatform.TestSequences
         public const string ChargeStringPowerPathRelays = "1,3,6,15,11,8";
         public const string CcbStringPowerPathRelays = "1,3,6,9,13,8";
         public const string PowerPathRelays = "1,3,6,8,9,10,11,13,15";
-        public const string AllPowerRelays = "1,3,6,7,8,9,10,11,13,15";
-        public const string AllBcm250Relays = "1,2,3,4,6,7,8,9,10,11,13,15";
+        public const string AllPowerRelays = "1,2,3,5,6,7,8,9,10,11,13,15";
+        // Y2/Y5 supply the electronic load and must remain closed during CH7-CH27.
+        public const string AllBcm250Relays = "1,3,4,6,7,8,9,10,11,13,15";
     }
 }

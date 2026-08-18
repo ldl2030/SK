@@ -93,6 +93,7 @@ namespace TestPlatform
                         var timer = Stopwatch.StartNew();
                         LogInfo?.Invoke($"MBD TX [{portName}] {FormatCommandForLog(payload)}");
                         string response = ReadResponse(effectiveTimeoutMs);
+
                         timer.Stop();
 
                         if (string.IsNullOrWhiteSpace(response))

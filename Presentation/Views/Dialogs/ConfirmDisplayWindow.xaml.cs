@@ -97,5 +97,21 @@ namespace TestPlatform
             BtnNo_Click(sender, e);
         }
 
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && !_noticeMode && btnYes.Visibility == Visibility.Visible)
+            {
+                e.Handled = true;
+                BtnYes_Click(btnYes, new RoutedEventArgs(Button.ClickEvent));
+                return;
+            }
+
+            if (e.Key == Key.Escape && btnNo.Visibility == Visibility.Visible)
+            {
+                e.Handled = true;
+                BtnNo_Click(btnNo, new RoutedEventArgs(Button.ClickEvent));
+            }
+        }
+
     }
 }

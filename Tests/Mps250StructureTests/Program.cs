@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -26,10 +27,11 @@ namespace Mps250StructureTests
                 ValidateStructure(plan, steps);
                 ValidateCatalog();
                 ValidatePowerSafety();
+                ValidateCustomerReport(root, plan);
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
 
-                Console.WriteLine("PASS MPS250: 193 rows, 60 PDF results, chapters 6-17, full simulation and J06 fault cleanup.");
+                Console.WriteLine("PASS MPS250: 193 rows, 60 customer TXT/PDF results, chapters 6-17, DAQ-only functional relays, USB-B insertion, report generation, full simulation and J06 fault cleanup.");
                 return 0;
             }
             catch (Exception ex)
@@ -55,8 +57,9 @@ namespace Mps250StructureTests
             Require(steps.Count == 193, "Expected 193 rows, got " + steps.Count + ".");
             Require(definitions.Count == steps.Count, "Code/XML row count mismatch.");
             Require(definitions.Select(x => x.StepId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 193, "StepIds are not unique.");
+            Require(definitions.Any(x => x.StepId == "MPS250.PRECHECK.S009.ACTION"), "MPS-250 USB-B insertion row is missing.");
             Require(definitions.Count(x => x.AlwaysRun) == 6, "Expected six cleanup rows.");
-            Require(definitions.Count(x => x.GroupId == Mps250GroupIds.Chapter(17)) == 43, "Chapter 17 must expose 43 detailed rows.");
+            Require(definitions.Count(x => x.GroupId == Mps250GroupIds.Chapter(17)) == 42, "Chapter 17 must expose 42 detailed rows after removing nonexistent Relay_1.");
 
             var resultIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Mps250ActionDefinition item in Mps250ActionCatalog.Create().Where(x => x.IsResult))
@@ -73,10 +76,10 @@ namespace Mps250StructureTests
                 Require(string.Equals(Read<string>(type, step, "Name"), definition.Name, StringComparison.Ordinal), "Name mismatch " + stepId + ".");
             }
 
-            ValidateLimit(plan, "B06", 10, 60, "mA");
-            ValidateLimit(plan, "K01", 1700, 2200, "mV");
+            ValidateLimit(plan, "B06", 10, 40, "mA");
+            ValidateLimit(plan, "K01", 1400, 1900, "mV");
             ValidateLimit(plan, "K02", 3000, 3300, "mV");
-            ValidateLimit(plan, "J06", 200000, 205000, "Count");
+            ValidateLimit(plan, "J06", 400000, 410000, "Count");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.1.1.4", "Firmware expectation mismatch.");
             ValidateDependency(plan, "H06", "H02");
             ValidateDependency(plan, "J04", "J01");
@@ -88,12 +91,21 @@ namespace Mps250StructureTests
         {
             IReadOnlyList<Mps250ActionDefinition> catalog = Mps250ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps250ActionKind.SetVbatt), "VBATT source B actions missing.");
-            Require(catalog.Where(x => x.Kind == Mps250ActionKind.DaqShuntCurrent).All(x => x.Channel == 111 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ111/1 ohm shunt.");
-            Require(catalog.Any(x => x.Kind == Mps250ActionKind.DaqResistance && x.Channel == 107), "Alarm resistance mapping missing.");
+            Require(catalog.Where(x => x.Kind == Mps250ActionKind.DaqShuntCurrent).All(x => x.Channel == 117 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ117/1 ohm shunt.");
+            Require(catalog.Any(x => x.Kind == Mps250ActionKind.DaqResistance && x.Channel == 118), "Alarm resistance mapping missing.");
             Require(catalog.Where(x => x.Kind == Mps250ActionKind.MbdCommand).All(x => x.AlwaysRun || (x.Argument ?? "").IndexOf(';') < 0), "Normal commands must be one UI row each.");
-            Require(Mps250StationMap.VbusReference == 116, "VBUS reference mapping changed.");
-            Require(Mps250StationMap.U24Pin7 == 108, "U24.7 mapping must be DAQ108.");
-            Require(Mps250StationMap.McuIsoBatt == 117, "MCU_ISOBATT mapping must be DAQ117.");
+            Require(catalog.Count(x => x.Kind == Mps250ActionKind.MbdCleanupIfConnected) == 1, "MPS-250 cleanup must use one connected-only MBD shutdown row.");
+            Require(Mps250StationMap.FiveVoltIsolated == 119, "+5VI mapping must be DAQ119.");
+            Require(Mps250StationMap.Vpwm == 114, "VPWM mapping must be DAQ114.");
+            Require(Mps250StationMap.VbusShunt == 117, "VBUS shunt mapping must be DAQ117.");
+            Require(Mps250StationMap.PPlus == 113 && Mps250StationMap.VbusReference == 113, "P+/VBUS reference mapping must be DAQ113.");
+            Require(Mps250StationMap.U24Pin7 == 109, "U24.7 mapping must be DAQ109.");
+            Require(Mps250StationMap.McuIsoBatt == 105, "MCU_ISOBATT mapping must be DAQ105.");
+            Require(Mps250StationMap.ExternalPowerDaqRelays == "@305,306", "Relay_2/2BIS must use DAQ305/306.");
+            Require(Mps250StationMap.AllControlledRelays == "2,3,4,5,6", "MPS-250 must not declare logical Relay_1.");
+            Require(!catalog.Where(x => x.Kind == Mps250ActionKind.DaqRelays)
+                .SelectMany(x => (x.Argument ?? "").Split(','))
+                .Any(x => x.Trim() == "1"), "MPS-250 catalog must not operate Relay_1/high-power Y1.");
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Mps250ActionDefinition item in catalog)
@@ -103,6 +115,153 @@ namespace Mps250StructureTests
                 if (item.IsResult)
                     seen.Add(item.ResultId);
             }
+        }
+
+        private static void ValidateCustomerReport(string root, ResolvedTestPlan plan)
+        {
+            string sourceConfigDirectory = Path.Combine(
+                root,
+                "ProjectConfig",
+                "SK",
+                "MPS-250");
+            string definitionPath = Path.Combine(sourceConfigDirectory, "MPS-250_report.psv");
+            string autoTestPath = Path.Combine(sourceConfigDirectory, "MPS-250_autoTest.xml");
+            string[] definitionLines = File.ReadAllLines(definitionPath)
+                .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
+                .ToArray();
+
+            Require(
+                definitionLines.Length == Bcm125LegacyReportExporter.Mps250ExpectedReportItemCount,
+                "MPS250 customer report definition must contain exactly 60 output rows.");
+            Require(
+                definitionLines.Select(line => line.Split('|')[0])
+                    .Distinct(StringComparer.OrdinalIgnoreCase).Count() == definitionLines.Length,
+                "MPS250 customer report codes must be unique.");
+            Require(
+                definitionLines.Select(line => line.Split('|')[1])
+                    .Distinct(StringComparer.OrdinalIgnoreCase).Count() == definitionLines.Length,
+                "MPS250 customer report StepIds must be unique.");
+
+            foreach (string line in definitionLines)
+            {
+                string[] fields = line.Split('|');
+                Require(fields.Length == 9, "MPS250 customer report row must contain 9 fields: " + line);
+                TestPlanStepDefinition step = plan.GetStep(fields[1]);
+                double scale = double.Parse(fields[8], System.Globalization.CultureInfo.InvariantCulture);
+                ValidateScaledReportLimit(fields[0], "lower", step.LowerLimit, fields[6], scale, false);
+                ValidateScaledReportLimit(
+                    fields[0],
+                    "upper",
+                    step.UpperLimit,
+                    fields[7],
+                    scale,
+                    !step.UpperLimit.HasValue && step.LowerLimit.HasValue);
+            }
+
+            var table = new DataTable();
+            table.Columns.Add("StepId", typeof(string));
+            table.Columns.Add("Channel1Value", typeof(string));
+            table.Columns.Add("Channel1Result", typeof(string));
+            foreach (string line in definitionLines)
+            {
+                string[] fields = line.Split('|');
+                string value = fields[0] == "B01" ? "5000" : "1";
+                table.Rows.Add(fields[1], value, "PASS");
+            }
+
+            string requestedQaRoot = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS250_REPORT_QA_ROOT");
+            bool keepQaReport = !string.IsNullOrWhiteSpace(requestedQaRoot);
+            string temporaryRoot = keepQaReport
+                ? Path.GetFullPath(requestedQaRoot)
+                : Path.Combine(
+                    Path.GetTempPath(),
+                    "TestPlatform_MPS250_Report_" + Guid.NewGuid().ToString("N"));
+            string temporaryConfigDirectory = Path.Combine(
+                temporaryRoot,
+                "ProjectConfig",
+                "SK",
+                "MPS-250");
+            Directory.CreateDirectory(temporaryConfigDirectory);
+            File.Copy(
+                definitionPath,
+                Path.Combine(temporaryConfigDirectory, "MPS-250_report.psv"),
+                true);
+            File.Copy(
+                autoTestPath,
+                Path.Combine(temporaryConfigDirectory, "MPS-250_autoTest.xml"),
+                true);
+
+            try
+            {
+                Bcm125LegacyReportExporter.ExportResult result =
+                    Bcm125LegacyReportExporter.SaveAsync(
+                        table,
+                        0,
+                        "2295",
+                        "MPS250-REPORT-TEST",
+                        true,
+                        "MPS-250",
+                        new DateTime(2025, 12, 18, 13, 10, 0),
+                        temporaryRoot)
+                    .GetAwaiter()
+                    .GetResult();
+
+                Require(result.Success, "MPS250 TXT/PDF report generation failed: " + result.ErrorMessage);
+                Require(result.DutPassed, "MPS250 all-pass report was not marked PASSED.");
+                Require(File.Exists(result.TextFilePath), "MPS250 TXT report was not created.");
+                Require(File.Exists(result.PdfFilePath), "MPS250 PDF report was not created.");
+
+                string reportText = File.ReadAllText(result.TextFilePath);
+                Require(
+                    reportText.StartsWith("MPS_UP250, Codice operatore: 2295, Seriale: MPS250-REPORT-TEST"),
+                    "MPS250 report header does not match the customer format.");
+                Require(
+                    reportText.Contains("B01") && reportText.Contains("+5V = 5 [4,8; 5,4] V"),
+                    "MPS250 report did not scale or format the B01 measurement correctly.");
+                Require(
+                    new FileInfo(result.PdfFilePath).Length > 1000,
+                    "MPS250 PDF report is unexpectedly empty.");
+            }
+            finally
+            {
+                if (!keepQaReport && Directory.Exists(temporaryRoot))
+                    Directory.Delete(temporaryRoot, true);
+            }
+        }
+
+        private static void ValidateScaledReportLimit(
+            string code,
+            string limitName,
+            double? xmlLimit,
+            string reportLimit,
+            double scale,
+            bool expectAny)
+        {
+            if (expectAny)
+            {
+                Require(
+                    string.Equals(reportLimit, "any", StringComparison.OrdinalIgnoreCase),
+                    $"MPS250 report {code} must use 'any' for its open {limitName} limit.");
+                return;
+            }
+
+            if (!xmlLimit.HasValue)
+            {
+                Require(
+                    string.IsNullOrWhiteSpace(reportLimit),
+                    $"MPS250 report {code} unexpectedly declares a {limitName} limit.");
+                return;
+            }
+
+            Require(
+                !string.IsNullOrWhiteSpace(reportLimit),
+                $"MPS250 report {code} is missing its {limitName} limit.");
+            double parsed = double.Parse(
+                reportLimit.Replace(',', '.'),
+                System.Globalization.CultureInfo.InvariantCulture);
+            Require(
+                Math.Abs(parsed - xmlLimit.Value * scale) < 0.0000001,
+                $"MPS250 report {code} {limitName} limit does not match the XML plan after scaling.");
         }
 
         private static void ValidateLimit(ResolvedTestPlan plan, string resultId, double lower, double upper, string unit)
@@ -121,17 +280,19 @@ namespace Mps250StructureTests
         private static void ValidatePowerSafety()
         {
             var device = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-250" };
-            Require(!device.SetVbusGeneratorAsync(275, 2, 300, true).GetAwaiter().GetResult(), "VBUS energized before Relay_1 closed.");
-            Require(!device.SetVbattGeneratorAsync(250, 0.1f, 300, true).GetAwaiter().GetResult(), "High-voltage VBATT energized before Relay_5/Relay_6 closed.");
-            Require(device.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(), "Cannot reset outputs.");
-            Require(device.SafeSwitchMpsVbusRelayAsync(1, true, 275, 2, 300, true).GetAwaiter().GetResult(), "Safe MPS VBUS connection failed.");
+            Require(device.SetVbusGeneratorAsync(275, 2, 300, true).GetAwaiter().GetResult(), "MPS VBUS must enable directly without a high-power relay.");
+            Require(device.SetVbattGeneratorAsync(250, 0.1f, 300, true).GetAwaiter().GetResult(), "MPS VBATT must enable directly without a high-power relay.");
+            Require(device.SetVbattGeneratorAsync(0, 0, 300, false).GetAwaiter().GetResult(), "Cannot turn off direct VBATT output.");
             Require(!device.StopFixturePressDownAsync("MPS-250").GetAwaiter().GetResult(), "Fixture released while VBUS was energized.");
-            Require(device.ControlRelayAsync(1, false).GetAwaiter().GetResult(), "Safe Relay_1 opening was blocked while VBUS was energized.");
-            Require(device.ControlRelayAsync(3, true).GetAwaiter().GetResult(), "Relay_3 live functional switching was incorrectly blocked.");
-            Require(device.SafeDisconnectMpsVbattRelayAsync(6, 300).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");
+            Require(!device.ControlMpsRelayAsync(5, Mps250StationMap.SensPrecDaqRelay, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 closed while VBUS was energized.");
+            Require(device.ControlMpsRelayAsync(3, Mps250StationMap.WithdrawalDaqRelay, true).GetAwaiter().GetResult(), "Relay_3 DAQ switching was incorrectly blocked.");
+            Require(device.SafeSwitchMpsVbusRelayAsync(5, Mps250StationMap.SensPrecDaqRelay, true, 275, 2, 300, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 safe switching failed.");
+            Require(device.SetVbusGeneratorAsync(0, 0, 300, false).GetAwaiter().GetResult(), "Cannot turn off VBUS.");
+            Require(device.SafeConnectMpsVbattRelayAsync(6, Mps250StationMap.IsoBattDaqRelay, 300).GetAwaiter().GetResult(), "Relay_6/DAQ304 safe connection failed.");
+            Require(device.SafeDisconnectMpsVbattRelayAsync(6, Mps250StationMap.IsoBattDaqRelay, 300).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");
             Require(device.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(), "Cannot power off before fixture release.");
-            Require(device.ControlRelayAsync(1, false).GetAwaiter().GetResult(), "Cannot open Relay_1 after VBUS power-off.");
             Require(device.StopFixturePressDownAsync("MPS-250").GetAwaiter().GetResult(), "Fixture remained locked after safe power-off.");
+            Require(!device.GetPowerSafetyTrace().Any(x => x.Contains("RELAY 1 ")), "MPS-250 touched nonexistent high-power Relay_1.");
             Require(device.GetPowerSafetyTrace().Any(x => x.StartsWith("BLOCK", StringComparison.Ordinal)), "No unsafe VBUS action was recorded.");
 
             var emergency = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-250" };
@@ -156,7 +317,9 @@ namespace Mps250StructureTests
                 var grid = new RecordingGrid();
                 var context = new TestSequenceContext { SN = injectFault ? "MPS250-FAULT" : "MPS250-PASS", TestPlan = plan, StopOnFail = true };
                 bool passed = new SKMPS250Sequence(grid).RunAsync(context).GetAwaiter().GetResult();
-                Require(passed != injectFault, injectFault ? "Injected-fault run passed." : "Full simulation failed.");
+                Require(passed != injectFault, injectFault
+                    ? "Injected-fault run passed."
+                    : "Full simulation failed. Failed steps: " + string.Join(", ", grid.FailedStepIds));
                 Require(grid.CleanupCompleted == 6, "Not all cleanup rows executed.");
                 if (injectFault)
                     Require(grid.FailedStepIds.Contains(faultStep), "Injected J06 failure was not reported.");

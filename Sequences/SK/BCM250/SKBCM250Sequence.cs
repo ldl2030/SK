@@ -12,12 +12,16 @@ namespace TestPlatform.TestSequences
     {
         public override string SequenceKey => "SK_BCM250_Sequence";
         public override string ExpectedBoardType => "BCM-250";
+        private readonly bool _skipFirmwareProgramming;
+        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming;
 
         public SKBCM250Sequence(
             ITestGridService grid = null,
-            Func<string, Task<bool>> confirmAsync = null)
+            Func<string, Task<bool>> confirmAsync = null,
+            bool skipFirmwareProgramming = false)
             : base(grid, confirmAsync)
         {
+            _skipFirmwareProgramming = skipFirmwareProgramming;
         }
 
         protected override void AddElectricalTestSteps(
@@ -69,6 +73,7 @@ namespace TestPlatform.TestSequences
                 StepId = action.StepId,
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
+                MaxRetries = action.Kind == Bcm250ActionKind.ProgramFirmware ? 0 : -1,
                 AlwaysRun = action.AlwaysRun,
                 PowerCritical = IsPowerCritical(action),
                 IsFixtureReleaseStep = action.AlwaysRun &&
@@ -105,6 +110,30 @@ namespace TestPlatform.TestSequences
 
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
+
+            if (action.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(action.StepId, "BCM250.CH12.S007.ACTION", StringComparison.OrdinalIgnoreCase))
+            {
+                double runningTime = device.SkipComInit
+                    ? 5.0
+                    : MbdResponseParser.ParseScalar(
+                        action.Argument,
+                        await device.QueryMbdCommandAsync(action.Argument, 0));
+                double integerPart = Math.Floor(runningTime);
+                OnLogInfo(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "平线复位前R10 running_time={0:0.###} s（整数部分={1:0}）",
+                    runningTime,
+                    integerPart));
+                return new StepResult
+                {
+                    IsPass = true,
+                    Value = runningTime.ToString("0.###", CultureInfo.InvariantCulture),
+                    NumericValue = integerPart,
+                    StoreKey = Bcm250ResultKeys.ResetFlatRunningTimeBefore,
+                    Unit = "s"
+                };
+            }
 
             if (action.Kind == Bcm250ActionKind.DaqShuntResistance)
             {
@@ -147,7 +176,10 @@ namespace TestPlatform.TestSequences
                         break;
                     }
                 case Bcm250ActionKind.SafeAnsPowerOff:
-                    passed = await device.DisableAnsThenOpenRl4Async(ParseInt(action.Argument));
+                    // Only release MBD when the DUT is actually about to lose power.
+                    // Programming itself still needs MBD before and after flashing for W86.
+                    passed = await device.CloseTargetBoardCommunicationAsync() &&
+                             await device.DisableAnsThenOpenRl4Async(ParseInt(action.Argument));
                     break;
                 case Bcm250ActionKind.PowerRelays:
                     passed = await SetPowerRelaysAsync(
@@ -174,7 +206,7 @@ namespace TestPlatform.TestSequences
                         action.Name);
                     break;
                 case Bcm250ActionKind.MbdCommand:
-                    passed = await SendCommandsAsync(device, action.Argument);
+                    passed = await SendCommandsAsync(device, action.Argument, token);
                     break;
                 case Bcm250ActionKind.SetVbus:
                     passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
@@ -223,6 +255,17 @@ namespace TestPlatform.TestSequences
                     break;
             }
 
+            if (passed &&
+                action.Kind != Bcm250ActionKind.Delay &&
+                step.PlanDefinition != null &&
+                step.PlanDefinition.DelayMs.GetValueOrDefault() > 0)
+            {
+                int postActionDelayMs = step.PlanDefinition.DelayMs.Value;
+                await Task.Delay(
+                    device.SkipComInit ? Math.Min(postActionDelayMs, 1) : postActionDelayMs,
+                    token);
+            }
+
             return Result(passed, passed ? "OK" : "FAIL", action);
         }
 
@@ -255,7 +298,7 @@ namespace TestPlatform.TestSequences
             if (action.Kind == Bcm250ActionKind.FirmwareVersion)
             {
                 string expectedFirmware = string.IsNullOrWhiteSpace(plan.ExpectedValue)
-                    ? Bcm250Commands.FirmwareFile
+                    ? Bcm250Commands.FirmwareVersion
                     : plan.ExpectedValue;
                 string response = device.SkipComInit
                     ? expectedFirmware
@@ -271,6 +314,49 @@ namespace TestPlatform.TestSequences
                 {
                     IsPass = pass,
                     Value = actualFirmware ?? string.Empty,
+                    StoreKey = Bcm250ResultKeys.For(action.ResultId),
+                    Unit = plan.Unit
+                };
+            }
+
+            if (action.Kind == Bcm250ActionKind.LogicResult)
+            {
+                double before;
+                if (!TryGetStoredNumericValue(
+                    context,
+                    Bcm250ResultKeys.ResetFlatRunningTimeBefore,
+                    out before))
+                {
+                    return new StepResult
+                    {
+                        IsPass = false,
+                        Value = "缺少复位前R10",
+                        NumericValue = 0.0,
+                        StoreKey = Bcm250ResultKeys.For(action.ResultId),
+                        Unit = plan.Unit
+                    };
+                }
+
+                double afterRaw = device.SkipComInit
+                    ? 1.0
+                    : MbdResponseParser.ParseScalar(
+                        action.Argument,
+                        await device.QueryMbdCommandAsync(action.Argument, 0));
+                double after = Math.Floor(afterRaw);
+                bool resetPassed = Math.Abs(before - after) >= 2.0 &&
+                                   Math.Abs(after - 1.0) < 0.001;
+                OnLogInfo(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "平线复位R10判定：复位前={0:0}s，复位后={1:0.###}s（整数部分={2:0}），结果={3}",
+                    before,
+                    afterRaw,
+                    after,
+                    resetPassed ? 1 : 0));
+                return new StepResult
+                {
+                    IsPass = resetPassed,
+                    Value = resetPassed ? "1" : "0",
+                    NumericValue = resetPassed ? 1.0 : 0.0,
                     StoreKey = Bcm250ResultKeys.For(action.ResultId),
                     Unit = plan.Unit
                 };
@@ -323,6 +409,9 @@ namespace TestPlatform.TestSequences
             {
                 case Bcm250ActionKind.DaqVoltage:
                     {
+                        if (string.Equals(action.ResultId, "S02", StringComparison.OrdinalIgnoreCase))
+                            await LogCcbDiagnosticAsync(device, "S02测量前", token);
+
                         double volts = await ReadDaqAverageAsync(
                             device,
                             action.Channel,
@@ -334,17 +423,40 @@ namespace TestPlatform.TestSequences
                     }
                 case Bcm250ActionKind.DaqShuntCurrent:
                     {
-                        double shuntOhms;
+                        if (string.Equals(action.ResultId, "S01", StringComparison.OrdinalIgnoreCase))
+                            await LogCcbDiagnosticAsync(device, "S01测量前", token);
+
+                        bool useNominalResistance =
+                            action.Channel == Bcm250StationMap.StringShuntDaqChannel ||
+                            string.Equals(action.ResultId, "B06", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(action.ResultId, "B07", StringComparison.OrdinalIgnoreCase);
+                        double shuntOhms = useNominalResistance ? action.Scale : 0.0;
                         string resistanceKey =
                             Bcm250ResultKeys.ShuntResistanceForChannel(action.Channel);
-                        if (context == null ||
-                            !context.TryGetNumericValue(resistanceKey, out shuntOhms) ||
-                            double.IsNaN(shuntOhms) ||
-                            double.IsInfinity(shuntOhms) ||
-                            shuntOhms <= 0.0)
+                        bool usingMeasuredResistance = !useNominalResistance && context != null &&
+                            context.TryGetNumericValue(resistanceKey, out shuntOhms) &&
+                            !double.IsNaN(shuntOhms) &&
+                            !double.IsInfinity(shuntOhms) &&
+                            shuntOhms > 0.0;
+                        if (!usingMeasuredResistance)
                         {
-                            throw new InvalidOperationException(
-                                "Missing/invalid measured shunt resistance: " + resistanceKey);
+                            shuntOhms = action.Scale;
+                            if (double.IsNaN(shuntOhms) ||
+                                double.IsInfinity(shuntOhms) ||
+                                shuntOhms <= 0.0)
+                            {
+                                throw new InvalidOperationException(
+                                    "Missing/invalid measured and nominal shunt resistance: " + resistanceKey);
+                            }
+
+                            if (!useNominalResistance)
+                            {
+                                OnLogWarning(string.Format(
+                                    CultureInfo.InvariantCulture,
+                                    "单章调试未取得CH7实测分流电阻：DAQ{0}使用工位标称值 {1:0.###} Ohm。",
+                                    action.Channel,
+                                    shuntOhms));
+                            }
                         }
 
                         double volts = await ReadDaqAverageAsync(
@@ -352,31 +464,34 @@ namespace TestPlatform.TestSequences
                             action.Channel,
                             SampleCountForResult(action.ResultId),
                             token);
-                        double currentMa = volts / shuntOhms * 1000.0 * ShuntSign(action.ResultId);
+                        // Preserve the DAQ polarity. BCM250 shunt current is defined as the
+                        // measured shunt voltage divided directly by the configured resistance.
+                        double currentMa = volts / shuntOhms * 1000.0;
                         OnLogInfo(string.Format(
                             CultureInfo.InvariantCulture,
-                            "DAQ{0}分流电流计算：V={1:0.########}V，R={2:0.########}Ohm，I={3:0.###}mA",
+                            "DAQ{0}分流电流计算：V={1:0.########}V，R={2:0.########}Ohm（{3}），I={4:0.###}mA",
                             action.Channel,
                             volts,
                             shuntOhms,
+                            usingMeasuredResistance ? "CH7实测" : "工位标称",
                             currentMa));
                         return currentMa;
                     }
                 case Bcm250ActionKind.ProgramFirmware:
-                    // Hardware programming remains a deliberate validation gate:
-                    // the deployed firmware path/TTL COM must be confirmed at station.
                     if (!device.IsTtlProgrammingRequired)
                     {
-                        OnLogWarning("SKRequireTtl=false：BCM250 TTL烧录记录为SKIPPED，未执行也未模拟烧录。");
+                        OnLogWarning("BCM250 TTL烧录已跳过：未执行也未模拟烧录。");
                         return 1.0;
                     }
-                    return 0.0;
+                    return await device.FlashBcm250FirmwareAsync(
+                        action.Argument,
+                        token) ? 1.0 : 0.0;
                 case Bcm250ActionKind.StoreToFlash:
                     return await device.SendMbdCommandAsync(Bcm250Commands.StoreToFlash, 0) ? 1.0 : 0.0;
                 case Bcm250ActionKind.WriteIdentity:
                     return await WriteAndVerifyIdentityAsync(device, context, action.Argument) ? 1.0 : 0.0;
                 case Bcm250ActionKind.LogicResult:
-                    return 1.0;
+                    throw new InvalidOperationException("LogicResult must be evaluated with its stored dependencies.");
                 case Bcm250ActionKind.ComputedCalibration:
                     return await ComputeCalibrationAsync(device, context, action);
                 case Bcm250ActionKind.MosfetRamp:
@@ -408,6 +523,36 @@ namespace TestPlatform.TestSequences
                             SampleIntervalForResult(action.ResultId),
                             token);
                     }
+            }
+        }
+
+        private async Task LogCcbDiagnosticAsync(
+            SK441Device device,
+            string phase,
+            CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                string currentResponse = await device.QueryMbdCommandAsync("R44", 0);
+                string stringVoltageResponse = await device.QueryMbdCommandAsync("R42", 0);
+                double internalCurrentMa = MbdResponseParser.ParseScalar("R44", currentResponse);
+                double stringVoltageMv = MbdResponseParser.ParseScalar("R42", stringVoltageResponse);
+
+                OnLogInfo(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "BCM250 CCB诊断[{0}]：R44内部iccb={1:0.###} mA，R42 vstr_neg={2:0.###} mV。",
+                    phase,
+                    internalCurrentMa,
+                    stringVoltageMv));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                OnLogWarning("BCM250 CCB诊断读取失败[" + phase + "]：" + ex.Message);
             }
         }
 
@@ -463,13 +608,11 @@ namespace TestPlatform.TestSequences
             int sampleCount,
             CancellationToken token)
         {
-            double total = 0.0;
-            for (int index = 0; index < sampleCount; index++)
-            {
-                token.ThrowIfCancellationRequested();
-                total += await device.MeasureDaqChannelVoltageAsync(channel);
-            }
-            return total / sampleCount;
+            return await device.MeasureDaqChannelVoltageAverageAsync(
+                channel,
+                sampleCount,
+                0,
+                token);
         }
 
         private async Task<double> ReadCanStatusAsync(
@@ -576,20 +719,6 @@ namespace TestPlatform.TestSequences
                     return 50;
                 default:
                     return 0;
-            }
-        }
-
-        private static double ShuntSign(string resultId)
-        {
-            switch ((resultId ?? string.Empty).ToUpperInvariant())
-            {
-                case "Q10":
-                case "R06":
-                case "R14":
-                case "S01":
-                    return -1.0;
-                default:
-                    return 1.0;
             }
         }
 
@@ -763,14 +892,35 @@ namespace TestPlatform.TestSequences
             };
         }
 
-        private static async Task<bool> SendCommandsAsync(SK441Device device, string commands)
+        private static async Task<bool> SendCommandsAsync(
+            SK441Device device,
+            string commands,
+            CancellationToken token)
         {
             foreach (string command in (commands ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (!await device.SendMbdCommandAsync(command.Trim(), 0))
+                string normalizedCommand = command.Trim();
+                if (!await device.SendMbdCommandAsync(normalizedCommand, 0))
                     return false;
+
+                int settleMs = MbdStateChangeSettleMs(normalizedCommand);
+                if (settleMs > 0)
+                    await Task.Delay(settleMs, token);
             }
             return true;
+        }
+
+        private static int MbdStateChangeSettleMs(string command)
+        {
+            string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            return normalized.StartsWith("W95=", StringComparison.Ordinal) ||
+                   normalized.StartsWith("W67=", StringComparison.Ordinal) ||
+                   normalized.StartsWith("W75=", StringComparison.Ordinal) ||
+                   normalized.StartsWith("W69=", StringComparison.Ordinal) ||
+                   normalized.StartsWith("W71=", StringComparison.Ordinal) ||
+                   normalized.StartsWith("W91=", StringComparison.Ordinal)
+                ? 500
+                : 0;
         }
 
         private static async Task<bool> SetGeneratorAsync(SK441Device device, string argument, bool vbus, bool state)

@@ -575,14 +575,11 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double sum = 0;
-                    for (int i = 0; i < sampleCount; i++)
-                    {
-                        sum += await deviceManager.MeasureDaqChannelVoltageAsync(channel) * 1000.0;
-                        if (i + 1 < sampleCount)
-                            await Task.Delay(intervalMs, token);
-                    }
-                    double average = sum / Math.Max(1, sampleCount);
+                    double average = await deviceManager.MeasureDaqChannelVoltageAverageAsync(
+                        channel,
+                        Math.Max(1, sampleCount),
+                        intervalMs,
+                        token) * 1000.0;
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mV");
@@ -657,10 +654,12 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double sum = 0;
-                    for (int i = 0; i < 8; i++)
-                        sum += await deviceManager.MeasureDaqChannelVoltageAsync(channel);
-                    double currentMa = (sum / 8.0) / shuntOhm * 1000.0;
+                    double averageVolts = await deviceManager.MeasureDaqChannelVoltageAverageAsync(
+                        channel,
+                        8,
+                        0,
+                        token);
+                    double currentMa = averageVolts / shuntOhm * 1000.0;
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");
@@ -1241,10 +1240,11 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double sum = 0;
-                    for (int i = 0; i < 8; i++)
-                        sum += await deviceManager.MeasureDaqChannelVoltageAsync(channel) * 1000.0;
-                    double mv = sum / 8.0;
+                    double mv = await deviceManager.MeasureDaqChannelVoltageAverageAsync(
+                        channel,
+                        8,
+                        0,
+                        token) * 1000.0;
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mV");
@@ -1264,10 +1264,12 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double sum = 0;
-                    for (int i = 0; i < 8; i++)
-                        sum += await deviceManager.MeasureDaqChannelVoltageAsync(channel);
-                    double currentMa = sign * (sum / 8.0) / shuntOhm * 1000.0;
+                    double averageVolts = await deviceManager.MeasureDaqChannelVoltageAverageAsync(
+                        channel,
+                        8,
+                        0,
+                        token);
+                    double currentMa = sign * averageVolts / shuntOhm * 1000.0;
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");

@@ -9,6 +9,8 @@ namespace TestPlatform
     {
         AppendCsv = 0,
         SingleExcel = 1,
-        Bcm125TxtPdf = 2
+        CustomerTxtPdf = 2,
+        BcmTxtPdf = CustomerTxtPdf,
+        Bcm125TxtPdf = CustomerTxtPdf
     }
 }

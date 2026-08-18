@@ -636,6 +636,9 @@
     <Content Include="ProjectConfig\SK\BCM-250\BCM-250_autoTest.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="ProjectConfig\SK\BCM-250\BCM-250_report.psv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="ProjectConfig\SK\BCM-250\BCM-250_profiles.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -643,6 +646,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\MPS-250\MPS-250_autoTest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\MPS-250\MPS-250_report.psv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\LS PrintConfig\LS D350PrintConfig.xml">

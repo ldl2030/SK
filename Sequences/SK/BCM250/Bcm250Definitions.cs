@@ -18,6 +18,7 @@ namespace TestPlatform.TestSequences
         public const string EnterBcm = "REMOTE2";
         public const string StoreToFlash = "ACT->FLASH";
         public const string FirmwareFile = "BCM_250_V5.HEX";
+        public const string FirmwareVersion = "stcu_UP250_V5";
     }
 
     public static class Bcm250ResultKeys
@@ -28,6 +29,7 @@ namespace TestPlatform.TestSequences
         public const string VmidLowMv = "BCM250.CAL.VMID_LOW_MV";
         public const string DischargeOneAmpMa = "BCM250.CAL.IDCH_1A_MA";
         public const string DischargeSixAmpMa = "BCM250.CAL.IDCH_6A_MA";
+        public const string ResetFlatRunningTimeBefore = "BCM250.RESET_FLAT.R10_BEFORE";
 
         public static string ShuntResistanceForChannel(int channel)
         {

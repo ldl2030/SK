@@ -61,6 +61,9 @@ namespace TestPlatform
         private DateTime globalStartTime;
         private bool isTimerRunning = false;
         private bool _stopInProgress;
+        private volatile bool _isPauseRequested;
+        private DateTime _pauseStartedTime;
+        private TimeSpan _totalPausedDuration = TimeSpan.Zero;
         /// <summary>
         /// led
         /// </summary>
@@ -80,6 +83,8 @@ namespace TestPlatform
             // 初始时未登录，禁用管理员按钮
             toolStripButton2.IsEnabled = false;
             toolStripButton3.IsEnabled = false;
+            buttonPause.IsEnabled = false;
+            button2.IsEnabled = false;
 
             Version ver = Assembly.GetExecutingAssembly().GetName().Version;
             AppendLog($"当前程序版本: {ver}", LogInfo);
@@ -90,7 +95,7 @@ namespace TestPlatform
         {
             if (isTimerRunning)
             {
-                TimeSpan elapsed = DateTime.Now - globalStartTime;
+                TimeSpan elapsed = GetActiveTestElapsed();
                 Dispatcher.Invoke(() =>
                 {
                     txb_testTime.Text = $"{elapsed.Hours:D2}:{elapsed.Minutes:D2}:{elapsed.Seconds:D2}.{elapsed.Milliseconds:D1}";
@@ -103,6 +108,7 @@ namespace TestPlatform
             if (!isTimerRunning)
             {
                 globalStartTime = DateTime.Now;
+                _totalPausedDuration = TimeSpan.Zero;
                 isTimerRunning = true;
                 globalTimer.Start();
             }
@@ -115,7 +121,7 @@ namespace TestPlatform
                 isTimerRunning = false;
                 globalTimer.Stop();
                 // 可选：最终显示总时间
-                TimeSpan total = DateTime.Now - globalStartTime;
+                TimeSpan total = GetActiveTestElapsed();
                 txb_testTime.Text = $"{total.Hours:D2}:{total.Minutes:D2}:{total.Seconds:D2}.{total.Milliseconds:D1}";
                 // 所有测试完成，保存日志
                 SaveActivityLogToFile();
@@ -155,6 +161,15 @@ namespace TestPlatform
                 SetDefaultProject();
             }
             UpdateProjectLabel();
+        }
+
+        private TimeSpan GetActiveTestElapsed()
+        {
+            TimeSpan currentPause = _isPauseRequested
+                ? DateTime.Now - _pauseStartedTime
+                : TimeSpan.Zero;
+            TimeSpan elapsed = DateTime.Now - globalStartTime - _totalPausedDuration - currentPause;
+            return elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
         }
 
         /// <summary>
@@ -1113,6 +1128,8 @@ namespace TestPlatform
                 if (channel == null)
                     return;
 
+                await WaitWhilePausedAsync(channel.Index, channel.CancelToken.Token);
+
                 if (string.IsNullOrWhiteSpace(sn))
                 {
                     AppendLog($"[通道{channel.Index + 1}] SN为空，取消测试", LogError);
@@ -1140,10 +1157,13 @@ namespace TestPlatform
                 }
 
                 // 2. 执行本地测试 RunLocalTestAsync
+                await WaitWhilePausedAsync(channel.Index, channel.CancelToken.Token);
                 testStartTime = DateTime.Now;
                 testResult = await RunLocalTestAsync(channel, sn);
                 testEndTime = DateTime.Now;
                 finalResult = testResult;
+
+                await WaitWhilePausedAsync(channel.Index, channel.CancelToken.Token);
 
                 // 3. 保存 CSV 并上传 SMB / FTP
                 reportUploadSuccess = await AppendToCsvReport(
@@ -1482,6 +1502,7 @@ namespace TestPlatform
         /// <param name="maxRetries">最大重试次数</param>
         private async Task<bool> ExecuteTestStepAsync(int channelIndex, Func<CancellationToken, Task<bool>> stepAction, string stepName, int rowIndex, CancellationToken cancellationToken, int currentStep, int totalSteps, int maxRetries = -1)
         {
+            await WaitWhilePausedAsync(channelIndex, cancellationToken);
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             bool finalResult = false;
             // 滚动到当前行（仅在行索引变化时）
@@ -1517,6 +1538,9 @@ namespace TestPlatform
                 try
                 {
                     finalResult = await stepAction(cancellationToken);
+                    stopwatch.Stop();
+                    await WaitWhilePausedAsync(channelIndex, cancellationToken);
+                    stopwatch.Start();
                     if (finalResult)
                         break;
                 }
@@ -1589,19 +1613,22 @@ namespace TestPlatform
             // 报告保存模式统一入口：
             // 1. AppendCsv：保持当前按天累加 CSV 的保存方式。
             // 2. SingleExcel：每个 SN 单独保存一个 Excel，然后复用同一套 FTP / SMB 上传方法。
-            // 3. Bcm125TxtPdf：按BCM-UP125客户格式生成同名TXT和PDF。
-            if (appSettings.ReportSaveMode == ReportSaveMode.Bcm125TxtPdf)
+            // 3. CustomerTxtPdf：按BCM/MPS客户格式生成同名TXT和PDF。
+            if (appSettings.ReportSaveMode == ReportSaveMode.CustomerTxtPdf)
             {
-                if (string.IsNullOrWhiteSpace(ProjectSettings.CurrentProjectName) ||
-                    ProjectSettings.CurrentProjectName.IndexOf(
-                        "BCM-125",
-                        StringComparison.OrdinalIgnoreCase) < 0)
+                string normalizedProjectName = (ProjectSettings.CurrentProjectName ?? string.Empty)
+                    .Replace("-", string.Empty)
+                    .Replace("_", string.Empty)
+                    .Replace(" ", string.Empty);
+                if (normalizedProjectName.IndexOf("BCM125", StringComparison.OrdinalIgnoreCase) < 0 &&
+                    normalizedProjectName.IndexOf("BCM250", StringComparison.OrdinalIgnoreCase) < 0 &&
+                    normalizedProjectName.IndexOf("MPS250", StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    AppendLog("BCM-125 TXT/PDF报告模式仅适用于BCM-125项目。", LogError);
+                    AppendLog("客户TXT/PDF报告模式仅适用于BCM-125、BCM-250或MPS-250项目。", LogError);
                     return false;
                 }
 
-                return await SaveBcm125TxtPdfReportAndUploadAsync(
+                return await SaveCustomerTxtPdfReportAndUploadAsync(
                     channelIndex,
                     sn,
                     testResult,
@@ -2730,12 +2757,14 @@ namespace TestPlatform
             bool hasFreeChannel = ProjectSettings.Channels.Any(c => !c.IsBusy);
             bool hasBusyChannel = ProjectSettings.Channels.Any(c => c.IsBusy);
             // 串口就绪且有空闲通道时，才允许测试
-            bool canTest = _comPortsReady && hasFreeChannel && !_stopInProgress;
+            bool canTest = _comPortsReady && hasFreeChannel && !_stopInProgress && !_isPauseRequested;
             Dispatcher.Invoke(() =>
             {
                 txb_snInput.IsEnabled = canTest;
                 btn_statsTest.IsEnabled = canTest;
                 button2.IsEnabled = hasBusyChannel;
+                buttonPause.IsEnabled = hasBusyChannel && !_stopInProgress;
+                buttonPause.Content = _isPauseRequested ? "继续测试" : "暂停测试";
             });
         }
 
@@ -2911,8 +2940,59 @@ namespace TestPlatform
             }
         }
 
+        private void buttonPause_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ProjectSettings.Channels.Any(c => c.IsBusy) || _stopInProgress)
+                return;
+
+            SetPauseRequested(!_isPauseRequested);
+        }
+
+        private void SetPauseRequested(bool pause, bool writeLog = true)
+        {
+            if (pause == _isPauseRequested)
+                return;
+
+            if (pause)
+            {
+                _pauseStartedTime = DateTime.Now;
+                _isPauseRequested = true;
+
+                foreach (var channel in ProjectSettings.Channels.Where(c => c.IsBusy))
+                {
+                    channel.ResultModel.DisplayText =
+                        $"通道 {channel.Index + 1}\n暂停请求已发出\n等待当前步骤安全结束...";
+                    channel.ResultModel.Background = StatusWarning;
+                    channel.ResultModel.DisplayForeground = Brushes.Black;
+                }
+
+                if (writeLog)
+                    AppendLog("已请求暂停测试；当前硬件步骤结束后进入暂停。", LogWarning);
+            }
+            else
+            {
+                _totalPausedDuration += DateTime.Now - _pauseStartedTime;
+                _isPauseRequested = false;
+
+                foreach (var channel in ProjectSettings.Channels.Where(c => c.IsBusy))
+                {
+                    channel.ResultModel.DisplayText =
+                        $"通道 {channel.Index + 1}\nSN: {channel.CurrentSN}\n正在测试...";
+                    channel.ResultModel.Background = Brushes.Yellow;
+                    channel.ResultModel.DisplayForeground = Brushes.Black;
+                }
+
+                if (writeLog)
+                    AppendLog("测试已继续，将从暂停处执行下一步。", LogInfo);
+            }
+
+            UpdateTestControlsState();
+        }
+
         private void button2_Click(object sender, RoutedEventArgs e)
         {
+            // 先打开暂停门，确保所有等待中的通道都能观察到取消令牌并进入安全收尾。
+            SetPauseRequested(false, false);
             _stopInProgress = true;
             foreach (var channel in ProjectSettings.Channels.Where(c => c.IsBusy))
             {
@@ -2935,6 +3015,37 @@ namespace TestPlatform
 
         #endregion 按钮事件END
         #region 公共测试方法
+
+        /// <summary>
+        /// 在测试步骤边界响应暂停。不会在线程或硬件通信执行到一半时强制挂起。
+        /// </summary>
+        private async Task WaitWhilePausedAsync(int channelIndex, CancellationToken cancellationToken)
+        {
+            if (!_isPauseRequested)
+                return;
+
+            AppendLog($"[通道{channelIndex + 1}] 已到达安全暂停点。", LogWarning);
+            await Dispatcher.InvokeAsync(() =>
+            {
+                ChannelContext channel = ProjectSettings.Channels.FirstOrDefault(c => c.Index == channelIndex);
+                if (channel?.ResultModel == null)
+                    return;
+
+                channel.ResultModel.DisplayText =
+                    $"通道 {channel.Index + 1}\nSN: {channel.CurrentSN}\n已暂停，可调整调试参数";
+                channel.ResultModel.Background = StatusWarning;
+                channel.ResultModel.DisplayForeground = Brushes.Black;
+            });
+
+            while (_isPauseRequested)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await Task.Delay(100, cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            AppendLog($"[通道{channelIndex + 1}] 离开暂停点，继续测试。", LogInfo);
+        }
 
         /// <summary>
         /// 等待治具下压，并实时将接收到的状态值更新到 DataGrid
@@ -4455,6 +4566,13 @@ namespace TestPlatform
                     return false;
                 }
                 DataRow row = dt.Rows[rowIndex];
+                if (appSettings?.SkipFirmwareProgramming == true)
+                {
+                    AppendLog($"第 {rowIndex + 1} 行按全局设置跳过烧录/擦除步骤", LogInfo);
+                    await UpdateBurnResult(channelIndex, rowIndex, true, "Skip");
+                    return true;
+                }
+
                 bool isSelected = Convert.ToBoolean(row["Select"]);
                 if (!isSelected)
                 {
@@ -10033,7 +10151,8 @@ namespace TestPlatform
                         ScrollToTestRowAsync,
                         UpdateChannelStepResultDisplay
                     ),
-                    ShowSequenceConfirmAsync
+                    ShowSequenceConfirmAsync,
+                    appSettings?.SkipFirmwareProgramming ?? false
                 ),
                 ["SK_BCM125_Sequence"] = () => new TestPlatform.TestSequences.SKBCM125Sequence(
                     new DataTableTestGridService(

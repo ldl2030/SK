@@ -301,12 +301,44 @@ namespace TestPlatform
         {
             // A previous ROUT:SCAN/INIT can leave the DAQ in the initiated
             // state.  In that state the DAQ-9600 rejects a new measurement
-            // configuration with error +261.  Always return to idle and clear
-            // the error queue before selecting the requested input.
-            SendCommand("ABOR");
-            ClearStatus();
+            // configuration with error +261.
+            RecoverVoltageDcMeasurement();
             rawResponse = Query($"MEAS:VOLT:DC? AUTO,MIN,({channelList})");
             return ParseSingleValue(rawResponse);
+        }
+
+        /// <summary>
+        /// Prepare one channel list for a series of READ? operations.  CONF
+        /// establishes the measurement function once and ROUT:SCAN replaces
+        /// any stale scan list, so subsequent samples do not need to repeat
+        /// MEAS configuration.
+        /// </summary>
+        public void PrepareVoltageDcMeasurementSeries(string channelList)
+        {
+            RecoverVoltageDcMeasurement();
+            SendCommand($"CONF:VOLT:DC AUTO,MIN,({channelList})");
+            SetScanList(channelList);
+        }
+
+        /// <summary>
+        /// Read one sample using the channel configuration established by
+        /// PrepareVoltageDcMeasurementSeries.
+        /// </summary>
+        public double ReadVoltageDcMeasurementSeriesSample(out string rawResponse)
+        {
+            rawResponse = Query("READ?");
+            return ParseSingleValue(rawResponse);
+        }
+
+        /// <summary>
+        /// Return the DAQ to idle and clear its status/error queue.  Call this
+        /// once before a measurement series and again only when that series
+        /// fails.  This is not a full instrument reset (*RST).
+        /// </summary>
+        public void RecoverVoltageDcMeasurement()
+        {
+            SendCommand("ABOR");
+            ClearStatus();
         }
 
         /// <summary>

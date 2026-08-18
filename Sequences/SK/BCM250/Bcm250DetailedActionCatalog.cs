@@ -85,9 +85,9 @@ namespace TestPlatform.TestSequences
             Daq(items, 8, "B03", "3.III 测量-VEE DAQ CH03", Bcm250StationMap.VeeDaqChannel);
             Daq(items, 8, "B04", "3.IV 测量3V3A DAQ CH07", Bcm250StationMap.ThreeVoltThreeAnalogDaqChannel);
             Daq(items, 8, "B05", "3.V 测量3V3-1 DAQ CH11", Bcm250StationMap.ThreeVoltThreeDaqChannel);
-            Shunt(items, 8, "B06", "3.VI 通过2.2R分流测量+VCC电流",
+            Shunt(items, 8, "B06", "3.VI 通过2.0R分流测量+VCC电流",
                 Bcm250StationMap.VccShuntDaqChannel, Bcm250StationMap.VccShuntOhms);
-            Shunt(items, 8, "B07", "3.VII 通过0.47R分流测量+5V电流",
+            Shunt(items, 8, "B07", "3.VII 通过0.4R分流测量+5V电流",
                 Bcm250StationMap.FiveVoltShuntDaqChannel, Bcm250StationMap.FiveVoltShuntOhms);
         }
 
@@ -602,14 +602,14 @@ namespace TestPlatform.TestSequences
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
             Daq(items, 24, "R07", "30-31 DAQ109测量V2 @0V/6A", Bcm250StationMap.V2DaqChannel);
             String(items, 24, "32 关闭并复位String发生器0V/0A/OVP300", 0, 0, 300, false);
-            Wait(items, 24, "33 等待500ms");
+            Command(items, 24, "33 关闭CCB后再进入15V/0A工作点：W69=1", "W69=1");
             Vbus(items, 24, "34 设置VSTR_NEG 15V/1A/OVP300", 15, 1, 300, true);
             Wait(items, 24, "35 等待1000ms");
             Mbd(items, 24, "R08", "36 读取R42 vstr_neg @15V/0A", "R42");
             Mbd(items, 24, "R09", "37 读取R44 iccb @15V/0A", "R44");
             Daq(items, 24, "R10", "38-39 DAQ109测量V2 @15V/0A", Bcm250StationMap.V2DaqChannel);
             String(items, 24, "40 设置String发生器5V/6A/OVP300", 5, 6, 300, true);
-            Wait(items, 24, "41 等待2000ms");
+            Command(items, 24, "41 重新打开CCB并等待2000ms：W69=0", "W69=0");
             Mbd(items, 24, "R11", "42 读取R42 vstr_neg @15V/6A", "R42");
             Mbd(items, 24, "R12", "43 读取R44 iccb @15V/6A", "R44");
             Daq(items, 24, "R13", "44-45 DAQ109测量V2 @15V/6A", Bcm250StationMap.V2DaqChannel);
@@ -664,18 +664,18 @@ namespace TestPlatform.TestSequences
             String(items, 25, "23 打开String发生器输出", 225, 0.2, 300, true);
             Wait(items, 25, "24 等待2000ms");
             Load(items, 25, "25 设置电子负载CV模式", 0, 0, 0, false);
-            Load(items, 25, "26 设置电子负载250V/10A/2500W", 250, 10, 2500, false);
+            Load(items, 25, "26 设置电子负载250V/7A/2000W", 250, 7, 2000, false);
             Wait(items, 25, "27 等待1000ms");
-            Load(items, 25, "28 打开电子负载输入", 250, 10, 2500, true);
+            Load(items, 25, "28 打开电子负载输入", 250, 7, 2000, true);
             Command(items, 25, "29 设置W11=0", "W11=0");
-            Command(items, 25, "30 设置W13=267500", "W13=267500");
+            Command(items, 25, "30 设置W13=267000", "W13=267000");
             Command(items, 25, "31 关闭MOSFET Q11：W71=0", "W71=0");
             Command(items, 25, "32 设置CCB目标6000mA：W12=6000", "W12=6000");
             Command(items, 25, "33 打开CCB：W69=0", "W69=0");
             Wait(items, 25, "34 等待10000ms");
             Shunt(items, 25, "S01", "35 DAQ113测量CCB外部分流电流",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
-            Load(items, 25, "36 设置电子负载255V", 255, 10, 2500, true);
+            Load(items, 25, "36 负载保持ON并将CV更新为255V", 255, 7, 2000, true);
             Wait(items, 25, "37 等待4000ms");
             Daq(items, 25, "S02", "38 DAQ114测量String电压",
                 Bcm250StationMap.StringVoltageDaqChannel);

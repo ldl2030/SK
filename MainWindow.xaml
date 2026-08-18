@@ -95,6 +95,20 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="PauseActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource WarningBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource WarningBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#713800"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- GroupBox 圆角样式 -->
         <Style TargetType="GroupBox">
             <Setter Property="BorderThickness" Value="1"/>
@@ -475,11 +489,15 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="btn_statsTest" Grid.Column="0" Content="开始测试 (Space)"
                             Style="{StaticResource PrimaryActionButton}" Margin="5"
                             Click="btn_statsTest_Click"/>
-                    <Button x:Name="button2" Grid.Column="1" Content="停止测试 (Esc)"
+                    <Button x:Name="buttonPause" Grid.Column="1" Content="暂停测试"
+                            Style="{StaticResource PauseActionButton}" Margin="5"
+                            Click="buttonPause_Click"/>
+                    <Button x:Name="button2" Grid.Column="2" Content="停止测试 (Esc)"
                             Style="{StaticResource DangerActionButton}" Margin="5"
                             Click="button2_Click"/>
                 </Grid>

@@ -6,7 +6,7 @@ namespace TestPlatform
 {
     public partial class MainWindow
     {
-        private async Task<bool> SaveBcm125TxtPdfReportAndUploadAsync(
+        private async Task<bool> SaveCustomerTxtPdfReportAndUploadAsync(
             int channelIndex,
             string sn,
             bool testResult,
@@ -23,7 +23,7 @@ namespace TestPlatform
 
                 if (snapshot == null)
                 {
-                    AppendLog("保存BCM-125 TXT/PDF报告失败：DataGrid数据为空。", LogError);
+                    AppendLog("保存客户TXT/PDF报告失败：DataGrid数据为空。", LogError);
                     return false;
                 }
 
@@ -46,17 +46,17 @@ namespace TestPlatform
 
                 if (!result.Success)
                 {
-                    AppendLog($"保存BCM-125 TXT/PDF报告失败：{result.ErrorMessage}", LogError);
+                    AppendLog($"保存客户TXT/PDF报告失败：{result.ErrorMessage}", LogError);
                     return false;
                 }
 
-                AppendLog($"BCM-125 TXT报告已保存: {result.TextFilePath}", LogInfo);
-                AppendLog($"BCM-125 PDF报告已保存: {result.PdfFilePath}", LogInfo);
+                AppendLog($"客户TXT报告已保存: {result.TextFilePath}", LogInfo);
+                AppendLog($"客户PDF报告已保存: {result.PdfFilePath}", LogInfo);
 
                 if (result.DutPassed != testResult)
                 {
                     AppendLog(
-                        "BCM-125报告检测到缺失、未执行或未通过的必需输出项，报告结果已标记为NOT PASSED。",
+                        "客户报告检测到缺失、未执行或未通过的必需输出项，报告结果已标记为NOT PASSED。",
                         LogWarning);
                 }
 
@@ -76,7 +76,7 @@ namespace TestPlatform
             }
             catch (Exception ex)
             {
-                AppendLog($"保存BCM-125 TXT/PDF报告异常: {ex.Message}", LogError);
+                AppendLog($"保存客户TXT/PDF报告异常: {ex.Message}", LogError);
                 return false;
             }
         }

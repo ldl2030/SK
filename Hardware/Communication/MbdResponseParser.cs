@@ -123,6 +123,57 @@ namespace TestPlatform
             return true;
         }
 
+        /// <summary>
+        /// Validates a non-query command with command-specific terminal semantics.
+        /// EXIT is idempotent: when the board is already at the MBD root terminal it
+        /// replies COMMAND ERROR followed by Ready.; that still proves the requested
+        /// terminal state and the serial exchange both completed successfully.
+        /// </summary>
+        public static bool IsSuccessfulCommandResponse(
+            string command,
+            string response,
+            out string error)
+        {
+            if (IsSuccessfulCommandResponse(response, out error))
+                return true;
+
+            if (IsAcceptedExitNoOpResponse(command, response, error))
+            {
+                error = string.Empty;
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsAcceptedExitNoOpResponse(
+            string command,
+            string response,
+            string responseError = "COMMAND ERROR")
+        {
+            return string.Equals(
+                       (command ?? string.Empty).Trim(),
+                       "EXIT",
+                       StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(
+                       responseError,
+                       "COMMAND ERROR",
+                       StringComparison.OrdinalIgnoreCase) &&
+                   !string.IsNullOrWhiteSpace(response) &&
+                   response.IndexOf(
+                       "COMMAND ERROR",
+                       StringComparison.OrdinalIgnoreCase) >= 0 &&
+                   ErrorMarkers
+                       .Where(marker => !string.Equals(
+                           marker,
+                           "COMMAND ERROR",
+                           StringComparison.OrdinalIgnoreCase))
+                       .All(marker => response.IndexOf(
+                           marker,
+                           StringComparison.OrdinalIgnoreCase) < 0) &&
+                   TargetBoardComm.HasTerminalPrompt(response);
+        }
+
         private static Match GetRegisterLine(string command, string response)
         {
             string error;
