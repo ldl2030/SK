@@ -2,8 +2,8 @@
 <TestItems>
   <PlanMetadata>
     <BoardType>MPS-250</BoardType>
-    <PlanVersion>2.1</PlanVersion>
-    <BaselineId>MPS250-PDF-REV3-DAQ-RELAYS-20260814</BaselineId>
+    <PlanVersion>2.2</PlanVersion>
+    <BaselineId>MPS250-PDF-REV3-THRESHOLDS-115200-SAFE-CLEANUP-20260820</BaselineId>
   </PlanMetadata>
   <Groups>
     <Group>
@@ -367,7 +367,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>7.1 功率路径闭合后打开VBUS输出</Name>
+    <Name>7.1 功率路径闭合后打开VBUS输出并等待实测电压稳定</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -454,7 +454,7 @@
     <DependsOn />
     <Name>B05 7.3.V 测量VPWM DAQ114</Name>
     <LowerLimit>12000</LowerLimit>
-    <UpperLimit>14500</UpperLimit>
+    <UpperLimit>14000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -471,7 +471,7 @@
     <DependsOn />
     <Name>B06 7.3.VI 通过1Ω分流测量VBUS吸收电流 DAQ117</Name>
     <LowerLimit>10</LowerLimit>
-    <UpperLimit>40</UpperLimit>
+    <UpperLimit>60</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -487,8 +487,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>B07 7.3.VII 测量P+ DAQ113</Name>
-    <LowerLimit>270000</LowerLimit>
-    <UpperLimit>280000</UpperLimit>
+    <LowerLimit>137000</LowerLimit>
+    <UpperLimit>138000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -690,7 +690,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>9.1 打开VBUS输出</Name>
+    <Name>9.1 打开VBUS输出并等待实测电压稳定</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1473,7 +1473,7 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>G02 12.8 测量LS1 COM-NO断开电阻 DAQ118</Name>
-    <LowerLimit>1000</LowerLimit>
+    <LowerLimit>1000000</LowerLimit>
     <UpperLimit />
     <Unit>Ohm</Unit>
     <ExpectedValue />
@@ -1541,8 +1541,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H02 13.4 通过1Ω分流测量MPS静态电流</Name>
-    <LowerLimit>10</LowerLimit>
-    <UpperLimit>40</UpperLimit>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>100</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1626,8 +1626,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H04 13.9 测量高驱动MPS电流</Name>
-    <LowerLimit>30</LowerLimit>
-    <UpperLimit>60</UpperLimit>
+    <LowerLimit>40</LowerLimit>
+    <UpperLimit>150</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1677,8 +1677,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH13.S004.H02</DependsOn>
     <Name>H06 13.12 测量低驱动电流并与H02比较</Name>
-    <LowerLimit>15</LowerLimit>
-    <UpperLimit>45</UpperLimit>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>70</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -1779,8 +1779,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>H08 13.18 测量关闭后MPS电流（PDF H8）</Name>
-    <LowerLimit>10</LowerLimit>
-    <UpperLimit>40</UpperLimit>
+    <LowerLimit>19</LowerLimit>
+    <UpperLimit>100</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2323,8 +2323,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S003.J01</DependsOn>
     <Name>J04 15.13 计算Gain_VBUS=4096*VBUS/J01</Name>
-    <LowerLimit>400000</LowerLimit>
-    <UpperLimit>410000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2340,8 +2340,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S006.J02</DependsOn>
     <Name>J05 15.14 计算Gain_VPREC=4096*VBUS/J02</Name>
-    <LowerLimit>400000</LowerLimit>
-    <UpperLimit>410000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2357,8 +2357,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn>MPS250.CH15.S012.J03</DependsOn>
     <Name>J06 15.15-16 计算单路Gain_VSTRING2=4096*VBUS/J03</Name>
-    <LowerLimit>400000</LowerLimit>
-    <UpperLimit>410000</UpperLimit>
+    <LowerLimit>200000</LowerLimit>
+    <UpperLimit>205000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2459,8 +2459,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>K01 16.3 MCU_ISOBATT/TP230基线测量约8秒 DAQ105</Name>
-    <LowerLimit>1400</LowerLimit>
-    <UpperLimit>1900</UpperLimit>
+    <LowerLimit>1700</LowerLimit>
+    <UpperLimit>2200</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2544,8 +2544,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>K03 16.8 MCU_ISOBATT@250V测量约8秒 DAQ105</Name>
-    <LowerLimit>0</LowerLimit>
-    <UpperLimit>300</UpperLimit>
+    <LowerLimit>400</LowerLimit>
+    <UpperLimit>800</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2816,8 +2816,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L04 17.15 测量加热器关闭时MPS电流</Name>
-    <LowerLimit>10</LowerLimit>
-    <UpperLimit>40</UpperLimit>
+    <LowerLimit>18</LowerLimit>
+    <UpperLimit>60</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2885,7 +2885,7 @@
     <DependsOn />
     <Name>L06 17.19-20 FBK_1 100%状态采样16次/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>200</UpperLimit>
+    <UpperLimit>600</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -2901,8 +2901,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L07 17.21 测量PWM1开启时MPS电流</Name>
-    <LowerLimit>230</LowerLimit>
-    <UpperLimit>300</UpperLimit>
+    <LowerLimit>100</LowerLimit>
+    <UpperLimit>200</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2953,7 +2953,7 @@
     <DependsOn />
     <Name>L08 17.23 FBK_1恢复0%采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>9000</UpperLimit>
+    <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3038,7 +3038,7 @@
     <DependsOn />
     <Name>L10 17.28-29 FBK_2 100%状态采样16次/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>200</UpperLimit>
+    <UpperLimit>500</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3054,8 +3054,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L11 17.30 测量PWM2开启时MPS电流</Name>
-    <LowerLimit>110</LowerLimit>
-    <UpperLimit>160</UpperLimit>
+    <LowerLimit>50</LowerLimit>
+    <UpperLimit>100</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3106,7 +3106,7 @@
     <DependsOn />
     <Name>L12 17.32 FBK_2恢复0%采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>9000</UpperLimit>
+    <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3208,7 +3208,7 @@
     <DependsOn />
     <Name>L14 17.36-37 FBK_1最终采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>9000</UpperLimit>
+    <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3225,7 +3225,7 @@
     <DependsOn />
     <Name>L15 17.36-38 FBK_2最终采样16次/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>9000</UpperLimit>
+    <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>

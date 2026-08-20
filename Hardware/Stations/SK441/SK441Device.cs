@@ -93,6 +93,9 @@ namespace TestPlatform
         private bool _mockMbdWestCmdActive;
         private bool _mockDutWestCmdActive;
         private double _mockVbusVoltage;
+        private double _mockVbusCurrentLimit;
+        private double _mockSecondaryVoltage;
+        private double _mockSecondaryCurrentLimit;
         private double _mockStringCurrent;
         private double _mockCcbCurrentSetpointMa;
         private bool _mockCcbEnabled;
@@ -1158,11 +1161,18 @@ namespace TestPlatform
             bool isManualMpsUsbB =
                 string.Equals(SimulationBoardType, "MPS-125", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(SimulationBoardType, "MPS-250", StringComparison.OrdinalIgnoreCase);
+            int targetBoardBaudRate = string.Equals(
+                SimulationBoardType,
+                "MPS-250",
+                StringComparison.OrdinalIgnoreCase)
+                ? GetIntAppSetting("SKMPS250TargetBoardBaudRate", 115200)
+                : GetIntAppSetting("SKTargetBoardBaudRate", 9600);
             string detectedPort = await SKSerialDeviceDiscovery.DiscoverMbdPortAsync(
                 message => LogInfo?.Invoke(message),
                 isManualMpsUsbB ? null : _targetBoardPortCandidate,
                 ignoreConfiguredPort: isManualMpsUsbB,
-                allowUnverifiedFallback: !isManualMpsUsbB);
+                allowUnverifiedFallback: !isManualMpsUsbB,
+                baudRate: targetBoardBaudRate);
             if (string.IsNullOrWhiteSpace(detectedPort))
             {
                 LogError?.Invoke(
@@ -1172,9 +1182,8 @@ namespace TestPlatform
 
             try
             {
-                int baudRate = GetIntAppSetting("SKTargetBoardBaudRate", 9600);
                 int settleMs = GetIntAppSetting("SKMbdOpenSettleMs", 500);
-                TargetBoard.Connect(detectedPort, baudRate, settleMs);
+                TargetBoard.Connect(detectedPort, targetBoardBaudRate, settleMs);
                 _targetBoardPortCandidate = detectedPort;
                 ComName.testComName = detectedPort;
                 return true;
@@ -1262,6 +1271,7 @@ namespace TestPlatform
                     await Task.Delay(50);
                     RecordPowerOutput("VBUS", outputOn);
                     _mockVbusVoltage = voltage;
+                    _mockVbusCurrentLimit = current;
                     if (Math.Abs(voltage) < 0.001 && !outputOn)
                         _mockR68ReadCount = 0;
                     LogInfo?.Invoke($"[调试模式] 模拟设置 VBUS 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
@@ -1296,6 +1306,8 @@ namespace TestPlatform
                 {
                     await Task.Delay(50);
                     RecordPowerOutput("SECONDARY", outputOn);
+                    _mockSecondaryVoltage = voltage;
+                    _mockSecondaryCurrentLimit = current;
                     _mockStringCurrent = outputOn ? current : 0;
                     LogInfo?.Invoke($"[调试模式] 模拟设置 String 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
                     return true;

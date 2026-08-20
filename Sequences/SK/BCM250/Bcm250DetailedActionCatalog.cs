@@ -78,7 +78,10 @@ namespace TestPlatform.TestSequences
 
         private static void AddChapter08(List<Bcm250ActionDefinition> items)
         {
-            MpsPower(items, 8, "1 配置ANS/MPS板电源275V/1A并保持输出关闭", 275, 1, false);
+            MpsPower(items, 8, "1 配置ANS/MPS板电源275V/1A并保持输出关闭",
+                Sk250TestSetpoints.Bcm250.MpsBoardVoltage,
+                Sk250TestSetpoints.Bcm250.MpsBoardCurrent,
+                false);
             Action(items, 8, "2 闭合RL4后开启ANS/MPS板电源", Bcm250ActionKind.SafeAnsPowerOn, "7,275,1", true);
             Daq(items, 8, "B01", "3.I 测量+5V DAQ CH01", Bcm250StationMap.FiveVoltDaqChannel);
             Daq(items, 8, "B02", "3.II 测量+VCC DAQ CH02", Bcm250StationMap.VccDaqChannel);
@@ -273,8 +276,8 @@ namespace TestPlatform.TestSequences
             Command(items, 18, "11 预充电继电器关闭W75=0", "W75=0");
             Fixture(items, 18, "12 闭合RL1a_B/RL2B预充电路径", "9,8", true);
             Wait(items, 18, "13 等待500ms");
-            Vbus(items, 18, "14 设置VBUS发生器275V/0.1A/OVP300", 275, 0.1, 300, false);
-            Vbus(items, 18, "15 打开VBUS发生器输出", 275, 0.1, 300, true);
+            Vbus(items, 18, "14 设置VBUS发生器275V/0.1A/OVP300", Sk250TestSetpoints.Bcm250.VbusCalibration, false);
+            Vbus(items, 18, "15 打开VBUS发生器输出", Sk250TestSetpoints.Bcm250.VbusCalibration, true);
             Command(items, 18, "16 发送EXIT进入MBD终端", "EXIT");
             Command(items, 18, "17 发送DIAG ON到MBD", "DIAG ON");
             Wait(items, 18, "18 等待15000ms");
@@ -289,7 +292,7 @@ namespace TestPlatform.TestSequences
             Mbd(items, 18, "L03", "27 读取R69预充电后adc3 vbus", "R69");
             Mbd(items, 18, "L04", "28 读取R68预充电后VsensPrec", "R68");
             Wait(items, 18, "29 等待4000ms");
-            Vbus(items, 18, "29.b 关闭VBUS发生器", 275, 0.1, 300, false);
+            Vbus(items, 18, "29.b 关闭VBUS发生器", Sk250TestSetpoints.Bcm250.VbusCalibration, false);
             Vbus(items, 18, "30 设VBUS发生器0V/0A/OVP10", 0, 0, 10, false);
             Vbus(items, 18, "31 确认VBUS发生器输出关闭", 0, 0, 10, false);
             Vbus(items, 18, "32 复位VBUS发生器0V/0A/OVP300", 0, 0, 300, false);
@@ -312,7 +315,7 @@ namespace TestPlatform.TestSequences
             Vbus(items, 19, "5 复位VBUS发生器0V/0A/OVP300", 0, 0, 300, false);
             Wait(items, 19, "6 等待20ms");
             DaqRelay(items, 19, "7 闭合VMID/RL6测量路径DAQ301", Bcm250StationMap.MidpointDaqRelay, true);
-            Vbus(items, 19, "8 设置VMID高点125V/0.1A/OVP300并输出", 125, 0.1, 300, true);
+            Vbus(items, 19, "8 设置VMID高点125V/0.1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VmidHigh, true);
             Wait(items, 19, "8.b 等待10000ms");
             Action(items, 19, "9 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 19, "10 发送EXIT进入MBD终端", "EXIT");
@@ -326,7 +329,7 @@ namespace TestPlatform.TestSequences
             Wait(items, 19, "18 等待2000ms");
             Mbd(items, 19, "M01", "19 平均读取8次R93 @125V", "R93");
             Daq(items, 19, "M02", "20 DAQ106平均测量8次VMID @125V", Bcm250StationMap.VmidReferenceDaqChannel);
-            Vbus(items, 19, "21 设置VMID低点5V/0.1A/OVP300并输出", 5, 0.1, 300, true);
+            Vbus(items, 19, "21 设置VMID低点5V/0.1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VmidLow, true);
             Wait(items, 19, "22 等待12000ms");
             Mbd(items, 19, "M03", "23 平均读取8次R93 @5V", "R93");
             Daq(items, 19, "M04", "24 DAQ106平均测量8次VMID @5V", Bcm250StationMap.VmidReferenceDaqChannel);
@@ -337,7 +340,7 @@ namespace TestPlatform.TestSequences
             Command(items, 19, "27 保存VMID校准参数ACT->FLASH", "ACT->FLASH");
             Mbd(items, 19, "M07", "28 回读R20核对Gain_VMID", "R20");
             Mbd(items, 19, "M08", "29 回读R21核对offset_vstr_mid", "R21");
-            Vbus(items, 19, "30 恢复VMID 125V/0.1A/OVP300并输出", 125, 0.1, 300, true);
+            Vbus(items, 19, "30 恢复VMID 125V/0.1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VmidHigh, true);
             Wait(items, 19, "31 等待15000ms");
             Mbd(items, 19, "M09", "32-33 平均读取20次R92 vstr_mid1", "R92");
             Command(items, 19, "34 发送EXIT返回MBD终端", "EXIT");
@@ -371,20 +374,20 @@ namespace TestPlatform.TestSequences
             Fixture(items, 20, "6 闭合String电源Y1/Y3/Y6及放电校准路径RL1a_B/RL1b_B/RL2A",
                 Bcm250StationMap.DischargeStringPowerPathRelays, true);
             Wait(items, 20, "7 等待20ms");
-            String(items, 20, "8 设置String发生器12V/1A/OVP16", 12, 1, 16, false);
-            String(items, 20, "9 打开String发生器1A输出", 12, 1, 16, true);
+            String(items, 20, "8 设置String发生器12V/1A/OVP16", Sk250TestSetpoints.Bcm250.DischargeOneAmp, false);
+            String(items, 20, "9 打开String发生器1A输出", Sk250TestSetpoints.Bcm250.DischargeOneAmp, true);
             Action(items, 20, "10 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 20, "11 发送REMOTE2进入BCM250终端", "REMOTE2");
             Mbd(items, 20, "N01", "12-13 平均读取16次R57 @1A", "R57");
             Shunt(items, 20, "N02", "14 DAQ113平均8次测量1A外部分流",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
-            String(items, 20, "15 设置String发生器12V/6A/OVP16", 12, 6, 16, false);
-            String(items, 20, "16 打开String发生器6A输出", 12, 6, 16, true);
+            String(items, 20, "15 设置String发生器12V/6A/OVP16", Sk250TestSetpoints.Bcm250.DischargeSixAmp, false);
+            String(items, 20, "16 打开String发生器6A输出", Sk250TestSetpoints.Bcm250.DischargeSixAmp, true);
             Wait(items, 20, "17 等待2000ms");
             Mbd(items, 20, "N03", "18-19 平均读取16次R57 @6A", "R57");
             Shunt(items, 20, "N04", "20 DAQ113平均8次测量6A外部分流",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
-            String(items, 20, "21 关闭String发生器输出", 12, 6, 16, false);
+            String(items, 20, "21 关闭String发生器输出", Sk250TestSetpoints.Bcm250.DischargeSixAmp, false);
             String(items, 20, "22 设String发生器0V/0A/OVP10", 0, 0, 10, false);
             Result(items, 20, "N05", "23-26 计算GAINidch",
                 Bcm250ActionKind.ComputedCalibration, "N05");
@@ -399,11 +402,11 @@ namespace TestPlatform.TestSequences
             Wait(items, 20, "31 等待3000ms");
             Mbd(items, 20, "N07", "32-34 平均读取50次R45 @0A", "R45");
             String(items, 20, "35 确认String发生器输出关闭", 0, 0, 10, false);
-            String(items, 20, "36 设置String发生器12V/6A/OVP16", 12, 6, 16, false);
-            String(items, 20, "37 打开String发生器6A输出", 12, 6, 16, true);
+            String(items, 20, "36 设置String发生器12V/6A/OVP16", Sk250TestSetpoints.Bcm250.DischargeSixAmp, false);
+            String(items, 20, "37 打开String发生器6A输出", Sk250TestSetpoints.Bcm250.DischargeSixAmp, true);
             Wait(items, 20, "38 等待2000ms");
             Mbd(items, 20, "N08", "39-41 平均读取50次R45 @6A", "R45");
-            String(items, 20, "42 关闭String发生器输出", 12, 6, 16, false);
+            String(items, 20, "42 关闭String发生器输出", Sk250TestSetpoints.Bcm250.DischargeSixAmp, false);
             String(items, 20, "43 设String发生器0V/0A/OVP10", 0, 0, 10, false);
             Vbus(items, 20, "44 确认VBUS发生器关闭", 0, 0, 300, false);
             String(items, 20, "45 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
@@ -428,14 +431,14 @@ namespace TestPlatform.TestSequences
             Fixture(items, 21, "7 闭合String电源Y1/Y3/Y6及自动放电路径RL1a_B/RL1b_B/RL2A",
                 Bcm250StationMap.DischargeStringPowerPathRelays, true);
             Wait(items, 21, "8 等待20ms");
-            String(items, 21, "9 设置String发生器5V/0.3A/OVP10", 5, 0.3, 10, false);
-            String(items, 21, "10 打开String发生器输出", 5, 0.3, 10, true);
+            String(items, 21, "9 设置String发生器5V/0.3A/OVP10", Sk250TestSetpoints.Bcm250.MosfetRampStart, false);
+            String(items, 21, "10 打开String发生器输出", Sk250TestSetpoints.Bcm250.MosfetRampStart, true);
             Action(items, 21, "11 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 21, "12 发送REMOTE2进入BCM250终端", "REMOTE2");
             Result(items, 21, "O01", "13 0.3A至1.3A阶梯扫描并记录R45触发电流",
                 Bcm250ActionKind.MosfetRamp, "R45");
             Mbd(items, 21, "O02", "13.b 读取R59确认st_gm_sc翻转", "R59");
-            String(items, 21, "14 关闭String发生器输出", 5, 1.3, 10, false);
+            String(items, 21, "14 关闭String发生器输出", Sk250TestSetpoints.Bcm250.MosfetRampEnd, false);
             String(items, 21, "15 设String发生器0V/0A/OVP10", 0, 0, 10, false);
             Vbus(items, 21, "16 确认VBUS发生器关闭", 0, 0, 300, false);
             String(items, 21, "17 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
@@ -461,8 +464,8 @@ namespace TestPlatform.TestSequences
                 Bcm250StationMap.DischargeStringPowerPathRelays, true);
             DaqRelay(items, 22, "7.b 闭合RL5.12/U1.2 DAQ302", Bcm250StationMap.U12ConnectionDaqRelay, true);
             Wait(items, 22, "8 等待500ms");
-            String(items, 22, "9 设置String发生器275V/1A/OVP300", 275, 1, 300, false);
-            String(items, 22, "10 打开String发生器输出", 275, 1, 300, true);
+            String(items, 22, "9 设置String发生器275V/1A/OVP300", Sk250TestSetpoints.Bcm250.ShortProtection, false);
+            String(items, 22, "10 打开String发生器输出", Sk250TestSetpoints.Bcm250.ShortProtection, true);
             Wait(items, 22, "11 等待1000ms");
             Action(items, 22, "12 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 22, "13 发送REMOTE2进入BCM250终端", "REMOTE2");
@@ -477,7 +480,7 @@ namespace TestPlatform.TestSequences
             Mbd(items, 22, "P03", "21 读取R61确认st_emerg=0", "R61");
             Mbd(items, 22, "P04", "21.b 读取R60确认st_prot_short=0", "R60");
             Action(items, 22, "22 恢复U1.2短路模拟器2.9V", Bcm250ActionKind.ShortSimulator, "2.9V", true);
-            String(items, 22, "23 关闭String发生器输出", 275, 1, 300, false);
+            String(items, 22, "23 关闭String发生器输出", Sk250TestSetpoints.Bcm250.ShortProtection, false);
             String(items, 22, "24 设String发生器0V/0A/OVP10", 0, 0, 10, false);
             Vbus(items, 22, "25 确认VBUS发生器关闭", 0, 0, 300, false);
             String(items, 22, "26 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
@@ -506,7 +509,7 @@ namespace TestPlatform.TestSequences
             String(items, 23, "9 设置String发生器0V/0A/OVP300", 0, 0, 300, false);
             Wait(items, 23, "10 等待1000ms");
             String(items, 23, "11 打开String发生器0A输出", 0, 0, 300, true);
-            Vbus(items, 23, "12 设置VSTR_NEG 1V/1A/OVP300并输出", 1, 1, 300, true);
+            Vbus(items, 23, "12 设置VSTR_NEG 1V/1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
             Action(items, 23, "13 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 23, "14.a 发送EXIT进入MBD终端", "EXIT");
             Command(items, 23, "14.b 发送DIAG ON到MBD", "DIAG ON");
@@ -521,13 +524,13 @@ namespace TestPlatform.TestSequences
             Daq(items, 23, "Q03", "23-24 DAQ109测量V2 @1V/0A", Bcm250StationMap.V2DaqChannel);
             Shunt(items, 23, "Q04", "25 DAQ113测量外部分流电流 @0V/0A",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
-            Vbus(items, 23, "26 设置VSTR_NEG 15V/1A/OVP300并输出", 15, 1, 300, true);
+            Vbus(items, 23, "26 设置VSTR_NEG 15V/1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VstrNegHigh, true);
             Wait(items, 23, "27 等待2000ms");
             Mbd(items, 23, "Q05", "28 平均读取4次R50 adc0 @15V/0A", "R50");
             Mbd(items, 23, "Q06", "29 平均读取4次R56 adc14 @15V/0A", "R56");
             Daq(items, 23, "Q07", "30-31 DAQ109测量V2 @15V/0A", Bcm250StationMap.V2DaqChannel);
-            Vbus(items, 23, "32 设置VSTR_NEG 1V/1A/OVP300并输出", 1, 1, 300, true);
-            String(items, 23, "33 设置String发生器25V/6A/OVP300并输出", 25, 6, 300, true);
+            Vbus(items, 23, "32 设置VSTR_NEG 1V/1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
+            String(items, 23, "33 设置String发生器25V/6A/OVP300并输出", Sk250TestSetpoints.Bcm250.ChargeCalibration, true);
             Wait(items, 23, "34.a 等待7000ms");
             Command(items, 23, "34.b 打开CCB：W69=0", "W69=0");
             Mbd(items, 23, "Q08", "35 平均读取4次R50 adc0 @0V/6A", "R50");
@@ -576,24 +579,26 @@ namespace TestPlatform.TestSequences
             Fixture(items, 24, "6 闭合String电源Y1/Y3/Y6及验证路径RL1a_A/RL1b_A/RL2B",
                 Bcm250StationMap.ChargeStringPowerPathRelays, true);
             Wait(items, 24, "7 等待20ms");
-            String(items, 24, "8 设置String发生器0V/0A/OVP300", 0, 0, 300, false);
-            String(items, 24, "9 打开String发生器输出", 0, 0, 300, true);
-            Vbus(items, 24, "10 设置VSTR_NEG 1V/1A/OVP300", 1, 1, 300, false);
-            Vbus(items, 24, "11 打开VBUS发生器输出", 1, 1, 300, true);
+            String(items, 24, "8 设置String发生器0V/0A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationZero, false);
+            String(items, 24, "9 打开String发生器输出", Sk250TestSetpoints.Bcm250.ChargeVerificationZero, true);
+            Vbus(items, 24, "10 设置VSTR_NEG 1V/1A/OVP300", Sk250TestSetpoints.Bcm250.VstrNegLow, false);
+            Vbus(items, 24, "11 打开VBUS发生器输出", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
             Action(items, 24, "12 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 24, "13.a 发送EXIT进入MBD终端", "EXIT");
             Command(items, 24, "13.b 发送DIAG ON到MBD", "DIAG ON");
             Command(items, 24, "14 发送REMOTE2进入BCM250终端", "REMOTE2");
             Command(items, 24, "15 发送DIAG ON到BCM250", "DIAG ON");
             Command(items, 24, "16 关闭CCB：W69=1", "W69=1");
-            Command(items, 24, "17 设置CCB目标6000mA：W12=6000", "W12=6000");
+            Command(items, 24,
+                "17 设置CCB校准目标电流：W12=" + Sk250TestSetpoints.Bcm250.CcbCalibrationCurrentMa,
+                "W12=" + Sk250TestSetpoints.Bcm250.CcbCalibrationCurrentMa);
             Command(items, 24, "18 激活预充电：W75=1", "W75=1");
             Wait(items, 24, "19 等待500ms");
             Mbd(items, 24, "R01", "20 读取R42 vstr_neg @0V/0A", "R42");
             Mbd(items, 24, "R02", "21 读取R44 iccb @0V/0A", "R44");
             Daq(items, 24, "R03", "22-23 DAQ109测量V2 @0V/0A", Bcm250StationMap.V2DaqChannel);
-            Vbus(items, 24, "24 设置VSTR_NEG 1V/1A/OVP300", 1, 1, 300, true);
-            String(items, 24, "25 设置String发生器15V/6A/OVP300", 15, 6, 300, true);
+            Vbus(items, 24, "24 设置VSTR_NEG 1V/1A/OVP300", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
+            String(items, 24, "25 设置String发生器15V/6A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationSixAmp, true);
             Wait(items, 24, "26.a 等待5000ms");
             Command(items, 24, "26.b 打开CCB：W69=0", "W69=0");
             Mbd(items, 24, "R04", "27 读取R42 vstr_neg @0V/6A", "R42");
@@ -603,12 +608,12 @@ namespace TestPlatform.TestSequences
             Daq(items, 24, "R07", "30-31 DAQ109测量V2 @0V/6A", Bcm250StationMap.V2DaqChannel);
             String(items, 24, "32 关闭并复位String发生器0V/0A/OVP300", 0, 0, 300, false);
             Command(items, 24, "33 关闭CCB后再进入15V/0A工作点：W69=1", "W69=1");
-            Vbus(items, 24, "34 设置VSTR_NEG 15V/1A/OVP300", 15, 1, 300, true);
+            Vbus(items, 24, "34 设置VSTR_NEG 15V/1A/OVP300", Sk250TestSetpoints.Bcm250.VstrNegHigh, true);
             Wait(items, 24, "35 等待1000ms");
             Mbd(items, 24, "R08", "36 读取R42 vstr_neg @15V/0A", "R42");
             Mbd(items, 24, "R09", "37 读取R44 iccb @15V/0A", "R44");
             Daq(items, 24, "R10", "38-39 DAQ109测量V2 @15V/0A", Bcm250StationMap.V2DaqChannel);
-            String(items, 24, "40 设置String发生器5V/6A/OVP300", 5, 6, 300, true);
+            String(items, 24, "40 设置String发生器5V/6A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationFiveVolt, true);
             Command(items, 24, "41 重新打开CCB并等待2000ms：W69=0", "W69=0");
             Mbd(items, 24, "R11", "42 读取R42 vstr_neg @15V/6A", "R42");
             Mbd(items, 24, "R12", "43 读取R44 iccb @15V/6A", "R44");
@@ -651,8 +656,8 @@ namespace TestPlatform.TestSequences
             Command(items, 25, "10 发送EXIT进入MBD终端", "EXIT");
             Command(items, 25, "11 发送DIAG ON到MBD", "DIAG ON");
             Command(items, 25, "12 闭合MPS RL2：W91=1", "W91=1");
-            Vbus(items, 25, "13 设置VBUS发生器275V/10A/OVP300", 275, 10, 300, false);
-            Vbus(items, 25, "14 打开VBUS发生器输出", 275, 10, 300, true);
+            Vbus(items, 25, "13 设置VBUS发生器275V/10A/OVP300", Sk250TestSetpoints.Bcm250.CcbVbus, false);
+            Vbus(items, 25, "14 打开VBUS发生器输出", Sk250TestSetpoints.Bcm250.CcbVbus, true);
             Wait(items, 25, "15 等待15000ms");
             Command(items, 25, "16 发送DIAG ON到MBD", "DIAG ON");
             Command(items, 25, "17 发送REMOTE2进入BCM250终端", "REMOTE2");
@@ -660,33 +665,37 @@ namespace TestPlatform.TestSequences
             Command(items, 25, "19 关闭CCB：W69=1", "W69=1");
             Command(items, 25, "20 设置CCB目标0mA：W12=0", "W12=0");
             Command(items, 25, "21 激活预充电：W75=1", "W75=1");
-            String(items, 25, "22 设置String发生器225V/0.2A/OVP300", 225, 0.2, 300, false);
-            String(items, 25, "23 打开String发生器输出", 225, 0.2, 300, true);
+            String(items, 25, "22 设置String发生器225V/0.2A/OVP300", Sk250TestSetpoints.Bcm250.CcbString, false);
+            String(items, 25, "23 打开String发生器输出", Sk250TestSetpoints.Bcm250.CcbString, true);
             Wait(items, 25, "24 等待2000ms");
             Load(items, 25, "25 设置电子负载CV模式", 0, 0, 0, false);
-            Load(items, 25, "26 设置电子负载250V/7A/2000W", 250, 7, 2000, false);
+            Load(items, 25, "26 设置电子负载250V/7A/2000W", Sk250TestSetpoints.Bcm250.CcbLoad, false);
             Wait(items, 25, "27 等待1000ms");
-            Load(items, 25, "28 打开电子负载输入", 250, 7, 2000, true);
+            Load(items, 25, "28 打开电子负载输入", Sk250TestSetpoints.Bcm250.CcbLoad, true);
             Command(items, 25, "29 设置W11=0", "W11=0");
-            Command(items, 25, "30 设置W13=267000", "W13=267000");
+            Command(items, 25,
+                "30 设置CCB电压目标：W13=" + Sk250TestSetpoints.Bcm250.CcbVoltageTargetMv,
+                "W13=" + Sk250TestSetpoints.Bcm250.CcbVoltageTargetMv);
             Command(items, 25, "31 关闭MOSFET Q11：W71=0", "W71=0");
-            // Temporary low-current hardware-debug workpoint for S01.
-            Command(items, 25, "32 临时设置CCB目标1000mA：W12=1000", "W12=1000");
+            // Hardware test current is intentionally centralized with the other 250-series setpoints.
+            Command(items, 25,
+                "32 设置CCB硬件测试目标电流：W12=" + Sk250TestSetpoints.Bcm250.CcbHardwareTestCurrentMa,
+                "W12=" + Sk250TestSetpoints.Bcm250.CcbHardwareTestCurrentMa);
             Command(items, 25, "33 打开CCB：W69=0", "W69=0");
             Wait(items, 25, "34 等待10000ms");
             Shunt(items, 25, "S01", "35 DAQ113测量CCB外部分流电流",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
-            Load(items, 25, "36 负载保持ON并将CV更新为255V", 255, 7, 2000, true);
+            Load(items, 25, "36 负载保持ON并将CV更新为255V", Sk250TestSetpoints.Bcm250.CcbLoadHold, true);
             Wait(items, 25, "37 等待4000ms");
             Daq(items, 25, "S02", "38 DAQ114测量String电压",
                 Bcm250StationMap.StringVoltageDaqChannel);
             Command(items, 25, "39 关闭CCB：W69=1", "W69=1");
             Load(items, 25, "40 关闭电子负载", 0, 0, 0, false);
             Load(items, 25, "41 复位电子负载0V/0A", 0, 0, 0, false);
-            String(items, 25, "42 关闭String发生器输出", 225, 0.2, 300, false);
+            String(items, 25, "42 关闭String发生器输出", Sk250TestSetpoints.Bcm250.CcbString, false);
             Wait(items, 25, "43 等待7000ms");
             String(items, 25, "44 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
-            Vbus(items, 25, "45 关闭VBUS发生器输出", 275, 10, 300, false);
+            Vbus(items, 25, "45 关闭VBUS发生器输出", Sk250TestSetpoints.Bcm250.CcbVbus, false);
             Vbus(items, 25, "46 复位VBUS发生器0V/0A/OVP300", 0, 0, 300, false);
             Command(items, 25, "48 关闭预充电：W75=0", "W75=0");
             Fixture(items, 25, "49 断开CCB功率路径", Bcm250StationMap.PowerPathRelays, false);
@@ -709,11 +718,11 @@ namespace TestPlatform.TestSequences
             Fixture(items, 26, "7 闭合String电源Y1/Y3/Y6及String test路径RL1a_B/RL1b_B/RL2B",
                 Bcm250StationMap.CcbStringPowerPathRelays, true);
             Wait(items, 26, "8 等待20ms");
-            Vbus(items, 26, "9 设置VBUS发生器100V/0.5A/OVP300", 100, 0.5, 300, false);
-            Vbus(items, 26, "10 打开VBUS发生器输出", 100, 0.5, 300, true);
+            Vbus(items, 26, "9 设置VBUS发生器100V/0.5A/OVP300", Sk250TestSetpoints.Bcm250.MosTestVbus, false);
+            Vbus(items, 26, "10 打开VBUS发生器输出", Sk250TestSetpoints.Bcm250.MosTestVbus, true);
             Wait(items, 26, "11 等待3000ms");
-            String(items, 26, "12 设置String发生器90V/3A/OVP300", 90, 3, 300, false);
-            String(items, 26, "13 打开String发生器输出", 90, 3, 300, true);
+            String(items, 26, "12 设置String发生器90V/3A/OVP300", Sk250TestSetpoints.Bcm250.MosTestString, false);
+            String(items, 26, "13 打开String发生器输出", Sk250TestSetpoints.Bcm250.MosTestString, true);
             Action(items, 26, "14 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 26, "15 发送EXIT进入MBD终端", "EXIT");
             Command(items, 26, "16 发送DIAG ON到MBD", "DIAG ON");
@@ -730,9 +739,9 @@ namespace TestPlatform.TestSequences
             Command(items, 26, "26 关闭MOSFET Q11：W71=0", "W71=0");
             Wait(items, 26, "27 等待6000ms");
             Mbd(items, 26, "T03", "28 读取R44内部iccb（MOS关闭）", "R44");
-            String(items, 26, "29 关闭String发生器输出", 90, 3, 300, false);
+            String(items, 26, "29 关闭String发生器输出", Sk250TestSetpoints.Bcm250.MosTestString, false);
             String(items, 26, "30 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
-            Vbus(items, 26, "31 关闭VBUS发生器输出", 100, 0.5, 300, false);
+            Vbus(items, 26, "31 关闭VBUS发生器输出", Sk250TestSetpoints.Bcm250.MosTestVbus, false);
             Vbus(items, 26, "32 复位VBUS发生器0V/0A/OVP300", 0, 0, 300, false);
             String(items, 26, "34.a 再次复位String发生器", 0, 0, 300, false);
             Vbus(items, 26, "34.b 再次复位VBUS发生器", 0, 0, 300, false);
@@ -853,6 +862,17 @@ namespace TestPlatform.TestSequences
             List<Bcm250ActionDefinition> items,
             int chapter,
             string name,
+            Sk250SourceSetpoint setpoint,
+            bool state)
+        {
+            Action(items, chapter, name, Bcm250ActionKind.SetVbus,
+                setpoint.ToArgument(), state);
+        }
+
+        private static void Vbus(
+            List<Bcm250ActionDefinition> items,
+            int chapter,
+            string name,
             double voltage,
             double current,
             double ovp,
@@ -878,6 +898,17 @@ namespace TestPlatform.TestSequences
             List<Bcm250ActionDefinition> items,
             int chapter,
             string name,
+            Sk250SourceSetpoint setpoint,
+            bool state)
+        {
+            Action(items, chapter, name, Bcm250ActionKind.SetString,
+                setpoint.ToArgument(), state);
+        }
+
+        private static void String(
+            List<Bcm250ActionDefinition> items,
+            int chapter,
+            string name,
             double voltage,
             double current,
             double ovp,
@@ -885,6 +916,17 @@ namespace TestPlatform.TestSequences
         {
             Action(items, chapter, name, Bcm250ActionKind.SetString,
                 Numbers(voltage, current, ovp), state);
+        }
+
+        private static void Load(
+            List<Bcm250ActionDefinition> items,
+            int chapter,
+            string name,
+            Sk250SourceSetpoint setpoint,
+            bool state)
+        {
+            Action(items, chapter, name, Bcm250ActionKind.SetLoad,
+                setpoint.ToArgument(), state);
         }
 
         private static void Load(

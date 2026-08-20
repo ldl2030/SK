@@ -280,7 +280,8 @@ namespace TestPlatform
             Action<string> logAction = null,
             string preferredPort = null,
             bool ignoreConfiguredPort = false,
-            bool allowUnverifiedFallback = true)
+            bool allowUnverifiedFallback = true,
+            int? baudRate = null)
         {
             string[] portNames = SerialPort.GetPortNames()
                 .Where(name => GetComNumber(name) != int.MaxValue)
@@ -321,7 +322,10 @@ namespace TestPlatform
                 $"{(candidates.Length == 0 ? "无" : string.Join(", ", candidates))}");
 
             Task<PortProbe>[] tasks = candidates
-                .Select(portName => Task.Run(() => ProbeMbdPort(portName, logAction)))
+                .Select(portName => Task.Run(() => ProbeMbdPort(
+                    portName,
+                    logAction,
+                    baudRate ?? GetIntSetting("SKTargetBoardBaudRate", 9600))))
                 .ToArray();
             PortProbe[] probes = await Task.WhenAll(tasks);
             PortProbe[] matches = probes.Where(probe => probe.Kind == "MBD").ToArray();
@@ -541,15 +545,18 @@ namespace TestPlatform
             return NewProbe(portName, "UNKNOWN", null);
         }
 
-        private static PortProbe ProbeMbdPort(string portName, Action<string> logAction)
+        private static PortProbe ProbeMbdPort(
+            string portName,
+            Action<string> logAction,
+            int baudRate)
         {
             string response;
             string error;
-            if (ProbeMbd(portName, out response, out error))
+            if (ProbeMbd(portName, baudRate, out response, out error))
             {
                 logAction?.Invoke(
                     $"识别成功：{portName} = MBD UART/目标板USB-B " +
-                    "(9600 8N1, 发送0D，收到COMMAND ERROR + Ready.)");
+                    $"({baudRate} 8N1, 发送0D，收到COMMAND ERROR + Ready.)");
                 return NewProbe(portName, "MBD", response);
             }
 
@@ -573,12 +580,12 @@ namespace TestPlatform
 
         private static bool ProbeMbd(
             string portName,
+            int baudRate,
             out string response,
             out string error)
         {
             response = null;
             error = null;
-            int baudRate = GetIntSetting("SKTargetBoardBaudRate", 9600);
             int settleMs = GetIntSetting("SKMbdOpenSettleMs", 500);
             int timeoutMs = GetIntSetting("SKMbdProbeTimeoutMs", 2000);
 

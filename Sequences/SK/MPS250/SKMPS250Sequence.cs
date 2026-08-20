@@ -18,6 +18,36 @@ namespace TestPlatform.TestSequences
         {
         }
 
+        protected override async Task RunBoardBackgroundMonitorAsync(
+            TestSequenceContext context,
+            SK441Device device,
+            CancellationToken token)
+        {
+            if (!device.IsMps250PowerTelemetryEnabled())
+            {
+                OnLogInfo("MPS-250电源遥测已通过App.config关闭。");
+                return;
+            }
+
+            int intervalMs = device.GetMps250PowerTelemetryIntervalMilliseconds();
+            string identity = string.Format(
+                CultureInfo.InvariantCulture,
+                "通道{0},SN={1}",
+                context.ChannelIndex + 1,
+                string.IsNullOrWhiteSpace(context.SN) ? "EMPTY" : context.SN);
+            OnLogInfo(
+                $"MPS-250电源遥测已启动：{identity}，周期={intervalMs}ms；" +
+                "记录恒辉8602 VBUS/A与VBATT/B的输出状态、实测电压和实测电流。");
+
+            while (!token.IsCancellationRequested)
+            {
+                OnLogInfo(
+                    $"[MPS250电源遥测][{identity}] " +
+                    device.ReadMps250PowerTelemetryLine());
+                await Task.Delay(intervalMs, token);
+            }
+        }
+
         protected override void AddElectricalTestSteps(List<TestStepItem> steps, TestSequenceContext context, SK441Device device)
         {
             steps.Add(new TestStepItem
@@ -142,6 +172,19 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.SetVbus:
                     passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
                     break;
+                case Mps250ActionKind.SetVbusAndWaitStable:
+                    {
+                        double[] values = ParseNumbers(action.Argument);
+                        passed = values.Length >= 1 &&
+                            await SetGeneratorAsync(device, action.Argument, true, true);
+                        if (passed)
+                        {
+                            passed = await device.WaitForMps250VbusStableAsync(
+                                (float)values[0],
+                                token);
+                        }
+                        break;
+                    }
                 case Mps250ActionKind.SetVbatt:
                     passed = await SetGeneratorAsync(device, action.Argument, false, action.State);
                     break;
@@ -178,7 +221,9 @@ namespace TestPlatform.TestSequences
                     passed = true;
                     break;
                 case Mps250ActionKind.Cleanup:
-                    passed = await device.CloseTargetBoardCommunicationAsync();
+                    bool communicationClosed = await device.CloseTargetBoardCommunicationAsync();
+                    bool fixtureReleased = await ReleaseFixtureAndVerifyAsync(device);
+                    passed = communicationClosed && fixtureReleased;
                     break;
                 default:
                     passed = true;
@@ -266,6 +311,7 @@ namespace TestPlatform.TestSequences
             switch (action.Kind)
             {
                 case Mps250ActionKind.SetVbus:
+                case Mps250ActionKind.SetVbusAndWaitStable:
                 case Mps250ActionKind.SetVbatt:
                 case Mps250ActionKind.SafeVbusRelay:
                 case Mps250ActionKind.SafeVbattConnect:

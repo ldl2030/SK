@@ -345,6 +345,7 @@
     <Compile Include="Sequences\SK\Common\SKBaseSequence.OperatorPrompts.cs" />
     <Compile Include="Sequences\SK\Common\SKBaseSequence.Initializing.cs" />
     <Compile Include="Sequences\SK\Common\BcmStringChannelConfig.cs" />
+    <Compile Include="Sequences\SK\Common\Sk250TestSetpoints.cs" />
     <Compile Include="Sequences\SK\Common\SKBcmSequenceBase.cs" />
     <Compile Include="Sequences\SK\BCM125\SKBCM125Sequence.cs" />
     <Compile Include="Sequences\SK\BCM125\Bcm125Definitions.cs" />

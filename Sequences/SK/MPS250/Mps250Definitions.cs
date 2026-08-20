@@ -19,7 +19,8 @@ namespace TestPlatform.TestSequences
     public enum Mps250ActionKind
     {
         CheckInstruments, AllOutputsOff, DaqRelays, CheckMbdCommunication,
-        CloseMbdCommunication, MbdCommand, MbdCleanupIfConnected, Delay, SetVbus, SetVbatt,
+        CloseMbdCommunication, MbdCommand, MbdCleanupIfConnected, Delay, SetVbus,
+        SetVbusAndWaitStable, SetVbatt,
         SafeVbusRelay, SafeVbattConnect, SafeVbattDisconnect,
         DaqVoltage, DaqAverageVoltage, DaqShuntCurrent, DaqResistance,
         MbdNumeric, FirmwareVersion, IgnitionRamp, ComputedGain,

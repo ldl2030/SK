@@ -15,6 +15,13 @@ namespace TestPlatform.TestSequences
         // 期望放上的板子类型，由子类指定，用于产线防呆
         public abstract string ExpectedBoardType { get; }
         protected virtual bool SkipFirmwareProgramming => false;
+        protected virtual Task RunBoardBackgroundMonitorAsync(
+            TestSequenceContext context,
+            SK441Device deviceManager,
+            CancellationToken token)
+        {
+            return Task.CompletedTask;
+        }
 
         public event Action<string> LogInfo;
         public event Action<string> LogWarning;
@@ -307,6 +314,25 @@ namespace TestPlatform.TestSequences
                                     reason);
                             }
                         });
+                        var boardMonitorTask = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await RunBoardBackgroundMonitorAsync(
+                                    context,
+                                    deviceManager,
+                                    safetyCts.Token);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // Normal test completion or safety cancellation.
+                            }
+                            catch (Exception ex)
+                            {
+                                OnLogWarning(
+                                    "板型后台遥测异常，测试流程继续执行：" + ex.Message);
+                            }
+                        });
 
                         try
                         {
@@ -439,6 +465,14 @@ namespace TestPlatform.TestSequences
                             try
                             {
                                 await safetyTask;
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // 正常退出。
+                            }
+                            try
+                            {
+                                await boardMonitorTask;
                             }
                             catch (OperationCanceledException)
                             {
@@ -742,6 +776,24 @@ namespace TestPlatform.TestSequences
 
             OnLogWarning($"开始执行章节失败处理：{groupId}，失败步骤：{failedStep.Name}");
 
+            if (ExpectedBoardType.StartsWith("MPS", StringComparison.OrdinalIgnoreCase))
+            {
+                await TryFailureActionAsync(
+                    "通过当前USB-B连接关闭MPS主开关与加热器",
+                    () => deviceManager.SendMbdCleanupCommandsOnCurrentConnectionAsync(
+                        "W101=0;W95=0;W96=5;W99=0;W100=0;W92=0"));
+                await TryFailureActionAsync(
+                    "关闭MPS全部仪器输出",
+                    () => deviceManager.TurnOffAllInstrumentsAsync());
+                await TryFailureActionAsync(
+                    "断开MPS DAQ301-306功能继电器",
+                    () => deviceManager.SetDaqRelaysAsync(
+                        "@301:306",
+                        false,
+                        "MPS章节失败安全隔离"));
+                return;
+            }
+
             await TryFailureActionAsync(
                 "关闭全部仪器输出",
                 () => deviceManager.TurnOffAllInstrumentsAsync());
@@ -968,10 +1020,15 @@ namespace TestPlatform.TestSequences
             {
                 if (_rl4OffTask == null)
                 {
-                    int dutPowerRelay = ExpectedBoardType.StartsWith(
-                        "MPS",
-                        StringComparison.OrdinalIgnoreCase) ? 1 : 7;
-                    _rl4OffTask = deviceManager.ControlRelayAsync(dutPowerRelay, false);
+                    if (ExpectedBoardType.StartsWith("MPS", StringComparison.OrdinalIgnoreCase))
+                    {
+                        OnLogInfo("MPS板不使用站号3 DUT主功率继电器，跳过RL4断开命令。");
+                        _rl4OffTask = Task.FromResult(true);
+                    }
+                    else
+                    {
+                        _rl4OffTask = deviceManager.ControlRelayAsync(7, false);
+                    }
                 }
                 return _rl4OffTask;
             }
@@ -1031,6 +1088,13 @@ namespace TestPlatform.TestSequences
 
                 return _fixtureReleaseVerificationTask;
             }
+        }
+
+        protected async Task<bool> ReleaseFixtureAndVerifyAsync(SK441Device deviceManager)
+        {
+            bool commandOk = await EnsureFixtureReleaseCommandAsync(deviceManager);
+            bool released = await EnsureFixtureReleaseVerifiedAsync(deviceManager);
+            return commandOk && released;
         }
 
         private async Task<bool> VerifyFixtureReleasedAsync(SK441Device deviceManager)

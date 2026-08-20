@@ -21,6 +21,81 @@ namespace TestPlatform
                 return _powerSafetyTrace.ToArray();
         }
 
+        public bool IsMps250PowerTelemetryEnabled()
+        {
+            return GetBoolAppSetting("SKMPS250PowerTelemetryEnabled", true);
+        }
+
+        public int GetMps250PowerTelemetryIntervalMilliseconds()
+        {
+            return Math.Max(
+                250,
+                GetIntAppSetting("SKMPS250PowerTelemetryIntervalMs", 1000));
+        }
+
+        public string ReadMps250PowerTelemetryLine()
+        {
+            if (SkipComInit)
+            {
+                bool vbusOn;
+                bool vbattOn;
+                lock (_powerSafetySync)
+                {
+                    vbusOn = _vbusOutputOn;
+                    vbattOn = _secondaryOutputOn;
+                }
+                return string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    "模式=Simulation | VBUS/A 输出={0}, 设定={1:0.###}V/{2:0.###}A | " +
+                    "VBATT/B 输出={3}, 设定={4:0.###}V/{5:0.###}A",
+                    vbusOn ? "ON" : "OFF",
+                    _mockVbusVoltage,
+                    _mockVbusCurrentLimit,
+                    vbattOn ? "ON" : "OFF",
+                    _mockSecondaryVoltage,
+                    _mockSecondaryCurrentLimit);
+            }
+
+            int readTimeoutMs = Math.Max(
+                50,
+                GetIntAppSetting("SKMPS250PowerTelemetryReadTimeoutMs", 250));
+            return ReadHengHuiTelemetry("VBUS/A", HengHuiPower1, readTimeoutMs) +
+                " | " +
+                ReadHengHuiTelemetry("VBATT/B", HengHuiPower2, readTimeoutMs);
+        }
+
+        private static string ReadHengHuiTelemetry(
+            string name,
+            HengHuiPowerSupply supply,
+            int readTimeoutMs)
+        {
+            if (supply == null || !supply.IsConnected)
+                return name + " 状态=DISCONNECTED";
+
+            try
+            {
+                bool outputOn;
+                float voltage;
+                float current;
+                supply.ReadOutputTelemetry(
+                    readTimeoutMs,
+                    out outputOn,
+                    out voltage,
+                    out current);
+                return string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    "{0} 输出={1}, 实测={2:0.###}V/{3:0.###}A",
+                    name,
+                    outputOn ? "ON" : "OFF",
+                    voltage,
+                    current);
+            }
+            catch (Exception ex)
+            {
+                return name + " 状态=READ_ERROR(" + ex.Message + ")";
+            }
+        }
+
         private void RecordPowerOutput(string domain, bool outputOn)
         {
             lock (_powerSafetySync)
@@ -127,6 +202,24 @@ namespace TestPlatform
                     return true;
             }
             return false;
+        }
+
+        public Task<bool> WaitForMps250VbusStableAsync(
+            float targetVoltage,
+            CancellationToken token)
+        {
+            int minimumWaitMs = Math.Max(
+                0,
+                GetIntAppSetting("SKMPS250VbusMinimumSettleMs", 500));
+            int maximumWaitMs = Math.Max(
+                minimumWaitMs + 1000,
+                GetIntAppSetting("SKMPS250VbusStableTimeoutMs", 5000));
+            return WaitForPowerVoltageStableAsync(
+                "VBUS",
+                targetVoltage,
+                minimumWaitMs,
+                maximumWaitMs,
+                token);
         }
 
         private bool AreAllPowerRelaysClosedUnsafe(params int[] relayIds)
@@ -313,6 +406,9 @@ namespace TestPlatform
 
                 await Task.Delay(250, token);
             }
+            LogError?.Invoke(
+                $"{domain} 电压稳定等待超时：目标={targetVoltage:0.###}V，" +
+                $"最短等待={minimumWaitMs}ms，最长等待={maximumWaitMs}ms。");
             return false;
         }
 

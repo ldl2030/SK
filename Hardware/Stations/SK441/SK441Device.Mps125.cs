@@ -37,6 +37,8 @@ namespace TestPlatform
                 {
                     await Task.Delay(1);
                     RecordPowerOutput("SECONDARY", outputOn);
+                    _mockSecondaryVoltage = voltage;
+                    _mockSecondaryCurrentLimit = current;
                     LogInfo?.Invoke($"[Simulation] VBATT source B: {voltage}V/{current}A OVP={ovp}V, {(outputOn ? "ON" : "OFF")}");
                     return true;
                 }

@@ -127,15 +127,31 @@ namespace TestPlatform
 
         private string Query(string command)
         {
+            return Query(command, null);
+        }
+
+        private string Query(string command, int? readTimeoutMs)
+        {
             lock (BusLock)
             {
                 EnsureConnected();
-                _serialPort.DiscardInBuffer();
-                _serialPort.Write((command ?? string.Empty).TrimEnd('\r', '\n') + "\n");
-                string response = _serialPort.ReadLine();
-                if (string.IsNullOrWhiteSpace(response))
-                    throw new TimeoutException($"HengHui 8602 returned an empty response to {command}.");
-                return response.Trim();
+                int originalReadTimeout = _serialPort.ReadTimeout;
+                try
+                {
+                    if (readTimeoutMs.HasValue)
+                        _serialPort.ReadTimeout = Math.Max(50, readTimeoutMs.Value);
+                    _serialPort.DiscardInBuffer();
+                    _serialPort.Write((command ?? string.Empty).TrimEnd('\r', '\n') + "\n");
+                    string response = _serialPort.ReadLine();
+                    if (string.IsNullOrWhiteSpace(response))
+                        throw new TimeoutException($"HengHui 8602 returned an empty response to {command}.");
+                    return response.Trim();
+                }
+                finally
+                {
+                    if (_serialPort != null && _serialPort.IsOpen)
+                        _serialPort.ReadTimeout = originalReadTimeout;
+                }
             }
         }
 
@@ -143,6 +159,15 @@ namespace TestPlatform
         {
             float value;
             string response = Query(command);
+            if (!float.TryParse(response, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                throw new FormatException($"Invalid HengHui 8602 response to {command}: {response}");
+            return value;
+        }
+
+        private float QueryFloat(string command, int readTimeoutMs)
+        {
+            float value;
+            string response = Query(command, readTimeoutMs);
             if (!float.TryParse(response, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
                 throw new FormatException($"Invalid HengHui 8602 response to {command}: {response}");
             return value;
@@ -206,6 +231,25 @@ namespace TestPlatform
         {
             voltage = QueryFloat(":MEAS:VOLT?");
             current = QueryFloat(":MEAS:CURR?");
+        }
+
+        public void ReadOutputTelemetry(
+            int readTimeoutMs,
+            out bool outputOn,
+            out float voltage,
+            out float current)
+        {
+            int timeoutMs = Math.Max(50, readTimeoutMs);
+            voltage = QueryFloat(":MEAS:VOLT?", timeoutMs);
+            current = QueryFloat(":MEAS:CURR?", timeoutMs);
+            string outputState = Query(":OUTP?", timeoutMs);
+            if (!string.Equals(outputState, "ON", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(outputState, "OFF", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new FormatException(
+                    $"Invalid HengHui 8602 response to :OUTP?: {outputState}");
+            }
+            outputOn = string.Equals(outputState, "ON", StringComparison.OrdinalIgnoreCase);
         }
 
         public void SetOvp(float ovp)

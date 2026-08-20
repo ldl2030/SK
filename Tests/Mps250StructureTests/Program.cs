@@ -5,7 +5,9 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TestPlatform;
 using TestPlatform.TestSequences;
 
@@ -25,13 +27,18 @@ namespace Mps250StructureTests
                 IList steps = BuildSteps(context, device);
 
                 ValidateStructure(plan, steps);
+                ValidateMps250BaudRate(root);
                 ValidateCatalog();
+                ValidateVbusStableWaits(root);
+                ValidatePowerTelemetry(root);
+                ValidateFixtureCleanup(steps, device);
+                ValidateMpsFailurePolicy(context, steps);
                 ValidatePowerSafety();
                 ValidateCustomerReport(root, plan);
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
 
-                Console.WriteLine("PASS MPS250: 193 rows, 60 customer TXT/PDF results, chapters 6-17, DAQ-only functional relays, USB-B insertion, report generation, full simulation and J06 fault cleanup.");
+                Console.WriteLine("PASS MPS250: 193 rows, PDF Rev.3 thresholds, 115200 USB-B, verified fixture release, MPS-only failure cleanup, report generation, full simulation and J06 fault injection.");
                 return 0;
             }
             catch (Exception ex)
@@ -76,10 +83,15 @@ namespace Mps250StructureTests
                 Require(string.Equals(Read<string>(type, step, "Name"), definition.Name, StringComparison.Ordinal), "Name mismatch " + stepId + ".");
             }
 
-            ValidateLimit(plan, "B06", 10, 40, "mA");
-            ValidateLimit(plan, "K01", 1400, 1900, "mV");
+            ValidateLimit(plan, "B06", 10, 60, "mA");
+            ValidateLimit(plan, "B07", 137000, 138000, "mV");
+            ValidateLimit(plan, "G02", 1000000, null, "Ohm");
+            ValidateLimit(plan, "K01", 1700, 2200, "mV");
             ValidateLimit(plan, "K02", 3000, 3300, "mV");
-            ValidateLimit(plan, "J06", 400000, 410000, "Count");
+            ValidateLimit(plan, "K03", 400, 800, "mV");
+            ValidateLimit(plan, "J06", 200000, 205000, "Count");
+            ValidateLimit(plan, "L07", 100, 200, "mA");
+            ValidateLimit(plan, "L11", 50, 100, "mA");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.1.1.4", "Firmware expectation mismatch.");
             ValidateDependency(plan, "H06", "H02");
             ValidateDependency(plan, "J04", "J01");
@@ -115,6 +127,87 @@ namespace Mps250StructureTests
                 if (item.IsResult)
                     seen.Add(item.ResultId);
             }
+        }
+
+        private static void ValidateMps250BaudRate(string root)
+        {
+            XDocument config = XDocument.Load(Path.Combine(root, "App.config"));
+            XElement setting = config.Descendants("add").SingleOrDefault(element =>
+                string.Equals(
+                    (string)element.Attribute("key"),
+                    "SKMPS250TargetBoardBaudRate",
+                    StringComparison.OrdinalIgnoreCase));
+            Require(
+                setting != null && (string)setting.Attribute("value") == "115200",
+                "MPS-250 USB-B must follow PDF Rev.3 at 115200 baud.");
+        }
+
+        private static void ValidatePowerTelemetry(string root)
+        {
+            XDocument config = XDocument.Load(Path.Combine(root, "App.config"));
+            Dictionary<string, string> settings = config.Descendants("add")
+                .Where(element => element.Attribute("key") != null)
+                .ToDictionary(
+                    element => (string)element.Attribute("key"),
+                    element => (string)element.Attribute("value"),
+                    StringComparer.OrdinalIgnoreCase);
+            Require(
+                settings.ContainsKey("SKMPS250PowerTelemetryEnabled") &&
+                string.Equals(settings["SKMPS250PowerTelemetryEnabled"], "true", StringComparison.OrdinalIgnoreCase),
+                "MPS-250 power telemetry must be enabled by default.");
+            Require(
+                settings.ContainsKey("SKMPS250PowerTelemetryIntervalMs") &&
+                settings["SKMPS250PowerTelemetryIntervalMs"] == "1000",
+                "MPS-250 power telemetry interval must default to 1000 ms.");
+
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "MPS-250"
+            };
+            Require(
+                device.SetVbusGeneratorAsync(275, 2, 300, true).GetAwaiter().GetResult(),
+                "Cannot prepare simulated VBUS telemetry.");
+            Require(
+                device.SetVbattGeneratorAsync(250, 0.1f, 300, true).GetAwaiter().GetResult(),
+                "Cannot prepare simulated VBATT telemetry.");
+            string telemetry = device.ReadMps250PowerTelemetryLine();
+            Require(
+                telemetry.Contains("VBUS/A 输出=ON") && telemetry.Contains("设定=275V/2A"),
+                "VBUS telemetry is missing output state or setpoint.");
+            Require(
+                telemetry.Contains("VBATT/B 输出=ON") && telemetry.Contains("设定=250V/0.1A"),
+                "VBATT telemetry is missing output state or setpoint.");
+        }
+
+        private static void ValidateVbusStableWaits(string root)
+        {
+            Mps250ActionDefinition[] stableActions = Mps250ActionCatalog.Create()
+                .Where(action => action.Kind == Mps250ActionKind.SetVbusAndWaitStable)
+                .ToArray();
+            Require(
+                stableActions.Length == 2,
+                "B01 and D01 must each have a VBUS measured-voltage stability gate.");
+            Require(
+                stableActions.Any(action => action.Chapter == 7) &&
+                stableActions.Any(action => action.Chapter == 9),
+                "VBUS stability gates must be in chapters 7 and 9.");
+
+            XDocument config = XDocument.Load(Path.Combine(root, "App.config"));
+            Dictionary<string, string> settings = config.Descendants("add")
+                .Where(element => element.Attribute("key") != null)
+                .ToDictionary(
+                    element => (string)element.Attribute("key"),
+                    element => (string)element.Attribute("value"),
+                    StringComparer.OrdinalIgnoreCase);
+            Require(
+                settings.ContainsKey("SKMPS250VbusMinimumSettleMs") &&
+                settings["SKMPS250VbusMinimumSettleMs"] == "500",
+                "MPS-250 VBUS minimum settle time must default to 500 ms.");
+            Require(
+                settings.ContainsKey("SKMPS250VbusStableTimeoutMs") &&
+                settings["SKMPS250VbusStableTimeoutMs"] == "5000",
+                "MPS-250 VBUS stability timeout must default to 5000 ms.");
         }
 
         private static void ValidateCustomerReport(string root, ResolvedTestPlan plan)
@@ -264,7 +357,7 @@ namespace Mps250StructureTests
                 $"MPS250 report {code} {limitName} limit does not match the XML plan after scaling.");
         }
 
-        private static void ValidateLimit(ResolvedTestPlan plan, string resultId, double lower, double upper, string unit)
+        private static void ValidateLimit(ResolvedTestPlan plan, string resultId, double? lower, double? upper, string unit)
         {
             TestPlanStepDefinition item = plan.Definition.Steps.Single(x => x.StepId.EndsWith("." + resultId, StringComparison.OrdinalIgnoreCase));
             Require(item.LowerLimit == lower && item.UpperLimit == upper && item.Unit == unit, "Limit mismatch " + resultId + ".");
@@ -302,6 +395,61 @@ namespace Mps250StructureTests
             Require(fixtureTrace.Contains("FIXTURE STATION 1 RELAY 1 CLOSED") && fixtureTrace.Contains("FIXTURE STATION 1 RELAY 1 OPEN"), "MPS-250 fixture Y1 emergency mapping failed.");
             Require(!fixtureTrace.Any(x => x.Contains("RELAY 2")), "MPS-250 incorrectly used fixture Y2 for press-down.");
             Require(!emergency.SetVbusGeneratorAsync(275, 2, 300, true).GetAwaiter().GetResult(), "Emergency latch allowed VBUS output ON.");
+        }
+
+        private static void ValidateFixtureCleanup(IList steps, SK441Device device)
+        {
+            object cleanupStep = steps.Cast<object>().Single(step =>
+                Read<bool>(step.GetType(), step, "IsFixtureReleaseStep"));
+            Require(
+                device.EnableFixturePressDownAsync("MPS-250").GetAwaiter().GetResult(),
+                "Cannot prepare fixture-release cleanup test.");
+
+            Delegate action = Read<Delegate>(cleanupStep.GetType(), cleanupStep, "Action");
+            Task task = (Task)action.DynamicInvoke(CancellationToken.None);
+            task.GetAwaiter().GetResult();
+            object result = task.GetType().GetProperty("Result").GetValue(task);
+            Require(
+                Read<bool>(result.GetType(), result, "IsPass"),
+                "Final MPS-250 cleanup row did not release and verify the fixture.");
+
+            string[] trace = device.GetFixtureActuationTrace();
+            Require(
+                trace.Contains("FIXTURE STATION 1 RELAY 1 CLOSED") &&
+                trace.Contains("FIXTURE STATION 1 RELAY 1 OPEN"),
+                "Final MPS-250 cleanup did not open fixture station 1 relay Y1.");
+        }
+
+        private static void ValidateMpsFailurePolicy(TestSequenceContext context, IList steps)
+        {
+            var sequence = new SKMPS250Sequence();
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "MPS-250"
+            };
+            object failedStep = steps.Cast<object>().Single(step =>
+                string.Equals(
+                    Read<string>(step.GetType(), step, "StepId"),
+                    "MPS250.CH15.S016.J06",
+                    StringComparison.OrdinalIgnoreCase));
+
+            Task task = (Task)FindMethod(
+                sequence.GetType(),
+                "ExecuteChapterFailurePolicyAsync").Invoke(
+                    sequence,
+                    new[] { context, device, failedStep });
+            task.GetAwaiter().GetResult();
+
+            Require(
+                !device.GetPowerSafetyTrace().Any(x => x.Contains("RELAY 1 ")),
+                "MPS-250 failure policy touched station-3 Relay_1.");
+            Require(
+                !device.GetFixtureActuationTrace().Any(x =>
+                    x.Contains("RELAY 3") || x.Contains("RELAY 4") ||
+                    x.Contains("RELAY 5") || x.Contains("RELAY 6") ||
+                    x.Contains("RELAY 7") || x.Contains("RELAY 8")),
+                "MPS-250 failure policy executed BCM fixture-programming relays.");
         }
 
         private static void RunEndToEnd(string xmlPath, bool injectFault)
