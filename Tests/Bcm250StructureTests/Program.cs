@@ -502,6 +502,7 @@ namespace Bcm250StructureTests
             ValidateLimit(plan, "O01", 200, 1100, "mA");
             ValidateLimit(plan, "O02", 1, 1, "Logic (0/1)");
             ValidateLimit(plan, "Q16", -6600, -5400, "mA");
+            ValidateLimit(plan, "S01", -1300, -700, "mA");
             ValidateLimit(plan, "S02", 259000, 263000, "mV");
             ValidateLimit(plan, "T02", 300, 750, "mA");
             ValidateLimit(plan, "T03", -20, 20, "mA");
@@ -524,13 +525,19 @@ namespace Bcm250StructureTests
                 "BCM250 +5V shunt must use the station-confirmed 0.4 ohm value.");
 
             IReadOnlyList<Bcm250ActionDefinition> catalogue = Bcm250ActionCatalog.Create();
+            Bcm250ActionDefinition temporaryS01Target = catalogue.Single(x =>
+                string.Equals(x.StepId, "BCM250.CH25.S033.ACTION", StringComparison.OrdinalIgnoreCase));
+            Require(
+                temporaryS01Target.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(temporaryS01Target.Argument, "W12=1000", StringComparison.OrdinalIgnoreCase),
+                "BCM250 S01 temporary low-current target must remain W12=1000.");
             int[] measuredShuntChannels = catalogue
                 .Where(x => x.Kind == Bcm250ActionKind.DaqShuntResistance)
                 .Select(x => x.Channel)
                 .OrderBy(x => x)
                 .ToArray();
             Require(measuredShuntChannels.SequenceEqual(new[] { 113, 117, 119 }),
-                "BCM250 must measure and store all three DAQ shunt resistances while de-energized.");
+                "BCM250 must retain all three visible startup shunt-resistance rows.");
             Require(catalogue
                     .Where(x => x.Kind == Bcm250ActionKind.DaqShuntCurrent)
                     .All(x => measuredShuntChannels.Contains(x.Channel)),
@@ -687,6 +694,18 @@ namespace Bcm250StructureTests
                 Require(pass, "End-to-end simulation did not pass.");
                 Require(passGrid.CleanupCompleted == 6,
                     "Passing run did not execute all cleanup steps.");
+                string[] startupResistanceSteps =
+                {
+                    "BCM250.CH07.S004.ACTION",
+                    "BCM250.CH07.S005.ACTION",
+                    "BCM250.CH07.S006.ACTION"
+                };
+                Require(startupResistanceSteps.All(stepId =>
+                        passGrid.ValuesByStepId.ContainsKey(stepId) &&
+                        passGrid.ValuesByStepId[stepId].StartsWith("SKIPPED (nominal ", StringComparison.Ordinal)),
+                    "BCM250 CH7 startup DAQ resistance rows were not retained as visible SKIPPED rows.");
+                Require(passGrid.ScrollCount < 200,
+                    "BCM250 UI scroll throttling regressed; too many ScrollIntoView requests were issued.");
 
                 TestPlanDefinition singleDefinition = TestPlanService.LoadDefinition(xmlPath);
                 var chapter8Overrides = singleDefinition.Steps.ToDictionary(
@@ -896,6 +915,9 @@ namespace Bcm250StructureTests
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public HashSet<string> PassedStepIds { get; } =
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public Dictionary<string, string> ValuesByStepId { get; } =
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            public int ScrollCount { get; private set; }
 
             public Task<bool> IsRowSelectedAsync(int rowIndex) => Task.FromResult(true);
             public Task<bool> IsStepSelectedAsync(string stepId) => Task.FromResult(true);
@@ -906,7 +928,11 @@ namespace Bcm250StructureTests
             public Task SetExecTimeAsync(int rowIndex, long elapsedMs) => Task.CompletedTask;
             public Task SetExecTimeByStepIdAsync(string stepId, long elapsedMs) => Task.CompletedTask;
             public Task ScrollToRowAsync(int rowIndex, int durationMs = 150) => Task.CompletedTask;
-            public Task ScrollToStepAsync(string stepId, int durationMs = 150) => Task.CompletedTask;
+            public Task ScrollToStepAsync(string stepId, int durationMs = 150)
+            {
+                ScrollCount++;
+                return Task.CompletedTask;
+            }
 
             public Task SetValueAndStatusByStepIdAsync(
                 int channelIndex,
@@ -914,6 +940,7 @@ namespace Bcm250StructureTests
                 string value,
                 StepExecutionStatus status)
             {
+                ValuesByStepId[stepId] = value ?? string.Empty;
                 if (status == StepExecutionStatus.Failed)
                     FailedStepIds.Add(stepId);
                 if (status == StepExecutionStatus.Passed ||

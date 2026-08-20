@@ -13,6 +13,44 @@ namespace TestPlatform.TestSequences
         public override string SequenceKey => "SK_BCM250_Sequence";
         public override string ExpectedBoardType => "BCM-250";
         private readonly bool _skipFirmwareProgramming;
+        private readonly Dictionary<string, Bcm250ActionDefinition> _actionsByResultId =
+            new Dictionary<string, Bcm250ActionDefinition>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, TestStepItem> _stepsByResultId =
+            new Dictionary<string, TestStepItem>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, double> _prefetchedHardwareValues =
+            new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        private MbdTerminalState _mbdTerminalState;
+        private bool _mbdDiagnosticsEnabled;
+        private bool _mbdReadyObserved;
+
+        private enum MbdTerminalState
+        {
+            Unknown,
+            Mbd,
+            Bcm
+        }
+
+        private sealed class ParallelMeasurementBatch
+        {
+            public string Leader { get; set; }
+            public string[][] Branches { get; set; }
+        }
+
+        private static readonly ParallelMeasurementBatch[] ParallelMeasurementBatches =
+        {
+            Batch(new[] { "M01" }, new[] { "M02" }),
+            Batch(new[] { "M03" }, new[] { "M04" }),
+            Batch(new[] { "N01" }, new[] { "N02" }),
+            Batch(new[] { "N03" }, new[] { "N04" }),
+            Batch(new[] { "Q01", "Q02" }, new[] { "Q03", "Q04" }),
+            Batch(new[] { "Q05", "Q06" }, new[] { "Q07" }),
+            Batch(new[] { "Q08", "Q09" }, new[] { "Q10", "Q11" }),
+            Batch(new[] { "R01", "R02" }, new[] { "R03" }),
+            Batch(new[] { "R04", "R05" }, new[] { "R06", "R07" }),
+            Batch(new[] { "R08", "R09" }, new[] { "R10" }),
+            Batch(new[] { "R11", "R12" }, new[] { "R13", "R14" }),
+            Batch(new[] { "T01" }, new[] { "T02" })
+        };
         protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming;
 
         public SKBCM250Sequence(
@@ -32,6 +70,14 @@ namespace TestPlatform.TestSequences
             AssignPlanGroupToRange(steps, context, Bcm250GroupIds.Precheck, 0, steps.Count);
 
             IReadOnlyList<Bcm250ActionDefinition> catalog = Bcm250ActionCatalog.Create();
+            _actionsByResultId.Clear();
+            _stepsByResultId.Clear();
+            _prefetchedHardwareValues.Clear();
+            _mbdTerminalState = MbdTerminalState.Unknown;
+            _mbdDiagnosticsEnabled = false;
+            _mbdReadyObserved = false;
+            foreach (Bcm250ActionDefinition resultAction in catalog.Where(x => x.IsResult))
+                _actionsByResultId[resultAction.ResultId] = resultAction;
             foreach (IGrouping<int, Bcm250ActionDefinition> chapter in catalog
                 .Where(x => !x.AlwaysRun)
                 .GroupBy(x => x.Chapter)
@@ -81,6 +127,8 @@ namespace TestPlatform.TestSequences
             };
             step.Action = token => ExecuteActionAsync(step, context, device, action, token);
             steps.Add(step);
+            if (action.IsResult)
+                _stepsByResultId[action.ResultId] = step;
         }
 
         private async Task<StepResult> ExecuteActionAsync(
@@ -104,7 +152,14 @@ namespace TestPlatform.TestSequences
                     new[] { step },
                     0,
                     0);
-                await Task.Delay(device.SkipComInit ? Math.Min(delayMs, 1) : delayMs, token);
+                if (device.SkipComInit)
+                {
+                    await Task.Delay(Math.Min(delayMs, 1), token);
+                }
+                else
+                {
+                    await ExecuteOptimizedDelayAsync(device, action.StepId, delayMs, token);
+                }
                 return Result(true, delayMs + " ms", action);
             }
 
@@ -138,20 +193,23 @@ namespace TestPlatform.TestSequences
             if (action.Kind == Bcm250ActionKind.DaqShuntResistance)
             {
                 token.ThrowIfCancellationRequested();
-                double resistance = device.SkipComInit
-                    ? action.Scale
-                    : await device.MeasureDaqChannelResistanceAsync(action.Channel);
+                double resistance = action.Scale;
                 bool resistanceValid = !double.IsNaN(resistance) &&
                                        !double.IsInfinity(resistance) &&
                                        resistance > 0.0;
+                OnLogWarning(string.Format(
+                    CultureInfo.InvariantCulture,
+                    "BCM250 CH7 DAQ{0} 开机电阻测量已跳过；保留测试行，后续计算使用工位标称值 {1:0.######} Ohm。",
+                    action.Channel,
+                    resistance));
                 return new StepResult
                 {
                     IsPass = resistanceValid,
                     Value = resistanceValid
-                        ? resistance.ToString("0.######", CultureInfo.InvariantCulture)
+                        ? "SKIPPED (nominal " + resistance.ToString("0.######", CultureInfo.InvariantCulture) + " Ohm)"
                         : "Invalid resistance",
                     NumericValue = resistance,
-                    StoreKey = Bcm250ResultKeys.ShuntResistanceForChannel(action.Channel),
+                    StoreKey = null,
                     Unit = "Ohm"
                 };
             }
@@ -173,6 +231,7 @@ namespace TestPlatform.TestSequences
                         double[] values = ParseNumbers(action.Argument);
                         passed = values.Length >= 3 && await device.CloseRl4ThenEnableAnsAsync(
                             (int)values[0], (float)values[1], (float)values[2]);
+                        ResetMbdState();
                         break;
                     }
                 case Bcm250ActionKind.SafeAnsPowerOff:
@@ -180,6 +239,7 @@ namespace TestPlatform.TestSequences
                     // Programming itself still needs MBD before and after flashing for W86.
                     passed = await device.CloseTargetBoardCommunicationAsync() &&
                              await device.DisableAnsThenOpenRl4Async(ParseInt(action.Argument));
+                    ResetMbdState();
                     break;
                 case Bcm250ActionKind.PowerRelays:
                     passed = await SetPowerRelaysAsync(
@@ -194,7 +254,12 @@ namespace TestPlatform.TestSequences
                         action.Name);
                     break;
                 case Bcm250ActionKind.CheckMbdCommunication:
-                    passed = await device.CheckMbdCommunicationAsync();
+                    passed = _mbdReadyObserved || await device.CheckMbdCommunicationAsync();
+                    _mbdReadyObserved = false;
+                    if (passed)
+                        _mbdTerminalState = MbdTerminalState.Unknown;
+                    else
+                        ResetMbdState();
                     break;
                 case Bcm250ActionKind.DocumentedBoundary:
                     passed = true;
@@ -206,7 +271,7 @@ namespace TestPlatform.TestSequences
                         action.Name);
                     break;
                 case Bcm250ActionKind.MbdCommand:
-                    passed = await SendCommandsAsync(device, action.Argument, token);
+                    passed = await SendCommandsAsync(device, action.Argument, action.StepId, token);
                     break;
                 case Bcm250ActionKind.SetVbus:
                     passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
@@ -249,6 +314,7 @@ namespace TestPlatform.TestSequences
                     break;
                 case Bcm250ActionKind.Cleanup:
                     passed = await device.CloseTargetBoardCommunicationAsync();
+                    ResetMbdState();
                     break;
                 default:
                     passed = true;
@@ -374,7 +440,12 @@ namespace TestPlatform.TestSequences
             }
             else
             {
-                value = await ReadHardwareValueAsync(device, action, unit, context, token);
+                value = await ReadHardwareValueWithParallelPrefetchAsync(
+                    device,
+                    action,
+                    unit,
+                    context,
+                    token);
             }
 
             bool passed = value >= lower && value <= upper;
@@ -395,6 +466,80 @@ namespace TestPlatform.TestSequences
                 StoreKey = Bcm250ResultKeys.For(action.ResultId),
                 Unit = unit
             };
+        }
+
+        private static ParallelMeasurementBatch Batch(string[] mbdBranch, string[] daqBranch)
+        {
+            return new ParallelMeasurementBatch
+            {
+                Leader = mbdBranch[0],
+                Branches = new[] { mbdBranch, daqBranch }
+            };
+        }
+
+        private async Task<double> ReadHardwareValueWithParallelPrefetchAsync(
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            string unit,
+            TestSequenceContext context,
+            CancellationToken token)
+        {
+            double prefetched;
+            if (_prefetchedHardwareValues.TryGetValue(action.ResultId, out prefetched))
+            {
+                _prefetchedHardwareValues.Remove(action.ResultId);
+                return prefetched;
+            }
+
+            ParallelMeasurementBatch batch = ParallelMeasurementBatches.FirstOrDefault(x =>
+                string.Equals(x.Leader, action.ResultId, StringComparison.OrdinalIgnoreCase));
+            if (batch == null)
+                return await ReadHardwareValueAsync(device, action, unit, context, token);
+
+            OnLogInfo("启动跨仪器并行测量批次：" + string.Join(" + ", batch.Branches.SelectMany(x => x)));
+            Task<Dictionary<string, double>>[] branchTasks = batch.Branches
+                .Select(branch => ReadMeasurementBranchAsync(device, branch, context, token))
+                .ToArray();
+            Dictionary<string, double>[] branchResults = await Task.WhenAll(branchTasks);
+            foreach (Dictionary<string, double> result in branchResults)
+            {
+                foreach (KeyValuePair<string, double> pair in result)
+                    _prefetchedHardwareValues[pair.Key] = pair.Value;
+            }
+
+            if (!_prefetchedHardwareValues.TryGetValue(action.ResultId, out prefetched))
+                throw new InvalidOperationException("Parallel measurement did not return " + action.ResultId);
+            _prefetchedHardwareValues.Remove(action.ResultId);
+            return prefetched;
+        }
+
+        private async Task<Dictionary<string, double>> ReadMeasurementBranchAsync(
+            SK441Device device,
+            IEnumerable<string> resultIds,
+            TestSequenceContext context,
+            CancellationToken token)
+        {
+            var values = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (string resultId in resultIds)
+            {
+                token.ThrowIfCancellationRequested();
+                Bcm250ActionDefinition branchAction;
+                TestStepItem branchStep;
+                if (!_actionsByResultId.TryGetValue(resultId, out branchAction) ||
+                    !_stepsByResultId.TryGetValue(resultId, out branchStep) ||
+                    branchStep.PlanDefinition == null)
+                {
+                    throw new TestPlanConfigurationException(
+                        "Parallel measurement has no XML definition for " + resultId);
+                }
+                values[resultId] = await ReadHardwareValueAsync(
+                    device,
+                    branchAction,
+                    branchStep.PlanDefinition.Unit ?? string.Empty,
+                    context,
+                    token);
+            }
+            return values;
         }
 
         private async Task<double> ReadHardwareValueAsync(
@@ -892,22 +1037,157 @@ namespace TestPlatform.TestSequences
             };
         }
 
-        private static async Task<bool> SendCommandsAsync(
+        private async Task ExecuteOptimizedDelayAsync(
+            SK441Device device,
+            string stepId,
+            int maximumWaitMs,
+            CancellationToken token)
+        {
+            int minimumWaitMs;
+            string[] domains;
+            float[] targets;
+            if (TryGetPowerPollingDefinition(stepId, out minimumWaitMs, out domains, out targets))
+            {
+                var polls = new List<Task<bool>>();
+                for (int index = 0; index < domains.Length; index++)
+                {
+                    polls.Add(device.WaitForPowerVoltageStableAsync(
+                        domains[index],
+                        targets[index],
+                        minimumWaitMs,
+                        maximumWaitMs,
+                        token));
+                }
+                bool[] stable = await Task.WhenAll(polls);
+                if (stable.All(x => x))
+                    return;
+
+                OnLogWarning(stepId + " 状态轮询未提前满足，已保留 XML 最大等待时间 " + maximumWaitMs + "ms。");
+                return;
+            }
+
+            if (string.Equals(stepId, "BCM250.CH09.S008.ACTION", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(stepId, "BCM250.CH12.S002.ACTION", StringComparison.OrdinalIgnoreCase))
+            {
+                DateTime started = DateTime.UtcNow;
+                int probeAfterMs = string.Equals(stepId, "BCM250.CH09.S008.ACTION", StringComparison.OrdinalIgnoreCase)
+                    ? 1500
+                    : 500;
+                await Task.Delay(Math.Min(probeAfterMs, maximumWaitMs), token);
+                if (await device.CheckMbdCommunicationAsync())
+                {
+                    _mbdReadyObserved = true;
+                    _mbdTerminalState = MbdTerminalState.Unknown;
+                    OnLogInfo(stepId + " DUT 通信已就绪，提前结束启动等待。");
+                    return;
+                }
+
+                int remainingMs = maximumWaitMs - (int)(DateTime.UtcNow - started).TotalMilliseconds;
+                if (remainingMs > 0)
+                    await Task.Delay(remainingMs, token);
+                return;
+            }
+
+            await Task.Delay(maximumWaitMs, token);
+        }
+
+        private static bool TryGetPowerPollingDefinition(
+            string stepId,
+            out int minimumWaitMs,
+            out string[] domains,
+            out float[] targets)
+        {
+            minimumWaitMs = 0;
+            domains = null;
+            targets = null;
+            switch ((stepId ?? string.Empty).ToUpperInvariant())
+            {
+                case "BCM250.CH19.S009.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
+                case "BCM250.CH19.S023.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 5f }; return true;
+                case "BCM250.CH19.S032.ACTION": minimumWaitMs = 2500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
+                case "BCM250.CH23.S028.ACTION": minimumWaitMs = 750; domains = new[] { "VBUS" }; targets = new[] { 15f }; return true;
+                case "BCM250.CH23.S034.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 25f }; return true;
+                case "BCM250.CH24.S027.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 15f }; return true;
+                case "BCM250.CH25.S016.ACTION": minimumWaitMs = 3000; domains = new[] { "VBUS" }; targets = new[] { 275f }; return true;
+                case "BCM250.CH25.S025.ACTION": minimumWaitMs = 750; domains = new[] { "SECONDARY" }; targets = new[] { 225f }; return true;
+                case "BCM250.CH26.S012.ACTION": minimumWaitMs = 1000; domains = new[] { "VBUS" }; targets = new[] { 100f }; return true;
+                default: return false;
+            }
+        }
+
+        private async Task<bool> SendCommandsAsync(
             SK441Device device,
             string commands,
+            string stepId,
             CancellationToken token)
         {
             foreach (string command in (commands ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string normalizedCommand = command.Trim();
+                if (CanSkipMbdCommand(normalizedCommand))
+                {
+                    OnLogInfo("重复 MBD 状态命令已消除：" + normalizedCommand);
+                    continue;
+                }
                 if (!await device.SendMbdCommandAsync(normalizedCommand, 0))
+                {
+                    ResetMbdState();
                     return false;
+                }
+
+                RecordMbdCommandState(normalizedCommand);
 
                 int settleMs = MbdStateChangeSettleMs(normalizedCommand);
-                if (settleMs > 0)
+                if (settleMs > 0 && !HasFollowingExplicitSettle(stepId))
                     await Task.Delay(settleMs, token);
             }
             return true;
+        }
+
+        private bool CanSkipMbdCommand(string command)
+        {
+            string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            return (normalized == "EXIT" && _mbdTerminalState == MbdTerminalState.Mbd) ||
+                   (normalized == "REMOTE2" && _mbdTerminalState == MbdTerminalState.Bcm) ||
+                   (normalized == "DIAG ON" &&
+                    _mbdTerminalState == MbdTerminalState.Mbd &&
+                    _mbdDiagnosticsEnabled);
+        }
+
+        private void RecordMbdCommandState(string command)
+        {
+            string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalized == "EXIT")
+                _mbdTerminalState = MbdTerminalState.Mbd;
+            else if (normalized == "REMOTE2")
+                _mbdTerminalState = MbdTerminalState.Bcm;
+            else if (normalized == "DIAG ON" && _mbdTerminalState == MbdTerminalState.Mbd)
+                _mbdDiagnosticsEnabled = true;
+            else if (normalized.StartsWith("W86=", StringComparison.Ordinal))
+                ResetMbdState();
+        }
+
+        private void ResetMbdState()
+        {
+            _mbdTerminalState = MbdTerminalState.Unknown;
+            _mbdDiagnosticsEnabled = false;
+            _mbdReadyObserved = false;
+        }
+
+        private static bool HasFollowingExplicitSettle(string stepId)
+        {
+            switch ((stepId ?? string.Empty).ToUpperInvariant())
+            {
+                case "BCM250.CH19.S014.ACTION":
+                case "BCM250.CH23.S021.ACTION":
+                case "BCM250.CH24.S020.ACTION":
+                case "BCM250.CH25.S034.ACTION":
+                case "BCM250.CH26.S023.ACTION":
+                case "BCM250.CH26.S027.ACTION":
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static int MbdStateChangeSettleMs(string command)

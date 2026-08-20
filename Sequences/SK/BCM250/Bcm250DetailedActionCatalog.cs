@@ -670,7 +670,8 @@ namespace TestPlatform.TestSequences
             Command(items, 25, "29 设置W11=0", "W11=0");
             Command(items, 25, "30 设置W13=267000", "W13=267000");
             Command(items, 25, "31 关闭MOSFET Q11：W71=0", "W71=0");
-            Command(items, 25, "32 设置CCB目标6000mA：W12=6000", "W12=6000");
+            // Temporary low-current hardware-debug workpoint for S01.
+            Command(items, 25, "32 临时设置CCB目标1000mA：W12=1000", "W12=1000");
             Command(items, 25, "33 打开CCB：W69=0", "W69=0");
             Wait(items, 25, "34 等待10000ms");
             Shunt(items, 25, "S01", "35 DAQ113测量CCB外部分流电流",

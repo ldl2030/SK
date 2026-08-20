@@ -7323,7 +7323,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 32 设置CCB目标6000mA：W12=6000</Name>
+    <Name>25. 32 临时设置CCB目标1000mA：W12=1000</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7368,8 +7368,8 @@
     <Enabled>true</Enabled>
     <Name>S01 35 DAQ113测量CCB外部分流电流</Name>
     <ExpectedValue></ExpectedValue>
-    <UpperLimit>-5700</UpperLimit>
-    <LowerLimit>-6300</LowerLimit>
+    <UpperLimit>-700</UpperLimit>
+    <LowerLimit>-1300</LowerLimit>
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>

@@ -34,6 +34,8 @@ namespace TestPlatform.TestSequences
         private Task<bool> _rl4OffTask;
         private Task<bool> _allInstrumentsOffTask;
         private Task<bool> _ansPowerOffTask;
+        private DateTime _lastUiScrollUtc = DateTime.MinValue;
+        private string _lastUiScrollGroup;
 
         protected SKBaseSequence(ITestGridService grid = null, Func<string, Task<bool>> confirmAsync = null)
         {
@@ -74,6 +76,8 @@ namespace TestPlatform.TestSequences
         public async Task<bool> RunAsync(TestSequenceContext context)
         {
             ResetCleanupState();
+            _lastUiScrollUtc = DateTime.MinValue;
+            _lastUiScrollGroup = null;
             LogInfo?.Invoke("==============================================");
             LogInfo?.Invoke("SK441 测试流程开始 - 正在初始化...");
             LogInfo?.Invoke("==============================================");
@@ -593,16 +597,27 @@ namespace TestPlatform.TestSequences
             int effectiveRetries = step.MaxRetries >= 0 ? step.MaxRetries : Math.Max(0, context.FailRetryCount);
             int attemptsUsed = 0;
 
+            bool scrolledToStep = false;
             if (!string.IsNullOrWhiteSpace(step.StepId))
             {
-                await _grid.ScrollToStepAsync(step.StepId);
-                await _grid.SetValueAndStatusByStepIdAsync(
-                    context.ChannelIndex,
-                    step.StepId,
-                    string.Empty,
-                    step.AlwaysRun
-                        ? StepExecutionStatus.CleanupRunning
-                        : StepExecutionStatus.Running);
+                if (ShouldScrollToStep(step))
+                {
+                    await _grid.ScrollToStepAsync(step.StepId);
+                    scrolledToStep = true;
+                }
+                bool isResultRow = !step.StepId.EndsWith(
+                    ".ACTION",
+                    StringComparison.OrdinalIgnoreCase);
+                if (scrolledToStep || isResultRow || step.AlwaysRun)
+                {
+                    await _grid.SetValueAndStatusByStepIdAsync(
+                        context.ChannelIndex,
+                        step.StepId,
+                        string.Empty,
+                        step.AlwaysRun
+                            ? StepExecutionStatus.CleanupRunning
+                            : StepExecutionStatus.Running);
+                }
             }
             else
                 await _grid.ScrollToRowAsync(step.RowIndex);
@@ -654,6 +669,12 @@ namespace TestPlatform.TestSequences
             }
 
             stopwatch.Stop();
+            if (!finalResult.IsPass &&
+                !scrolledToStep &&
+                !string.IsNullOrWhiteSpace(step.StepId))
+            {
+                await _grid.ScrollToStepAsync(step.StepId);
+            }
             finalResult.AttemptCount = attemptsUsed;
             if (!string.IsNullOrWhiteSpace(step.StepId))
             {
@@ -691,6 +712,23 @@ namespace TestPlatform.TestSequences
                 OnLogError($"[通道{context.ChannelIndex + 1}] 步骤 '{step.Name}' 失败 (耗时 {stopwatch.ElapsedMilliseconds} ms)");
 
             return finalResult;
+        }
+
+        private bool ShouldScrollToStep(TestStepItem step)
+        {
+            DateTime now = DateTime.UtcNow;
+            string stepId = step.StepId ?? string.Empty;
+            int stepMarker = stepId.IndexOf(".S", StringComparison.OrdinalIgnoreCase);
+            string group = stepMarker > 0 ? stepId.Substring(0, stepMarker) : step.ExpectedGroupId;
+            bool isResultRow = !stepId.EndsWith(".ACTION", StringComparison.OrdinalIgnoreCase);
+            bool chapterChanged = !string.Equals(group, _lastUiScrollGroup, StringComparison.OrdinalIgnoreCase);
+            bool throttleElapsed = (now - _lastUiScrollUtc).TotalMilliseconds >= 250.0;
+            if (!isResultRow && !chapterChanged && !throttleElapsed)
+                return false;
+
+            _lastUiScrollUtc = now;
+            _lastUiScrollGroup = group;
+            return true;
         }
 
         private async Task ExecuteChapterFailurePolicyAsync(

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TestPlatform
@@ -263,6 +264,56 @@ namespace TestPlatform
                 return;
             }
             throw new ArgumentException("Unknown power domain: " + domain, nameof(domain));
+        }
+
+        public async Task<bool> WaitForPowerVoltageStableAsync(
+            string domain,
+            float targetVoltage,
+            int minimumWaitMs,
+            int maximumWaitMs,
+            CancellationToken token)
+        {
+            if (SkipComInit)
+                return true;
+
+            DateTime started = DateTime.UtcNow;
+            int stableSamples = 0;
+            float tolerance = Math.Max(0.5f, Math.Abs(targetVoltage) * 0.02f);
+            while ((DateTime.UtcNow - started).TotalMilliseconds < maximumWaitMs)
+            {
+                token.ThrowIfCancellationRequested();
+                int elapsedMs = (int)(DateTime.UtcNow - started).TotalMilliseconds;
+                if (elapsedMs < minimumWaitMs)
+                {
+                    await Task.Delay(Math.Min(250, minimumWaitMs - elapsedMs), token);
+                    continue;
+                }
+
+                try
+                {
+                    float voltage;
+                    float current;
+                    ReadPowerDomain(domain, out voltage, out current);
+                    stableSamples = Math.Abs(voltage - targetVoltage) <= tolerance
+                        ? stableSamples + 1
+                        : 0;
+                    if (stableSamples >= 3)
+                    {
+                        LogInfo?.Invoke(
+                            $"{domain} 电压连续稳定，提前结束等待：目标={targetVoltage:0.###}V，" +
+                            $"实测={voltage:0.###}V，耗时={(DateTime.UtcNow - started).TotalMilliseconds:0}ms");
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    stableSamples = 0;
+                    LogInfo?.Invoke($"{domain} 稳定轮询暂未就绪：{ex.Message}");
+                }
+
+                await Task.Delay(250, token);
+            }
+            return false;
         }
 
         private Task<bool> VerifyRelayPowerIsOffAsync(int relayId)
