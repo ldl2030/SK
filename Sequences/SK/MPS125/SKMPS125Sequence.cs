@@ -75,6 +75,7 @@ namespace TestPlatform.TestSequences
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
                 AlwaysRun = action.AlwaysRun,
+                SafetyCritical = IsSafetyCritical(action),
                 PowerCritical = IsPowerCritical(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps125ActionKind.Cleanup
             };
@@ -115,17 +116,62 @@ namespace TestPlatform.TestSequences
                     passed = await device.CheckMbdCommunicationAsync();
                     break;
                 case Mps125ActionKind.CloseMbdCommunication:
-                    passed = action.AlwaysRun ? await device.CloseTargetBoardCommunicationAsync() : true;
+                    passed = await device.CloseTargetBoardCommunicationAsync();
                     break;
                 case Mps125ActionKind.MbdCommand:
                     passed = await SendCommandsAsync(device, action.Argument);
                     break;
+                case Mps125ActionKind.MbdCleanupIfConnected:
+                    if (HasFixtureReleaseStarted || device.IsEmergencyStopLatched)
+                    {
+                        await device.CloseTargetBoardCommunicationAsync();
+                        OnLogWarning(
+                            "MPS-125治具已开始释放或急停已触发，USB-B会随下压解除而断开；" +
+                            "跳过MBD安全关闭命令，不再重新枚举串口。");
+                        return BasicResult(true, "治具已释放，跳过MBD命令", action);
+                    }
+                    if (!device.IsTargetBoardCommunicationConnected)
+                    {
+                        OnLogWarning(
+                            "MPS-125目标板通信当前未连接；跳过MBD安全关闭命令，" +
+                            "不重新枚举串口。硬件输出与继电器收尾继续执行。");
+                        return BasicResult(true, "USB已断开，跳过MBD命令", action);
+                    }
+                    passed = await device.SendMbdCleanupCommandsOnCurrentConnectionAsync(
+                        action.Argument);
+                    break;
                 case Mps125ActionKind.SetVbus:
                     passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
                     break;
+                case Mps125ActionKind.SetVbusAndWaitStable:
+                    {
+                        double[] values = ParseNumbers(action.Argument);
+                        passed = values.Length >= 1 &&
+                            await SetGeneratorAsync(device, action.Argument, true, true);
+                        if (passed)
+                        {
+                            passed = await device.WaitForMps125VbusStableAsync(
+                                (float)values[0],
+                                token);
+                        }
+                        break;
+                    }
                 case Mps125ActionKind.SetVbatt:
                     passed = await SetGeneratorAsync(device, action.Argument, false, action.State);
                     break;
+                case Mps125ActionKind.SetVbattAndWaitStable:
+                    {
+                        double[] values = ParseNumbers(action.Argument);
+                        passed = values.Length >= 1 &&
+                            await SetGeneratorAsync(device, action.Argument, false, action.State);
+                        if (passed)
+                        {
+                            passed = await device.WaitForMps125VbattVoltageAsync(
+                                (float)values[0],
+                                token);
+                        }
+                        break;
+                    }
                 case Mps125ActionKind.SafeVbusRelay:
                     {
                         double[] values = ParseNumbers(action.Argument);
@@ -136,14 +182,16 @@ namespace TestPlatform.TestSequences
                             (float)values[1],
                             (float)values[2],
                             (float)values[3],
-                            values[4] > 0);
+                            values[4] > 0,
+                            token);
                         break;
                     }
                 case Mps125ActionKind.SafeVbattConnect:
-                    passed = await device.SafeConnectMpsVbattRelayAsync(
+                    passed = await device.SafeConnectMps125VbattRelayAsync(
                         ParseInt(action.Argument),
                         Mps125StationMap.GetDaqRelayChannels(ParseInt(action.Argument)),
-                        150);
+                        150,
+                        token);
                     break;
                 case Mps125ActionKind.SafeVbattDisconnect:
                     passed = await device.SafeDisconnectMpsVbattRelayAsync(
@@ -181,6 +229,19 @@ namespace TestPlatform.TestSequences
                     return BasicResult(false, "Missing dependency " + dependency, action);
             }
 
+            if (action.Kind == Mps125ActionKind.MbdNumeric &&
+                string.Equals(action.Argument, "R71", StringComparison.OrdinalIgnoreCase) &&
+                !device.IsMps125R71PolarityConfirmed())
+            {
+                return new StepResult
+                {
+                    IsPass = false,
+                    Value = "未确认MPS-125 R71高低极性；请先用良品验证并设置SKMPS125R71PolarityConfirmed=true",
+                    StoreKey = Mps125ResultKeys.For(action.ResultId),
+                    Unit = plan.Unit
+                };
+            }
+
             if (action.Kind == Mps125ActionKind.FirmwareVersion)
             {
                 string expected = string.IsNullOrWhiteSpace(plan.ExpectedValue) ? "mcu_app U.2.2.2" : plan.ExpectedValue;
@@ -195,6 +256,26 @@ namespace TestPlatform.TestSequences
                     StoreKey = Mps125ResultKeys.For(action.ResultId),
                     Unit = plan.Unit
                 };
+            }
+
+            if (action.Kind == Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline)
+            {
+                int relayId = ParseInt(action.Argument);
+                bool baselineReady = await device.PrepareMps125VbattBaselineAsync(
+                    relayId,
+                    Mps125StationMap.GetDaqRelayChannels(relayId),
+                    150,
+                    token);
+                if (!baselineReady)
+                {
+                    return new StepResult
+                    {
+                        IsPass = false,
+                        Value = "VBATT基线条件不成立",
+                        StoreKey = Mps125ResultKeys.For(action.ResultId),
+                        Unit = plan.Unit
+                    };
+                }
             }
 
             double value = device.SkipComInit
@@ -226,6 +307,7 @@ namespace TestPlatform.TestSequences
             {
                 case Mps125ActionKind.DaqVoltage:
                 case Mps125ActionKind.DaqAverageVoltage:
+                case Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline:
                     return ScaleVoltage(await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token), unit);
                 case Mps125ActionKind.DaqShuntCurrent:
                     return await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token) / action.Scale * 1000.0;
@@ -247,13 +329,16 @@ namespace TestPlatform.TestSequences
             switch (action.Kind)
             {
                 case Mps125ActionKind.SetVbus:
+                case Mps125ActionKind.SetVbusAndWaitStable:
                 case Mps125ActionKind.SetVbatt:
+                case Mps125ActionKind.SetVbattAndWaitStable:
                 case Mps125ActionKind.SafeVbusRelay:
                 case Mps125ActionKind.SafeVbattConnect:
                 case Mps125ActionKind.SafeVbattDisconnect:
                 case Mps125ActionKind.DaqRelays:
                 case Mps125ActionKind.DaqVoltage:
                 case Mps125ActionKind.DaqAverageVoltage:
+                case Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline:
                 case Mps125ActionKind.DaqShuntCurrent:
                 case Mps125ActionKind.DaqResistance:
                 case Mps125ActionKind.IgnitionRamp:
@@ -262,6 +347,21 @@ namespace TestPlatform.TestSequences
                 default:
                     return false;
             }
+        }
+
+        private static bool IsSafetyCritical(Mps125ActionDefinition action)
+        {
+            if (action.AlwaysRun)
+                return false;
+
+            if (action.Kind == Mps125ActionKind.SafeVbattConnect ||
+                action.Kind == Mps125ActionKind.SetVbattAndWaitStable ||
+                action.Kind == Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline)
+            {
+                return true;
+            }
+
+            return action.Chapter == 17 && action.IsResult;
         }
 
         private static async Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)
@@ -370,9 +470,28 @@ namespace TestPlatform.TestSequences
             double[] values = ParseNumbers(argument);
             if (values.Length < 3)
                 return false;
-            return vbus
-                ? await device.SetVbusGeneratorAsync((float)values[0], (float)values[1], (float)values[2], state)
-                : await device.SetVbattGeneratorAsync((float)values[0], (float)values[1], (float)values[2], state);
+            if (!vbus)
+                return await device.SetVbattGeneratorAsync(
+                    (float)values[0],
+                    (float)values[1],
+                    (float)values[2],
+                    state);
+
+            if (state)
+            {
+                if (!device.ResetMbdConnectionBeforeDutPowerOn())
+                    return false;
+            }
+            else if (!await device.CloseTargetBoardCommunicationAsync())
+            {
+                return false;
+            }
+
+            return await device.SetVbusGeneratorAsync(
+                (float)values[0],
+                (float)values[1],
+                (float)values[2],
+                state);
         }
 
         private static int[] ParseRelayList(string value) => (value ?? string.Empty)

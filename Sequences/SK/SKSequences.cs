@@ -626,6 +626,11 @@ namespace TestPlatform.TestSequences
             int totalSteps,
             CancellationToken token)
         {
+            // Independent SK sequences run outside MainWindow's legacy step runner.
+            // Cooperatively enter the UI pause gate before changing the row to
+            // Running or issuing the next hardware command.
+            await WaitIfPausedAsync(context, token);
+
             Stopwatch stopwatch = Stopwatch.StartNew();
             StepResult finalResult = new StepResult { IsPass = false, Value = "未执行" };
             int effectiveRetries = step.MaxRetries >= 0 ? step.MaxRetries : Math.Max(0, context.FailRetryCount);
@@ -659,6 +664,7 @@ namespace TestPlatform.TestSequences
             for (int attempt = 0; attempt <= effectiveRetries; attempt++)
             {
                 token.ThrowIfCancellationRequested();
+                await WaitIfPausedAsync(context, token);
                 attemptsUsed = attempt + 1;
 
                 if (attempt > 0)
@@ -746,6 +752,17 @@ namespace TestPlatform.TestSequences
                 OnLogError($"[通道{context.ChannelIndex + 1}] 步骤 '{step.Name}' 失败 (耗时 {stopwatch.ElapsedMilliseconds} ms)");
 
             return finalResult;
+        }
+
+        private static async Task WaitIfPausedAsync(
+            TestSequenceContext context,
+            CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Func<CancellationToken, Task> pauseGate = context?.WaitIfPausedAsync;
+            if (pauseGate != null)
+                await pauseGate(token);
+            token.ThrowIfCancellationRequested();
         }
 
         private bool ShouldScrollToStep(TestStepItem step)

@@ -243,8 +243,10 @@ namespace TestPlatform.TestSequences
             Command(items, 17, "7 发送DIAG ON到BCM250", "DIAG ON");
             Mbd(items, 17, "K01", "8-9 读取R61确认st_emerg=0", "R61");
             Command(items, 17, "10 发送EXIT返回MBD终端", "EXIT");
+            Command(items, 17, "10.a 发送DIAG ON到MBD", "DIAG ON");
             Command(items, 17, "11 MBD关闭Westinghouse：W95=0", "W95=0");
             Command(items, 17, "12 发送REMOTE2进入BCM250终端", "REMOTE2");
+            Command(items, 17, "12.a 发送DIAG ON到BCM250", "DIAG ON");
             Mbd(items, 17, "K02", "13 读取R61确认st_emerg=1", "R61");
             Command(items, 17, "14 DUT使能emerg_uc：W67=1", "W67=1");
             Mbd(items, 17, "K03", "15 读取R61确认DUT报警st_emerg=0", "R61");

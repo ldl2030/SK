@@ -568,12 +568,16 @@ namespace TestPlatform
             if (SkipComInit)
             {
                 double mockTotal = 0.0;
+                var mockSchedule = System.Diagnostics.Stopwatch.StartNew();
                 for (int index = 0; index < sampleCount; index++)
                 {
                     token.ThrowIfCancellationRequested();
+                    await WaitForDaqSampleStartAsync(
+                        mockSchedule,
+                        index,
+                        intervalMs,
+                        token);
                     mockTotal += await MeasureDaqChannelVoltageAsync(channel);
-                    if (intervalMs > 0 && index + 1 < sampleCount)
-                        await Task.Delay(intervalMs, token);
                 }
                 return mockTotal / sampleCount;
             }
@@ -584,9 +588,23 @@ namespace TestPlatform
             try
             {
                 Daq.PrepareVoltageDcMeasurementSeries(channelList);
+                var schedule = System.Diagnostics.Stopwatch.StartNew();
+                bool overrunLogged = false;
                 for (int index = 0; index < sampleCount; index++)
                 {
                     token.ThrowIfCancellationRequested();
+                    bool onSchedule = await WaitForDaqSampleStartAsync(
+                        schedule,
+                        index,
+                        intervalMs,
+                        token);
+                    if (!onSchedule && !overrunLogged && index > 0)
+                    {
+                        overrunLogged = true;
+                        LogInfo?.Invoke(
+                            $"DAQ 通道 {channel} 单次通信耗时超过 {intervalMs}ms；" +
+                            "已取消额外等待并按最快可用速度连续采样。");
+                    }
                     currentSample = index + 1;
                     double value = Daq.ReadVoltageDcMeasurementSeriesSample(
                         out string rawResponse);
@@ -595,8 +613,6 @@ namespace TestPlatform
                         $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次测量电压: " +
                         $"{value:0.######}V (原始响应: {rawResponse})");
 
-                    if (intervalMs > 0 && index + 1 < sampleCount)
-                        await Task.Delay(intervalMs, token);
                 }
 
                 return total / sampleCount;
@@ -621,6 +637,28 @@ namespace TestPlatform
                 LogError?.Invoke(message);
                 throw new InvalidOperationException(message, ex);
             }
+        }
+
+        private static async Task<bool> WaitForDaqSampleStartAsync(
+            System.Diagnostics.Stopwatch schedule,
+            int sampleIndex,
+            int intervalMs,
+            CancellationToken token)
+        {
+            if (sampleIndex <= 0 || intervalMs <= 0)
+                return true;
+
+            long dueMilliseconds = (long)sampleIndex * intervalMs;
+            long remainingMilliseconds = dueMilliseconds - schedule.ElapsedMilliseconds;
+            if (remainingMilliseconds <= 0)
+                return false;
+
+            await Task.Delay(
+                remainingMilliseconds > int.MaxValue
+                    ? int.MaxValue
+                    : (int)remainingMilliseconds,
+                token);
+            return true;
         }
 
         private static double GetExpectedDaqRangeHint(int channel)
@@ -1151,6 +1189,77 @@ namespace TestPlatform
         public void PrepareMps250UsbBManualConnection()
         {
             PrepareMpsUsbBManualConnection("MPS-250");
+        }
+
+        public bool ResetMbdConnectionBeforeDutPowerOn()
+        {
+            if (SkipComInit)
+                return true;
+
+            try
+            {
+                TargetBoard?.Disconnect();
+                _targetBoardPortCandidate = null;
+                ComName.testComName = null;
+                LogInfo?.Invoke(
+                    "DUT重新上电前已释放旧MBD串口句柄；上电后将重新枚举并严格验证终端响应。");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"DUT重新上电前释放旧MBD串口失败：{ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> WaitForMbdReadyAfterPowerCycleAsync(
+            int timeoutMs,
+            CancellationToken token)
+        {
+            if (SkipComInit)
+                return true;
+
+            int effectiveTimeoutMs = Math.Max(1000, timeoutMs);
+            int retryIntervalMs = Math.Max(
+                100,
+                GetIntAppSetting("SKMbdRecoveryRetryMs", 750));
+            int commandTimeoutMs = Math.Max(
+                500,
+                GetIntAppSetting("SKMbdRecoveryCommandTimeoutMs", 2000));
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(effectiveTimeoutMs);
+            int attempt = 0;
+
+            while (DateTime.UtcNow <= deadline)
+            {
+                token.ThrowIfCancellationRequested();
+                attempt++;
+                if (attempt > 1)
+                    await Task.Delay(retryIntervalMs, token);
+
+                TargetBoard?.Disconnect();
+                LogInfo?.Invoke(
+                    $"DUT电源循环后MBD就绪检查 {attempt}：重新枚举并验证终端响应。");
+                if (!await EnsureMbdConnectedAsync())
+                    continue;
+
+                string response = await TargetBoard.SendCommandAsync(
+                    string.Empty,
+                    commandTimeoutMs);
+                if (SKSerialDeviceDiscovery.IsMbdIdentificationResponse(response))
+                {
+                    LogInfo?.Invoke(
+                        $"DUT电源循环后MBD已就绪：{ComName.testComName}，尝试次数={attempt}。");
+                    return true;
+                }
+
+                LogInfo?.Invoke(
+                    "DUT电源循环后MBD端口已打开，但终端响应尚未完整，继续等待。");
+            }
+
+            TargetBoard?.Disconnect();
+            LogError?.Invoke(
+                $"DUT电源循环后MBD在 {effectiveTimeoutMs} ms 内未恢复就绪。");
+            return false;
         }
 
         private async Task<bool> EnsureMbdConnectedAsync()

@@ -54,7 +54,18 @@ namespace TestPlatform
         private bool _updatingRuntimeGroupSummary;
         private readonly Dictionary<string, bool> _runtimeGroupExpansion =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        private string _lastAutoScrollGroupHeader;
         private static readonly object LiveLogSync = new object();
+        private readonly object _activityLogQueueSync = new object();
+        private readonly Queue<ActivityLogEntry> _activityLogQueue = new Queue<ActivityLogEntry>();
+        private int _activityLogFlushScheduled;
+        private int _activityLogEntryCount;
+
+        private sealed class ActivityLogEntry
+        {
+            public string Text { get; set; }
+            public Brush Color { get; set; }
+        }
 
         // 全局计时器
         private System.Windows.Threading.DispatcherTimer globalTimer;
@@ -667,6 +678,7 @@ namespace TestPlatform
         private void BuildDataGridColumns(int channelCount)
         {
             dataGridView1.Columns.Clear();
+            _lastAutoScrollGroupHeader = null;
             ProjectSettings.testDataTable = new DataTable();
             ProjectSettings.testDataTable.RowChanged += RuntimeTreeDataTable_RowChanged;
 
@@ -888,6 +900,11 @@ namespace TestPlatform
                     DataRow targetDataRow = table.Rows[rowIndex];
                     string groupHeader =
                         targetDataRow["GroupHeader"]?.ToString() ?? string.Empty;
+                    bool groupChanged = !string.Equals(
+                        _lastAutoScrollGroupHeader,
+                        groupHeader,
+                        StringComparison.OrdinalIgnoreCase);
+                    _lastAutoScrollGroupHeader = groupHeader;
                     EnsureRuntimeGroupExpanded(groupHeader);
                     _lastScrolledRow = rowIndex;
 
@@ -904,7 +921,7 @@ namespace TestPlatform
                             group.Name?.ToString(),
                             groupHeader,
                             StringComparison.OrdinalIgnoreCase));
-                    if (targetGroup != null)
+                    if (targetGroup != null && groupChanged)
                     {
                         dataGridView1.ScrollIntoView(targetGroup);
                         dataGridView1.UpdateLayout();
@@ -921,15 +938,7 @@ namespace TestPlatform
                     }
 
                     dataGridView1.ScrollIntoView(item);
-                    dataGridView1.UpdateLayout();
                     dataGridView1.SelectedItem = item;
-
-                    var row = dataGridView1.ItemContainerGenerator
-                        .ContainerFromItem(item) as DataGridRow;
-                    if (row != null)
-                    {
-                        row.BringIntoView();
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -2122,31 +2131,82 @@ namespace TestPlatform
                     : ReferenceEquals(effectiveColor, LogSuccess) ? "PASS" : "INFO";
             WriteLiveLog(level, message);
 
-            Action appendToActivityLog = () =>
+            lock (_activityLogQueueSync)
             {
-                var tr = new TextRange(rictxB_log.Document.ContentEnd, rictxB_log.Document.ContentEnd)
+                _activityLogQueue.Enqueue(new ActivityLogEntry
                 {
-                    Text = $"{DateTime.Now:HH:mm:ss} - {message}\n"
-                };
-                tr.ApplyPropertyValue(TextElement.ForegroundProperty, effectiveColor);
+                    Text = $"{DateTime.Now:HH:mm:ss} - {message}\n",
+                    Color = effectiveColor
+                });
+            }
+
+            ScheduleActivityLogFlush();
+        }
+
+        private void ScheduleActivityLogFlush()
+        {
+            if (Interlocked.Exchange(ref _activityLogFlushScheduled, 1) != 0)
+                return;
+
+            Task.Delay(75).ContinueWith(_ =>
+            {
+                try
+                {
+                    Dispatcher.BeginInvoke(
+                        new Action(FlushActivityLogQueue),
+                        DispatcherPriority.Background);
+                }
+                catch
+                {
+                    Interlocked.Exchange(ref _activityLogFlushScheduled, 0);
+                }
+            }, TaskScheduler.Default);
+        }
+
+        private void FlushActivityLogQueue()
+        {
+            const int maximumBatchSize = 200;
+            const int maximumVisibleEntries = 1500;
+            var batch = new List<ActivityLogEntry>(maximumBatchSize);
+            lock (_activityLogQueueSync)
+            {
+                while (batch.Count < maximumBatchSize && _activityLogQueue.Count > 0)
+                    batch.Add(_activityLogQueue.Dequeue());
+            }
+
+            Paragraph paragraph = rictxB_log.Document.Blocks.LastBlock as Paragraph;
+            if (paragraph == null)
+            {
+                paragraph = new Paragraph { Margin = new Thickness(0) };
+                rictxB_log.Document.Blocks.Add(paragraph);
+            }
+
+            foreach (ActivityLogEntry entry in batch)
+            {
+                paragraph.Inlines.Add(new Run(entry.Text) { Foreground = entry.Color });
+                _activityLogEntryCount++;
+            }
+
+            while (_activityLogEntryCount > maximumVisibleEntries &&
+                   paragraph.Inlines.FirstInline != null)
+            {
+                paragraph.Inlines.Remove(paragraph.Inlines.FirstInline);
+                _activityLogEntryCount--;
+            }
+
+            if (batch.Count > 0)
+            {
                 rictxB_log.CaretPosition = rictxB_log.Document.ContentEnd;
                 rictxB_log.ScrollToEnd();
+            }
 
-                // RichTextBox updates its internal ScrollViewer after layout. A second
-                // scroll at ContextIdle keeps the newest test item visible under bursts.
-                Dispatcher.BeginInvoke(
-                    DispatcherPriority.ContextIdle,
-                    new Action(() =>
-                    {
-                        rictxB_log.CaretPosition = rictxB_log.Document.ContentEnd;
-                        rictxB_log.ScrollToEnd();
-                    }));
-            };
-
-            if (Dispatcher.CheckAccess())
-                appendToActivityLog();
-            else
-                Dispatcher.Invoke(appendToActivityLog);
+            Interlocked.Exchange(ref _activityLogFlushScheduled, 0);
+            lock (_activityLogQueueSync)
+            {
+                if (_activityLogQueue.Count == 0)
+                    return;
+            }
+            ScheduleActivityLogFlush();
         }
 
         private static void WriteLiveLog(string level, string message)
@@ -2384,11 +2444,11 @@ namespace TestPlatform
                 return;
 
             _runtimeTreeRefreshPending = true;
-            Dispatcher.BeginInvoke(new Action(() =>
+            Task.Delay(150).ContinueWith(_ => Dispatcher.BeginInvoke(new Action(() =>
             {
                 _runtimeTreeRefreshPending = false;
                 RefreshRuntimeGroupTree();
-            }), DispatcherPriority.Background);
+            }), DispatcherPriority.Background), TaskScheduler.Default);
         }
 
         private void RefreshRuntimeGroupTree()
@@ -2407,20 +2467,22 @@ namespace TestPlatform
 
             RuntimeGroupNode activeNode = null;
             DataRow activeRow = null;
+            Dictionary<string, List<DataRow>> rowsByGroup = ProjectSettings.testDataTable.Rows
+                .Cast<DataRow>()
+                .Where(x => !string.Equals(
+                    x["RunCondition"]?.ToString(),
+                    "OnChapterFailure",
+                    StringComparison.OrdinalIgnoreCase))
+                .GroupBy(
+                    x => x["GroupId"]?.ToString() ?? string.Empty,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.ToList(), StringComparer.OrdinalIgnoreCase);
             _updatingRuntimeGroupSummary = true;
             foreach (RuntimeGroupNode node in _runtimeGroups)
             {
-                List<DataRow> allRows = ProjectSettings.testDataTable.Rows
-                    .Cast<DataRow>()
-                    .Where(x => string.Equals(
-                        x["GroupId"]?.ToString(),
-                        node.GroupId,
-                        StringComparison.OrdinalIgnoreCase))
-                    .Where(x => !string.Equals(
-                        x["RunCondition"]?.ToString(),
-                        "OnChapterFailure",
-                        StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                List<DataRow> allRows;
+                if (!rowsByGroup.TryGetValue(node.GroupId, out allRows))
+                    allRows = new List<DataRow>();
 
                 List<DataRow> selectedRows = allRows.Where(x =>
                     Convert.ToBoolean(x["Select"]) ||
@@ -2512,10 +2574,15 @@ namespace TestPlatform
             string status,
             string summary)
         {
-            foreach (DataRow row in rows)
+            // Group headers bind to Items[0]. Updating every row in a large BCM250
+            // chapter produced dozens of redundant DataGrid change notifications.
+            DataRow row = rows.FirstOrDefault();
+            if (row != null)
             {
-                row["GroupStatus"] = status;
-                row["GroupSummary"] = summary;
+                if (!string.Equals(row["GroupStatus"]?.ToString(), status, StringComparison.Ordinal))
+                    row["GroupStatus"] = status;
+                if (!string.Equals(row["GroupSummary"]?.ToString(), summary, StringComparison.Ordinal))
+                    row["GroupSummary"] = summary;
             }
         }
 
@@ -2687,6 +2754,13 @@ namespace TestPlatform
         {
             if (string.IsNullOrWhiteSpace(groupHeader))
                 return;
+
+            bool currentState;
+            if (_runtimeGroupExpansion.TryGetValue(groupHeader, out currentState) &&
+                currentState == expanded)
+            {
+                return;
+            }
 
             _runtimeGroupExpansion[groupHeader] = expanded;
             foreach (Expander expander in FindVisualChildren<Expander>(dataGridView1))
@@ -10220,6 +10294,7 @@ namespace TestPlatform
                     ChannelIndex = channelIndex,
                     SN = sn,
                     CancellationToken = ct,
+                    WaitIfPausedAsync = token => WaitWhilePausedAsync(channelIndex, token),
                     StopOnFail = appSettings.StopOnFail,
                     PromptOnFail = appSettings.PromptOnFail,
                     ContinueAfterPowerCriticalFailure =
@@ -10241,7 +10316,13 @@ namespace TestPlatform
                     "安全关键步骤始终安全停机。",
                     LogInfo);
 
-                return await sequence.RunAsync(context);
+                // Independent sequence implementations contain legacy synchronous
+                // serial/VISA calls for power supplies, DAQ, loads, relays, MBD and
+                // programmers. Start the whole hardware workflow without a WPF
+                // synchronization context; UI/grid/prompt services marshal only their
+                // own updates back to the Dispatcher.
+                return await Task.Run(() => sequence.RunAsync(context))
+                    .ConfigureAwait(false);
             }
             finally
             {
@@ -10520,13 +10601,21 @@ namespace TestPlatform
 
         public void Update(string status, string progressText, int completed, int total)
         {
+            bool statusChanged = !string.Equals(Status, status, StringComparison.Ordinal);
             Status = status;
             ProgressText = progressText;
-            CompletedCount = completed;
-            TotalCount = total;
-            StatusBrush = GetStatusBrush(status);
-            OnPropertyChanged(nameof(CompletedCount));
-            OnPropertyChanged(nameof(TotalCount));
+            if (CompletedCount != completed)
+            {
+                CompletedCount = completed;
+                OnPropertyChanged(nameof(CompletedCount));
+            }
+            if (TotalCount != total)
+            {
+                TotalCount = total;
+                OnPropertyChanged(nameof(TotalCount));
+            }
+            if (statusChanged)
+                StatusBrush = GetStatusBrush(status);
         }
 
         private static Brush GetStatusBrush(string status)

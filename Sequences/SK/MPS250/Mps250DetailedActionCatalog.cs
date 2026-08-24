@@ -172,11 +172,13 @@ namespace TestPlatform.TestSequences
         private static void AddChapter16(List<Mps250ActionDefinition> x)
         {
             Cmd(x, 16, "16.1 发送EXIT", "EXIT"); Cmd(x, 16, "16.2 发送DIAG ON", "DIAG ON");
-            DaqAvg(x, 16, "K01", "16.3 MCU_ISOBATT/TP230基线测量约8秒 DAQ105", Mps250StationMap.McuIsoBatt, 16, 500);
-            Vbatt(x, 16, "16.4 设置VBATT 0V/0.1A OVP300并输出", Sk250TestSetpoints.Mps250.VbattZero, true);
-            A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)后输出0V", Mps250ActionKind.SafeVbattConnect, "6");
+            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105",
+                Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline, "6", Mps250StationMap.McuIsoBatt, 0, 16, 500);
+            Vbatt(x, 16, "16.4 预设VBATT 0V/0.1A OVP300并保持输出关闭", Sk250TestSetpoints.Mps250.VbattZero, false);
+            A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)，输出0V并验证实测≤0.5V", Mps250ActionKind.SafeVbattConnect, "6");
             DaqAvg(x, 16, "K02", "16.6 MCU_ISOBATT@0V测量约8秒 DAQ105", Mps250StationMap.McuIsoBatt, 16, 500);
-            Vbatt(x, 16, "16.7 设置VBATT 250V/0.1A OVP300并输出", Sk250TestSetpoints.Mps250.VbattIsolation, true);
+            A(x, 16, "16.7 设置VBATT 250V/0.1A OVP300并等待实测稳定", Mps250ActionKind.SetVbattAndWaitStable,
+                Sk250TestSetpoints.Mps250.VbattIsolation.ToArgument(), true);
             DaqAvg(x, 16, "K03", "16.8 MCU_ISOBATT@250V测量约8秒 DAQ105", Mps250StationMap.McuIsoBatt, 16, 500);
             A(x, 16, "16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT", Mps250ActionKind.SafeVbattDisconnect, "6", false); Vbatt(x, 16, "16.10 确认VBATT保持关闭", Sk250TestSetpoints.Common.OutputOffOvp300, false);
         }

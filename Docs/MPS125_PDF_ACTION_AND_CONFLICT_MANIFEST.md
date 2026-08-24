@@ -13,6 +13,11 @@ procedure chapters 6-17 and threshold table 6 (pages 9-21).
   the MPS board/DUT. PDF Relay_2 through Relay_6 are 34903A/DAQ functional
   relays: Relay_3=`@301`, Relay_4=`@302`, Relay_5=`@303`, Relay_6=`@304`, and
   Relay_2/2BIS=`@305,306`.
+- Chapter 6.1 checks only the three physical instruments used by MPS-125:
+  voltage source A (VBUS), voltage source B (VBATT), and the DAQ960. The PDF's
+  34901A/34903A/34907A module list is retained as functional context, but the
+  modules are not treated as three additional serial instruments and are not
+  individually identified as a pass condition.
 - The newest user-provided fixture table supersedes PDF table 9 for physical
   CH01-CH20. VBUS current uses the external 1 ohm shunt on physical
   CH17/DAQ117. No direct-current DAQ mode is used.
@@ -28,8 +33,31 @@ procedure chapters 6-17 and threshold table 6 (pages 9-21).
 Every document command, source setting/output transition, relay change, wait,
 measurement, calculation, removed-step marker, chapter boundary, and cleanup
 operation is a separate catalog/XML row. The 70 PDF result codes remain unique;
-their thresholds and units are stored only in XML. Four informational R71 rows
-(L01/L05/L09/L13) retain no numeric pass range because table 6 says `0..any`.
+their thresholds and units are stored only in XML. Table 6 leaves the four R71
+rows L01/L05/L09/L13 effectively unchecked as `0..any`; they are now functional
+state checks using the current known-good pattern: L01/L09/L13 high=`3900..4096
+Count`, L05 low=`0..100 Count`. Confirm this polarity on one known-good MPS-125
+before the first complete Hardware-mode run. Hardware execution is blocked at
+the first R71 result while `SKMPS125R71PolarityConfirmed=false`; set it to
+`true` only after that known-good-board confirmation. Simulation remains enabled.
+
+VBUS output-on rows before B01 and D01 now wait for measured source-A voltage
+stability. Every VBUS power edge releases the old USB-B serial handle; after a
+power cycle the MBD path is rediscovered and validated before commands resume.
+The visible chapter 8/9/17 communication-close rows now execute instead of
+silently returning success.
+
+Chapter 16 prepares K01 by turning VBATT off, safely opening Relay_6, and
+requiring three consecutive source-B readbacks within 0.5 V of zero (and below
+0.05 A). Relay_6 closes only while source B is off; K02 runs only after the 0 V
+output passes the same gate, and K03 runs only after the 125 V output is stable
+within 2%. These gates are safety-critical and cannot be bypassed by engineering
+continue-after-power-failure mode.
+
+All Chapter 17 result rows are safety-critical. A failed R71, FBK, or heater
+current result stops later PWM actions and proceeds to cleanup. Cleanup sends MBD
+safety commands only on an already-open USB-B connection and never rediscovers a
+port after fixture release or emergency stop.
 
 ## Contradictions and selected values
 
@@ -42,6 +70,7 @@ their thresholds and units are stored only in XML. Four informational R71 rows
 | 16.4/16.5 | Text names RELAY_6 and parenthetically `ex 7` | Current Rev.3 table 8 CH_4 / DAQ304 functional relay | Continuity-check DAQ304 Relay_6 to J7.5 |
 | 8.6 | “Gradually” gives no increment or dwell | 1 V increments, 100 ms dwell, 5-80 V | Approve ramp resolution and dwell at station |
 | G02 | Maximum is infinity | XML uses 1 MOhm to 1 TOhm as an executable open-contact range | Confirm DAQ over-range representation |
+| Table 6 L01/L05/L09/L13 | `0..any` cannot detect a stuck R71 signal | Use current known-good state pattern: high 3900-4096 for L01/L09/L13 and low 0-100 for L05 | Confirm R71 high/low polarity on one known-good MPS-125 |
 | PDF table 9 vs current station table | Older implementation used COM_USB=CH05, shunt=CH11, P+=CH04, MCU_ISOBATT=CH17, LSI.COM=CH07 and Gen VBUS=CH16 | Latest user-provided MPS-125UP table: COM_USB=CH11, shunt=CH17, P+=CH13, MCU_ISOBATT=CH05, LSI.COM=CH18; CH16 is empty | Continuity-check CH05/11/13/17/18 before the first Hardware-mode run |
 
 ## Hardware-only gates

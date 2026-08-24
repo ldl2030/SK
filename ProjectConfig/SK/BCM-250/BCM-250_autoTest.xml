@@ -2024,13 +2024,27 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>17. 11 MBD关闭Westinghouse：W95=0</Name>
+    <Name>17. 10.a 发送DIAG ON到MBD</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH17.S011.ACTION</StepId>
+    <GroupId>BCM250.CH17</GroupId>
+    <SequenceOrder>129</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <DependsOn></DependsOn>
+    <Enabled>true</Enabled>
+    <Name>17. 11 MBD关闭Westinghouse：W95=0</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <StepId>BCM250.CH17.S012.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>130</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2044,7 +2058,21 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S012.K02</StepId>
+    <StepId>BCM250.CH17.S013.ACTION</StepId>
+    <GroupId>BCM250.CH17</GroupId>
+    <SequenceOrder>131</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <DependsOn></DependsOn>
+    <Enabled>true</Enabled>
+    <Name>17. 12.a 发送DIAG ON到BCM250</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <StepId>BCM250.CH17.S014.K02</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>131</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2059,7 +2087,7 @@
     <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S013.ACTION</StepId>
+    <StepId>BCM250.CH17.S015.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>132</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2073,7 +2101,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S014.K03</StepId>
+    <StepId>BCM250.CH17.S016.K03</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>133</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2088,7 +2116,7 @@
     <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S015.ACTION</StepId>
+    <StepId>BCM250.CH17.S017.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>134</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2102,7 +2130,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S016.K04</StepId>
+    <StepId>BCM250.CH17.S018.K04</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>135</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2117,7 +2145,7 @@
     <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S017.ACTION</StepId>
+    <StepId>BCM250.CH17.S019.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>136</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2131,7 +2159,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S018.ACTION</StepId>
+    <StepId>BCM250.CH17.S020.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>137</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2145,7 +2173,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S019.ACTION</StepId>
+    <StepId>BCM250.CH17.S021.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>138</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2159,7 +2187,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S020.K05</StepId>
+    <StepId>BCM250.CH17.S022.K05</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>139</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2174,7 +2202,7 @@
     <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S021.ACTION</StepId>
+    <StepId>BCM250.CH17.S023.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>140</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2188,7 +2216,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S022.K06</StepId>
+    <StepId>BCM250.CH17.S024.K06</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>141</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2203,7 +2231,7 @@
     <Unit>Logic (0/1)</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S023.ACTION</StepId>
+    <StepId>BCM250.CH17.S025.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>142</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -2217,7 +2245,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH17.S024.ACTION</StepId>
+    <StepId>BCM250.CH17.S026.ACTION</StepId>
     <GroupId>BCM250.CH17</GroupId>
     <SequenceOrder>143</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>

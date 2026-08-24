@@ -13,22 +13,30 @@ namespace TestPlatform
     public static class MbdResponseParser
     {
         private static readonly Regex RegisterLineRegex = new Regex(
-            @"(?m)^\s*(?<register>\d{3})\s*=\s*(?<payload>[^\r\n]*)",
-            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+            @"(?:^|[\r\n\0])\s*(?:R\s*)?(?<register>\d{1,3})\s*=\s*(?<payload>[^\r\n\0]*)",
+            RegexOptions.Compiled |
+            RegexOptions.CultureInvariant |
+            RegexOptions.IgnoreCase);
 
         private static readonly Regex NumberRegex = new Regex(
-            @"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?",
+            @"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        private static readonly string[] ErrorMarkers =
+        private sealed class ErrorPattern
         {
-            "RANGE ERROR",
-            "COMMAND ERROR",
-            "INVALID COMMAND",
-            "SYNTAX ERROR",
-            "WRITE ERROR",
-            "FAILED",
-            "FAIL"
+            public string Name { get; set; }
+            public Regex Regex { get; set; }
+        }
+
+        private static readonly ErrorPattern[] ErrorPatterns =
+        {
+            NewErrorPattern("RANGE ERROR", @"\bRANGE\s*[:\-]?\s*(?:ERROR|ERR)\b"),
+            NewErrorPattern("COMMAND ERROR", @"\b(?:COMMAND|CMD)\s*[:\-]?\s*(?:ERROR|ERR)\b"),
+            NewErrorPattern("INVALID COMMAND", @"\bINVALID\s+(?:COMMAND|CMD)\b"),
+            NewErrorPattern("UNKNOWN COMMAND", @"\b(?:UNKNOWN|UNRECOGNIZED)\s+(?:COMMAND|CMD)\b"),
+            NewErrorPattern("SYNTAX ERROR", @"\bSYNTAX\s*[:\-]?\s*(?:ERROR|ERR)\b"),
+            NewErrorPattern("WRITE ERROR", @"\bWRITE\s*[:\-]?\s*(?:ERROR|ERR)\b"),
+            NewErrorPattern("FAILED", @"\b(?:FAILED|FAIL)\b")
         };
 
         public static double ParseScalar(string command, string response)
@@ -110,11 +118,11 @@ namespace TestPlatform
                 return false;
             }
 
-            foreach (string marker in ErrorMarkers)
+            foreach (ErrorPattern pattern in ErrorPatterns)
             {
-                if (response.IndexOf(marker, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (pattern.Regex.IsMatch(response))
                 {
-                    error = marker;
+                    error = pattern.Name;
                     return false;
                 }
             }
@@ -160,17 +168,13 @@ namespace TestPlatform
                        "COMMAND ERROR",
                        StringComparison.OrdinalIgnoreCase) &&
                    !string.IsNullOrWhiteSpace(response) &&
-                   response.IndexOf(
-                       "COMMAND ERROR",
-                       StringComparison.OrdinalIgnoreCase) >= 0 &&
-                   ErrorMarkers
-                       .Where(marker => !string.Equals(
-                           marker,
+                   ContainsResponseError(response, "COMMAND ERROR") &&
+                   ErrorPatterns
+                       .Where(pattern => !string.Equals(
+                           pattern.Name,
                            "COMMAND ERROR",
                            StringComparison.OrdinalIgnoreCase))
-                       .All(marker => response.IndexOf(
-                           marker,
-                           StringComparison.OrdinalIgnoreCase) < 0) &&
+                       .All(pattern => !pattern.Regex.IsMatch(response)) &&
                    TargetBoardComm.HasTerminalPrompt(response);
         }
 
@@ -183,32 +187,62 @@ namespace TestPlatform
                     "MBD response error for " + command + ": " + error + ". Response: " + response);
             }
 
-            Match line = RegisterLineRegex.Match(response);
-            if (!line.Success)
+            MatchCollection lines = RegisterLineRegex.Matches(response ?? string.Empty);
+            if (lines.Count == 0)
             {
                 throw new InvalidOperationException(
                     "MBD response contains no register assignment for " + command + ": " + response);
             }
 
             int expectedRegister;
-            int actualRegister;
-            if (TryGetRequestedRegister(command, out expectedRegister) &&
-                int.TryParse(
-                    line.Groups["register"].Value,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out actualRegister) &&
-                actualRegister != expectedRegister)
+            if (!TryGetRequestedRegister(command, out expectedRegister))
+                return lines[0];
+
+            foreach (Match candidate in lines)
             {
-                throw new InvalidOperationException(string.Format(
-                    CultureInfo.InvariantCulture,
-                    "MBD response register mismatch: requested {0}, received {1}. Response: {2}",
-                    command,
-                    line.Groups["register"].Value,
-                    response));
+                int actualRegister;
+                if (int.TryParse(
+                        candidate.Groups["register"].Value,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out actualRegister) &&
+                    actualRegister == expectedRegister)
+                {
+                    return candidate;
+                }
             }
 
-            return line;
+            string receivedRegisters = string.Join(
+                ", ",
+                lines.Cast<Match>().Select(item => item.Groups["register"].Value));
+            throw new InvalidOperationException(string.Format(
+                CultureInfo.InvariantCulture,
+                "MBD response register mismatch: requested {0}, received {1}. Response: {2}",
+                command,
+                receivedRegisters,
+                response));
+        }
+
+        private static ErrorPattern NewErrorPattern(string name, string pattern)
+        {
+            return new ErrorPattern
+            {
+                Name = name,
+                Regex = new Regex(
+                    pattern,
+                    RegexOptions.Compiled |
+                    RegexOptions.CultureInvariant |
+                    RegexOptions.IgnoreCase)
+            };
+        }
+
+        private static bool ContainsResponseError(string response, string errorName)
+        {
+            ErrorPattern pattern = ErrorPatterns.FirstOrDefault(item => string.Equals(
+                item.Name,
+                errorName,
+                StringComparison.OrdinalIgnoreCase));
+            return pattern != null && pattern.Regex.IsMatch(response ?? string.Empty);
         }
 
         private static bool TryGetRequestedRegister(string command, out int register)

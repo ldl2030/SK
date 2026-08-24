@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -80,6 +81,14 @@ namespace TestPlatform
     /// </summary>
     public static class SKSerialDeviceDiscovery
     {
+        private static readonly Regex MbdCommandErrorRegex = new Regex(
+            @"(?:\b(?:COMMAND|CMD)\b\s*[:\-]?\s*\b(?:ERROR|ERR)\b)|" +
+            @"(?:\b(?:INVALID|UNKNOWN|UNRECOGNIZED)\b\s+\b(?:COMMAND|CMD)\b)|" +
+            @"(?:\bSYNTAX\b\s*[:\-]?\s*\b(?:ERROR|ERR)\b)",
+            RegexOptions.Compiled |
+            RegexOptions.CultureInvariant |
+            RegexOptions.IgnoreCase);
+
         private sealed class PortProbe
         {
             public string PortName { get; set; }
@@ -574,8 +583,8 @@ namespace TestPlatform
         public static bool IsMbdIdentificationResponse(string response)
         {
             return !string.IsNullOrWhiteSpace(response) &&
-                   response.IndexOf("COMMAND ERROR", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                   response.IndexOf("Ready.", StringComparison.OrdinalIgnoreCase) >= 0;
+                   MbdCommandErrorRegex.IsMatch(response) &&
+                   TargetBoardComm.HasTerminalPrompt(response);
         }
 
         private static bool ProbeMbd(

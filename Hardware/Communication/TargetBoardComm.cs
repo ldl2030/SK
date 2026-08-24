@@ -15,6 +15,7 @@ namespace TestPlatform
     public class TargetBoardComm : IDisposable, IDeviceLogSource
     {
         private const int DefaultTimeoutMs = 2000;
+        private const int ResponseWithPromptQuietMs = 50;
         private const int ResponseWithoutPromptQuietMs = 300;
         private SerialPort _serialPort;
         private readonly object _lock = new object();
@@ -62,10 +63,23 @@ namespace TestPlatform
 
         public void Disconnect()
         {
-            if (_serialPort != null && _serialPort.IsOpen)
-                _serialPort.Close();
-            _serialPort?.Dispose();
-            _serialPort = null;
+            lock (_lock)
+            {
+                SerialPort port = _serialPort;
+                _serialPort = null;
+                if (port == null)
+                    return;
+
+                try
+                {
+                    if (port.IsOpen)
+                        port.Close();
+                }
+                finally
+                {
+                    port.Dispose();
+                }
+            }
         }
 
         public async Task<string> SendCommandAsync(string command, int timeoutMs = DefaultTimeoutMs)
@@ -137,7 +151,9 @@ namespace TestPlatform
                 if (lastDataAtMs >= 0)
                 {
                     string currentResponse = response.ToString();
-                    if (HasTerminalPrompt(currentResponse))
+                    if (HasTerminalPrompt(currentResponse) &&
+                        totalTimer.ElapsedMilliseconds - lastDataAtMs >=
+                        ResponseWithPromptQuietMs)
                         break;
 
                     if (totalTimer.ElapsedMilliseconds - lastDataAtMs >=
@@ -156,13 +172,15 @@ namespace TestPlatform
             if (string.IsNullOrEmpty(response))
                 return false;
 
-            return response.IndexOf(
+            string normalized = response.TrimEnd('\r', '\n', '\0', ' ', '\t');
+
+            return normalized.IndexOf(
                        "chars answered. Ready",
                        StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   response.IndexOf(
+                   normalized.IndexOf(
                        "Ready.",
                        StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   response.EndsWith(
+                   normalized.EndsWith(
                        "Ready",
                        StringComparison.OrdinalIgnoreCase);
         }

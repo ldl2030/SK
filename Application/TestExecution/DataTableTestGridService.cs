@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -15,6 +16,9 @@ namespace TestPlatform.TestSequences
         private readonly Dispatcher _dispatcher;
         private readonly Func<int, int, Task> _scrollToRowAsync;
         private readonly Action<int, int, string, bool, string> _stepResultUpdated;
+        private DataTable _indexedTable;
+        private int _indexedRowCount = -1;
+        private Dictionary<string, int> _stepIndexById;
         public DataTableTestGridService(
     Func<DataTable> getTable,
     Dispatcher dispatcher,
@@ -261,24 +265,28 @@ namespace TestPlatform.TestSequences
                 if (table == null || !table.Columns.Contains("StepId"))
                     throw new TestPlanConfigurationException("The test grid does not contain a StepId column.");
 
-                int foundIndex = -1;
-                for (int index = 0; index < table.Rows.Count; index++)
+                if (!ReferenceEquals(_indexedTable, table) ||
+                    _indexedRowCount != table.Rows.Count ||
+                    _stepIndexById == null)
                 {
-                    if (!string.Equals(
-                        table.Rows[index]["StepId"]?.ToString(),
-                        stepId,
-                        StringComparison.OrdinalIgnoreCase))
+                    var indexById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    for (int index = 0; index < table.Rows.Count; index++)
                     {
-                        continue;
+                        string candidate = table.Rows[index]["StepId"]?.ToString();
+                        if (string.IsNullOrWhiteSpace(candidate))
+                            continue;
+                        if (indexById.ContainsKey(candidate))
+                            throw new TestPlanConfigurationException($"Duplicate StepId in test grid: {candidate}");
+                        indexById[candidate] = index;
                     }
 
-                    if (foundIndex >= 0)
-                        throw new TestPlanConfigurationException($"Duplicate StepId in test grid: {stepId}");
-
-                    foundIndex = index;
+                    _indexedTable = table;
+                    _indexedRowCount = table.Rows.Count;
+                    _stepIndexById = indexById;
                 }
 
-                if (foundIndex < 0)
+                int foundIndex;
+                if (!_stepIndexById.TryGetValue(stepId, out foundIndex))
                     throw new TestPlanConfigurationException($"StepId not found in test grid: {stepId}");
 
                 return foundIndex;

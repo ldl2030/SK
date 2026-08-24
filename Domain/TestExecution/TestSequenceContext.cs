@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TestPlatform.TestSequences
 {
@@ -29,6 +31,13 @@ namespace TestPlatform.TestSequences
         public string SN { get; set; }
 
         public CancellationToken CancellationToken { get; set; }
+
+        /// <summary>
+        /// Optional cooperative pause gate supplied by the host UI. Sequence
+        /// implementations call this at safe step boundaries so a pause never
+        /// interrupts an in-flight hardware command.
+        /// </summary>
+        public Func<CancellationToken, Task> WaitIfPausedAsync { get; set; }
 
         public bool StopOnFail { get; set; }
 

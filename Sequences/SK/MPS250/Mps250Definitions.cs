@@ -21,8 +21,10 @@ namespace TestPlatform.TestSequences
         CheckInstruments, AllOutputsOff, DaqRelays, CheckMbdCommunication,
         CloseMbdCommunication, MbdCommand, MbdCleanupIfConnected, Delay, SetVbus,
         SetVbusAndWaitStable, SetVbatt,
+        SetVbattAndWaitStable,
         SafeVbusRelay, SafeVbattConnect, SafeVbattDisconnect,
-        DaqVoltage, DaqAverageVoltage, DaqShuntCurrent, DaqResistance,
+        DaqVoltage, DaqAverageVoltage, DaqAverageVoltageAfterVbattBaseline,
+        DaqShuntCurrent, DaqResistance,
         MbdNumeric, FirmwareVersion, IgnitionRamp, ComputedGain,
         DocumentedBoundary, Cleanup
     }

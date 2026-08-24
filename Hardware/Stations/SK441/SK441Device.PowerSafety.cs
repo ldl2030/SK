@@ -222,6 +222,24 @@ namespace TestPlatform
                 token);
         }
 
+        public Task<bool> WaitForMps125VbusStableAsync(
+            float targetVoltage,
+            CancellationToken token)
+        {
+            int minimumWaitMs = Math.Max(
+                0,
+                GetIntAppSetting("SKMPS125VbusMinimumSettleMs", 500));
+            int maximumWaitMs = Math.Max(
+                minimumWaitMs + 1000,
+                GetIntAppSetting("SKMPS125VbusStableTimeoutMs", 5000));
+            return WaitForPowerVoltageStableAsync(
+                "VBUS",
+                targetVoltage,
+                minimumWaitMs,
+                maximumWaitMs,
+                token);
+        }
+
         private bool AreAllPowerRelaysClosedUnsafe(params int[] relayIds)
         {
             foreach (int relayId in relayIds)
@@ -570,12 +588,64 @@ namespace TestPlatform
             return passed;
         }
 
-        public async Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, string daqChannelList, bool close, float voltage, float current, float ovp, bool restoreOutput)
+        public async Task<bool> SafeSwitchMpsVbusRelayAsync(
+            int relayId,
+            string daqChannelList,
+            bool close,
+            float voltage,
+            float current,
+            float ovp,
+            bool restoreOutput,
+            CancellationToken token)
         {
+            if (!await CloseTargetBoardCommunicationAsync()) return false;
             if (!await SetVbusGeneratorAsync(0, 0, ovp, false)) return false;
             if (!await VerifyPowerDomainsOffAsync("VBUS")) return false;
             if (!await ControlMpsRelayAsync(relayId, daqChannelList, close)) return false;
-            return !restoreOutput || await SetVbusGeneratorAsync(voltage, current, ovp, true);
+            if (!restoreOutput) return true;
+
+            if (!ResetMbdConnectionBeforeDutPowerOn()) return false;
+            if (!await SetVbusGeneratorAsync(voltage, current, ovp, true)) return false;
+
+            bool voltageStable = string.Equals(
+                SimulationBoardType,
+                "MPS-250",
+                StringComparison.OrdinalIgnoreCase)
+                ? await WaitForMps250VbusStableAsync(voltage, token)
+                : await WaitForPowerVoltageStableAsync(
+                    "VBUS",
+                    voltage,
+                    500,
+                    5000,
+                    token);
+            if (!voltageStable) return false;
+
+            int mbdRecoveryTimeoutMs = Math.Max(
+                5000,
+                GetIntAppSetting("SKMbdPowerCycleRecoveryTimeoutMs", 25000));
+            return await WaitForMbdReadyAfterPowerCycleAsync(
+                mbdRecoveryTimeoutMs,
+                token);
+        }
+
+        public Task<bool> SafeSwitchMpsVbusRelayAsync(
+            int relayId,
+            string daqChannelList,
+            bool close,
+            float voltage,
+            float current,
+            float ovp,
+            bool restoreOutput)
+        {
+            return SafeSwitchMpsVbusRelayAsync(
+                relayId,
+                daqChannelList,
+                close,
+                voltage,
+                current,
+                ovp,
+                restoreOutput,
+                CancellationToken.None);
         }
 
         public Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, bool close, float voltage, float current, float ovp, bool restoreOutput)
@@ -583,12 +653,194 @@ namespace TestPlatform
             return SafeSwitchMpsVbusRelayAsync(relayId, null, close, voltage, current, ovp, restoreOutput);
         }
 
-        public async Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, string daqChannelList, float ovp)
+        public async Task<bool> PrepareMpsVbattBaselineAsync(
+            int relayId,
+            string daqChannelList,
+            float ovp,
+            CancellationToken token)
+        {
+            if (!await SetVbattGeneratorAsync(0, 0, ovp, false)) return false;
+            if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
+            if (!await ControlMpsRelayAsync(relayId, daqChannelList, false)) return false;
+            return await WaitForMps250VbattVoltageAsync(0, token);
+        }
+
+        public async Task<bool> PrepareMps125VbattBaselineAsync(
+            int relayId,
+            string daqChannelList,
+            float ovp,
+            CancellationToken token)
+        {
+            if (!await SetVbattGeneratorAsync(0, 0, ovp, false)) return false;
+            if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
+            if (!await ControlMpsRelayAsync(relayId, daqChannelList, false)) return false;
+            return await WaitForMps125VbattVoltageAsync(0, token);
+        }
+
+        public async Task<bool> WaitForMps250VbattVoltageAsync(
+            float targetVoltage,
+            CancellationToken token)
+        {
+            if (SkipComInit)
+                return true;
+
+            float voltageTolerance = Math.Abs(targetVoltage) < 0.001f
+                ? GetFloatAppSetting("SKMPS250VbattZeroToleranceV", 0.5f)
+                : Math.Max(1.0f, Math.Abs(targetVoltage) * 0.02f);
+            float zeroCurrentTolerance = GetFloatAppSetting(
+                "SKMPS250VbattZeroCurrentToleranceA",
+                0.05f);
+            int timeoutMs = Math.Max(
+                1000,
+                GetIntAppSetting(
+                    Math.Abs(targetVoltage) < 0.001f
+                        ? "SKMPS250VbattZeroTimeoutMs"
+                        : "SKMPS250VbattStableTimeoutMs",
+                    Math.Abs(targetVoltage) < 0.001f ? 30000 : 10000));
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            int stableSamples = 0;
+
+            while (DateTime.UtcNow <= deadline)
+            {
+                token.ThrowIfCancellationRequested();
+                float voltage;
+                float current;
+                try
+                {
+                    ReadPowerDomain("SECONDARY", out voltage, out current);
+                }
+                catch (Exception ex)
+                {
+                    LogError?.Invoke("VBATT实测条件读取失败：" + ex.Message);
+                    return false;
+                }
+
+                bool voltageReady = Math.Abs(voltage - targetVoltage) <= voltageTolerance;
+                bool currentReady = Math.Abs(targetVoltage) >= 0.001f ||
+                    Math.Abs(current) <= zeroCurrentTolerance;
+                stableSamples = voltageReady && currentReady ? stableSamples + 1 : 0;
+                LogInfo?.Invoke(
+                    $"等待VBATT实测条件：目标={targetVoltage:0.###}V，" +
+                    $"实测={voltage:0.###}V/{current:0.###}A，" +
+                    $"电压容差=±{voltageTolerance:0.###}V。");
+                if (stableSamples >= 3)
+                    return true;
+
+                await Task.Delay(250, token);
+            }
+
+            LogError?.Invoke(
+                $"VBATT实测条件在 {timeoutMs}ms 内未达成：" +
+                $"目标={targetVoltage:0.###}V，容差=±{voltageTolerance:0.###}V。");
+            return false;
+        }
+
+        public async Task<bool> WaitForMps125VbattVoltageAsync(
+            float targetVoltage,
+            CancellationToken token)
+        {
+            if (SkipComInit)
+                return true;
+
+            float voltageTolerance = Math.Abs(targetVoltage) < 0.001f
+                ? GetFloatAppSetting("SKMPS125VbattZeroToleranceV", 0.5f)
+                : Math.Max(1.0f, Math.Abs(targetVoltage) * 0.02f);
+            float zeroCurrentTolerance = GetFloatAppSetting(
+                "SKMPS125VbattZeroCurrentToleranceA",
+                0.05f);
+            int timeoutMs = Math.Max(
+                1000,
+                GetIntAppSetting(
+                    Math.Abs(targetVoltage) < 0.001f
+                        ? "SKMPS125VbattZeroTimeoutMs"
+                        : "SKMPS125VbattStableTimeoutMs",
+                    Math.Abs(targetVoltage) < 0.001f ? 30000 : 10000));
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            int stableSamples = 0;
+
+            while (DateTime.UtcNow <= deadline)
+            {
+                token.ThrowIfCancellationRequested();
+                float voltage;
+                float current;
+                try
+                {
+                    ReadPowerDomain("SECONDARY", out voltage, out current);
+                }
+                catch (Exception ex)
+                {
+                    LogError?.Invoke("MPS-125 VBATT实测条件读取失败：" + ex.Message);
+                    return false;
+                }
+
+                bool voltageReady = Math.Abs(voltage - targetVoltage) <= voltageTolerance;
+                bool currentReady = Math.Abs(targetVoltage) >= 0.001f ||
+                    Math.Abs(current) <= zeroCurrentTolerance;
+                stableSamples = voltageReady && currentReady ? stableSamples + 1 : 0;
+                LogInfo?.Invoke(
+                    $"等待MPS-125 VBATT实测条件：目标={targetVoltage:0.###}V，" +
+                    $"实测={voltage:0.###}V/{current:0.###}A，" +
+                    $"电压容差=±{voltageTolerance:0.###}V。");
+                if (stableSamples >= 3)
+                    return true;
+
+                await Task.Delay(250, token);
+            }
+
+            LogError?.Invoke(
+                $"MPS-125 VBATT实测条件在 {timeoutMs}ms 内未达成：" +
+                $"目标={targetVoltage:0.###}V，容差=±{voltageTolerance:0.###}V。");
+            return false;
+        }
+
+        public async Task<bool> SafeConnectMps125VbattRelayAsync(
+            int relayId,
+            string daqChannelList,
+            float ovp,
+            CancellationToken token)
         {
             if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, false)) return false;
             if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
             if (!await ControlMpsRelayAsync(relayId, daqChannelList, true)) return false;
-            return await SetVbattGeneratorAsync(0, 0.1f, ovp, true);
+            if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, true)) return false;
+            if (await WaitForMps125VbattVoltageAsync(0, token)) return true;
+
+            LogError?.Invoke(
+                "MPS-125 Relay_6闭合后VBATT实测未达到0V条件，立即关闭VBATT并断开Relay_6。");
+            await SetVbattGeneratorAsync(0, 0, ovp, false);
+            await ControlMpsRelayAsync(relayId, daqChannelList, false);
+            return false;
+        }
+
+        public async Task<bool> SafeConnectMpsVbattRelayAsync(
+            int relayId,
+            string daqChannelList,
+            float ovp,
+            CancellationToken token)
+        {
+            if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, false)) return false;
+            if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
+            if (!await ControlMpsRelayAsync(relayId, daqChannelList, true)) return false;
+            if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, true)) return false;
+            if (await WaitForMps250VbattVoltageAsync(0, token)) return true;
+
+            LogError?.Invoke(
+                "Relay_6闭合后VBATT实测未达到0V条件，立即关闭VBATT并断开Relay_6。");
+            await SetVbattGeneratorAsync(0, 0, ovp, false);
+            await ControlMpsRelayAsync(relayId, daqChannelList, false);
+            return false;
+        }
+
+        public Task<bool> SafeConnectMpsVbattRelayAsync(
+            int relayId,
+            string daqChannelList,
+            float ovp)
+        {
+            return SafeConnectMpsVbattRelayAsync(
+                relayId,
+                daqChannelList,
+                ovp,
+                CancellationToken.None);
         }
 
         public Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, float ovp)

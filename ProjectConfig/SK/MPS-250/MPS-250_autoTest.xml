@@ -2458,7 +2458,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K01 16.3 MCU_ISOBATT/TP230基线测量约8秒 DAQ105</Name>
+    <Name>K01 16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105</Name>
     <LowerLimit>1700</LowerLimit>
     <UpperLimit>2200</UpperLimit>
     <Unit>mV</Unit>
@@ -2475,7 +2475,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.4 设置VBATT 0V/0.1A OVP300并输出</Name>
+    <Name>16.4 预设VBATT 0V/0.1A OVP300并保持输出关闭</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2492,7 +2492,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.5 在VBATT关闭时闭合Relay_6(DAQ304)后输出0V</Name>
+    <Name>16.5 在VBATT关闭时闭合Relay_6(DAQ304)，输出0V并验证实测≤0.5V</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2526,7 +2526,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>16.7 设置VBATT 250V/0.1A OVP300并输出</Name>
+    <Name>16.7 设置VBATT 250V/0.1A OVP300并等待实测稳定</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -2765,9 +2765,9 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L01 17.11 读取R71 ridstrneg基线</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
+    <LowerLimit>3900</LowerLimit>
+    <UpperLimit>4096</UpperLimit>
+    <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
   </TestItem>
@@ -2867,9 +2867,9 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L05 17.18 读取R71 ridstrneg（PWM1开启）</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit>100</UpperLimit>
+    <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
   </TestItem>
@@ -3020,9 +3020,9 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L09 17.27 读取R71 ridstrneg（PWM2开启）</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
+    <LowerLimit>3900</LowerLimit>
+    <UpperLimit>4096</UpperLimit>
+    <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
   </TestItem>
@@ -3139,9 +3139,9 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L13 17.34 读取R71 ridstrneg（risc_on关闭）</Name>
-    <LowerLimit />
-    <UpperLimit />
-    <Unit />
+    <LowerLimit>3900</LowerLimit>
+    <UpperLimit>4096</UpperLimit>
+    <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
   </TestItem>

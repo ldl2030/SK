@@ -30,8 +30,11 @@ Every command, source setting, output transition, relay operation, wait,
 measurement, multi-sample average, calculation, removed-step marker and cleanup
 operation is a separate UI row. The 60 selected PDF result codes are unique.
 `F8`, `H7`, and `H8` are normalized to `F08`, `H07`, and `H08` for stable IDs.
-The four `R71` informational results L01/L05/L09/L13 have no numeric pass range
-because table 6 specifies `0..any`.
+Table 6 leaves the four `R71` results L01/L05/L09/L13 effectively unchecked as
+`0..any`. After the 2026-08-21 failed run showed all four stuck at zero while
+every command still returned `OK`, they are now treated as functional state
+checks. The selected ranges follow the known-good report pattern: L01/L09/L13
+high=`3900..4096 Count`, L05 low=`0..100 Count`.
 
 MPS-250 cleanup sends `W101/W95/W96/W99/W100/W92` only through an already-open
 MBD connection. It never rediscovers or recovers USB during cleanup. If fixture
@@ -57,6 +60,21 @@ default gate waits at least 500 ms, then requires three consecutive readings
 within 2% of 275 V at 250 ms intervals, with a 5 s maximum. A timeout fails the
 power-critical output-on row, preventing transient ramp values from being used
 as B01/D01 product results.
+
+Chapter 16 now prepares K01 by turning VBATT off, safely opening Relay_6 and
+requiring three consecutive source-B readbacks within 0.5 V of zero (and below
+0.05 A). Relay_6 is then closed only while source B is off; K02 is allowed only
+after the 0 V output passes the same readback gate. K03 is allowed only after
+the 250 V output is stable within 2%. These gates are safety-critical and
+cannot be bypassed by the engineering continue-after-power-failure option.
+
+DAQ series timing is start-to-start: a slow `READ?` no longer receives an
+additional full interval delay. If the serial acquisition itself exceeds the
+requested interval, sampling continues immediately and logs one overrun. This
+keeps the K 16-by-500 ms window near eight seconds and avoids the previous
+approximately seventeen-second sparse sampling. All Chapter 17 result rows are
+safety-critical; any invalid R71, FBK or current result closes the heaters and
+all power outputs before later PWM actions can execute.
 
 ## Main-switch terminology
 
@@ -89,6 +107,7 @@ configured/fixed-port behavior.
 | F8/H7/H8 | Non-zero-padded result labels | Normalize to F08/H07/H08 | None; audit-only rename |
 | Table 6 K01 | Printed `1700..22008 mV` contains an extra trailing digit; the legacy report renders the intended maximum as 2200 mV | Use corrected PDF intent `1700..2200 mV` | Confirm TP230 baseline on a known-good board |
 | Table 6/REF2 K02 | `30000..3300 mV` / `30,0..3,3 V` has lower greater than upper | Normalize to `3000..3300 mV` | Confirm TP230 with VBATT=0 V |
+| Table 6 L01/L05/L09/L13 | `0..any` cannot detect a stuck R71 signal | Use known-good state pattern: high 3900-4096 for L01/L09/L13 and low 0-100 for L05 | Confirm R71 high/low polarity on one known-good board |
 | 13.12 | Says H06 must exceed current from point 5/STEP H03, but H03 is a voltage and current baseline is H02 | Compare H06 to H02 and also apply H06 XML range | Confirm expected current increase at W101=200 |
 | 13.19 | Says drive zero but printed command is `W101=5` | Safety-confirm with `W101=0` | Verify target firmware zero command |
 | 15.3 | Command is printed as `R69VERB`, unlike other procedures' `R69` | Preserve exact Rev.3 `R69VERB` command | Confirm firmware supports verbose query |

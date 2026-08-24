@@ -105,6 +105,7 @@ namespace TestPlatform.TestSequences
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
                 AlwaysRun = action.AlwaysRun,
+                SafetyCritical = IsSafetyCritical(action),
                 PowerCritical = IsPowerCritical(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps250ActionKind.Cleanup
             };
@@ -145,7 +146,7 @@ namespace TestPlatform.TestSequences
                     passed = await device.CheckMbdCommunicationAsync();
                     break;
                 case Mps250ActionKind.CloseMbdCommunication:
-                    passed = action.AlwaysRun ? await device.CloseTargetBoardCommunicationAsync() : true;
+                    passed = await device.CloseTargetBoardCommunicationAsync();
                     break;
                 case Mps250ActionKind.MbdCommand:
                     passed = await SendCommandsAsync(device, action.Argument);
@@ -188,6 +189,19 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.SetVbatt:
                     passed = await SetGeneratorAsync(device, action.Argument, false, action.State);
                     break;
+                case Mps250ActionKind.SetVbattAndWaitStable:
+                    {
+                        double[] values = ParseNumbers(action.Argument);
+                        passed = values.Length >= 1 &&
+                            await SetGeneratorAsync(device, action.Argument, false, action.State);
+                        if (passed)
+                        {
+                            passed = await device.WaitForMps250VbattVoltageAsync(
+                                (float)values[0],
+                                token);
+                        }
+                        break;
+                    }
                 case Mps250ActionKind.SafeVbusRelay:
                     {
                         double[] values = ParseNumbers(action.Argument);
@@ -198,14 +212,16 @@ namespace TestPlatform.TestSequences
                             (float)values[1],
                             (float)values[2],
                             (float)values[3],
-                            values[4] > 0);
+                            values[4] > 0,
+                            token);
                         break;
                     }
                 case Mps250ActionKind.SafeVbattConnect:
                     passed = await device.SafeConnectMpsVbattRelayAsync(
                         ParseInt(action.Argument),
                         Mps250StationMap.GetDaqRelayChannels(ParseInt(action.Argument)),
-                        300);
+                        300,
+                        token);
                     break;
                 case Mps250ActionKind.SafeVbattDisconnect:
                     passed = await device.SafeDisconnectMpsVbattRelayAsync(
@@ -261,6 +277,26 @@ namespace TestPlatform.TestSequences
                 };
             }
 
+            if (action.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline)
+            {
+                int relayId = ParseInt(action.Argument);
+                bool baselineReady = await device.PrepareMpsVbattBaselineAsync(
+                    relayId,
+                    Mps250StationMap.GetDaqRelayChannels(relayId),
+                    300,
+                    token);
+                if (!baselineReady)
+                {
+                    return new StepResult
+                    {
+                        IsPass = false,
+                        Value = "VBATT基线条件不成立",
+                        StoreKey = Mps250ResultKeys.For(action.ResultId),
+                        Unit = plan.Unit
+                    };
+                }
+            }
+
             double value = device.SkipComInit
                 ? SimulationValue(action.ResultId, plan.LowerLimit, plan.UpperLimit)
                 : await ReadHardwareValueAsync(device, context, action, plan.Unit, token);
@@ -290,6 +326,7 @@ namespace TestPlatform.TestSequences
             {
                 case Mps250ActionKind.DaqVoltage:
                 case Mps250ActionKind.DaqAverageVoltage:
+                case Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline:
                     return ScaleVoltage(await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token), unit);
                 case Mps250ActionKind.DaqShuntCurrent:
                     return await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token) / action.Scale * 1000.0;
@@ -313,12 +350,14 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.SetVbus:
                 case Mps250ActionKind.SetVbusAndWaitStable:
                 case Mps250ActionKind.SetVbatt:
+                case Mps250ActionKind.SetVbattAndWaitStable:
                 case Mps250ActionKind.SafeVbusRelay:
                 case Mps250ActionKind.SafeVbattConnect:
                 case Mps250ActionKind.SafeVbattDisconnect:
                 case Mps250ActionKind.DaqRelays:
                 case Mps250ActionKind.DaqVoltage:
                 case Mps250ActionKind.DaqAverageVoltage:
+                case Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline:
                 case Mps250ActionKind.DaqShuntCurrent:
                 case Mps250ActionKind.DaqResistance:
                 case Mps250ActionKind.IgnitionRamp:
@@ -327,6 +366,23 @@ namespace TestPlatform.TestSequences
                 default:
                     return false;
             }
+        }
+
+        private static bool IsSafetyCritical(Mps250ActionDefinition action)
+        {
+            if (action.AlwaysRun)
+                return false;
+
+            if (action.Kind == Mps250ActionKind.SafeVbattConnect ||
+                action.Kind == Mps250ActionKind.SetVbattAndWaitStable ||
+                action.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline)
+            {
+                return true;
+            }
+
+            // Heater feedback/current failures must never be bypassed by the
+            // engineering "continue after power-critical failure" option.
+            return action.Chapter == 17 && action.IsResult;
         }
 
         private static async Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)
@@ -437,9 +493,31 @@ namespace TestPlatform.TestSequences
             double[] values = ParseNumbers(argument);
             if (values.Length < 3)
                 return false;
-            return vbus
-                ? await device.SetVbusGeneratorAsync((float)values[0], (float)values[1], (float)values[2], state)
-                : await device.SetVbattGeneratorAsync((float)values[0], (float)values[1], (float)values[2], state);
+
+            if (!vbus)
+                return await device.SetVbattGeneratorAsync(
+                    (float)values[0],
+                    (float)values[1],
+                    (float)values[2],
+                    state);
+
+            // Never keep a SerialPort handle across a DUT power edge. A COM name can
+            // remain enumerated even though the previous USB endpoint is no longer usable.
+            if (state)
+            {
+                if (!device.ResetMbdConnectionBeforeDutPowerOn())
+                    return false;
+            }
+            else if (!await device.CloseTargetBoardCommunicationAsync())
+            {
+                return false;
+            }
+
+            return await device.SetVbusGeneratorAsync(
+                (float)values[0],
+                (float)values[1],
+                (float)values[2],
+                state);
         }
 
         private static int[] ParseRelayList(string value) => (value ?? string.Empty)

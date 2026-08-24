@@ -57,7 +57,7 @@ namespace Bcm250StructureTests
                 RunEndToEndSimulation(xmlPath);
 
                 Console.WriteLine(
-                    "PASS BCM250 structure/simulation: 594 steps, 91 results, " +
+                    "PASS BCM250 structure/simulation: 596 steps, 91 results, " +
                     "chapters 7-27, detailed PDF actions, explicit StepIds, XML authority, 6 cleanup steps, " +
                     "full simulation and Q16 fault injection.");
                 return 0;
@@ -209,12 +209,28 @@ namespace Bcm250StructureTests
                     "COMMAND ERROR\r000014 chars answered. Ready.\r"),
                 "MBD identification must accept the normal CR probe response.");
             Require(
+                SKSerialDeviceDiscovery.IsMbdIdentificationResponse(
+                    "cmd-error\rReady\r"),
+                "MBD identification must accept a compact command-error variant.");
+            Require(
+                SKSerialDeviceDiscovery.IsMbdIdentificationResponse(
+                    "Invalid command\r000014 chars answered. Ready.\r"),
+                "MBD identification must accept an invalid-command variant.");
+            Require(
+                SKSerialDeviceDiscovery.IsMbdIdentificationResponse(
+                    "SYNTAX ERR\rReady.\r"),
+                "MBD identification must accept a syntax-error variant.");
+            Require(
                 !SKSerialDeviceDiscovery.IsMbdIdentificationResponse(
                     "000054 chars answered. Ready.\r"),
                 "Ready alone must not identify a port as MBD.");
             Require(
                 !SKSerialDeviceDiscovery.IsMbdIdentificationResponse("COMMAND ERROR\r"),
                 "COMMAND ERROR alone must not identify a port as MBD.");
+            Require(
+                !SKSerialDeviceDiscovery.IsMbdIdentificationResponse(
+                    "RANGE ERROR\rReady.\r"),
+                "A generic device error plus Ready must not identify a port as MBD.");
         }
 
         private static void ValidateMbdResponseParsing()
@@ -224,6 +240,24 @@ namespace Bcm250StructureTests
                 "055 = 1549      \r000017 chars answered. Ready.\r");
             Require(Math.Abs(scalar - 1549.0) < 0.000001,
                 "MBD scalar parser returned the register number instead of the payload.");
+
+            double readyBeforeRegister = MbdResponseParser.ParseScalar(
+                "R68",
+                "000014 chars answered. Ready.\r068 = 2797\r");
+            Require(Math.Abs(readyBeforeRegister - 2797.0) < 0.000001,
+                "MBD parser must accept a CR-delimited register after Ready.");
+
+            double optionalPrefixAndExponent = MbdResponseParser.ParseScalar(
+                "R70",
+                "Ready.\nR70 = +5.55E+02\0");
+            Require(Math.Abs(optionalPrefixAndExponent - 555.0) < 0.000001,
+                "MBD parser must accept LF/NUL delimiters, an R prefix and exponent values.");
+
+            double selectedRegister = MbdResponseParser.ParseScalar(
+                "R55",
+                "051 = 12\r055 = .625\rReady\r");
+            Require(Math.Abs(selectedRegister - 0.625) < 0.000001,
+                "MBD parser must select the requested register from a multi-register response.");
 
             string textPayload = MbdResponseParser.ParsePayloadText(
                 "R40",
@@ -261,6 +295,20 @@ namespace Bcm250StructureTests
                     out string diagError) &&
                 diagError == "COMMAND ERROR",
                 "COMMAND ERROR must remain a failure for non-EXIT commands.");
+            Require(
+                MbdResponseParser.IsSuccessfulCommandResponse(
+                    "EXIT",
+                    "cmd-error\rReady\r",
+                    out string compactExitError) &&
+                string.IsNullOrEmpty(compactExitError),
+                "EXIT must accept the compact command-error terminal variant.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "DIAG ON",
+                    "unknown cmd\rReady\r",
+                    out string unknownCommandError) &&
+                unknownCommandError == "UNKNOWN COMMAND",
+                "Unknown-command variants must remain command failures.");
             Require(
                 !MbdResponseParser.IsSuccessfulCommandResponse(
                     "EXIT",
@@ -444,7 +492,7 @@ namespace Bcm250StructureTests
                 .Where(x => !string.Equals(x.RunCondition, "OnChapterFailure", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(x => x.SequenceOrder)
                 .ToList();
-            Require(steps.Count == 594, "Expected 594 executable steps, got " + steps.Count + ".");
+            Require(steps.Count == 596, "Expected 596 executable steps, got " + steps.Count + ".");
             Require(steps.Count == definitions.Count, "Code/XML step counts differ.");
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -525,6 +573,19 @@ namespace Bcm250StructureTests
                 "BCM250 +5V shunt must use the station-confirmed 0.4 ohm value.");
 
             IReadOnlyList<Bcm250ActionDefinition> catalogue = Bcm250ActionCatalog.Create();
+            int w95OffIndex = catalogue.ToList().FindIndex(x =>
+                x.Chapter == 17 &&
+                x.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(x.Argument, "W95=0", StringComparison.OrdinalIgnoreCase));
+            Require(w95OffIndex >= 1 && w95OffIndex + 3 < catalogue.Count,
+                "BCM250 CH17 W95=0 command sequence is incomplete.");
+            Require(
+                string.Equals(catalogue[w95OffIndex - 1].Argument, "DIAG ON", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(catalogue[w95OffIndex + 1].Argument, "REMOTE2", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(catalogue[w95OffIndex + 2].Argument, "DIAG ON", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(catalogue[w95OffIndex + 3].ResultId, "K02", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(catalogue[w95OffIndex + 3].Argument, "R61", StringComparison.OrdinalIgnoreCase),
+                "BCM250 CH17 must execute DIAG ON before W95=0 and again after REMOTE2 before K02/R61.");
             Bcm250ActionDefinition temporaryS01Target = catalogue.Single(x =>
                 string.Equals(x.StepId, "BCM250.CH25.S033.ACTION", StringComparison.OrdinalIgnoreCase));
             Require(

@@ -20,7 +20,6 @@ namespace TestPlatform.TestSequences
         private readonly Dictionary<string, double> _prefetchedHardwareValues =
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         private MbdTerminalState _mbdTerminalState;
-        private bool _mbdDiagnosticsEnabled;
         private bool _mbdReadyObserved;
 
         private enum MbdTerminalState
@@ -74,7 +73,6 @@ namespace TestPlatform.TestSequences
             _stepsByResultId.Clear();
             _prefetchedHardwareValues.Clear();
             _mbdTerminalState = MbdTerminalState.Unknown;
-            _mbdDiagnosticsEnabled = false;
             _mbdReadyObserved = false;
             foreach (Bcm250ActionDefinition resultAction in catalog.Where(x => x.IsResult))
                 _actionsByResultId[resultAction.ResultId] = resultAction;
@@ -1148,10 +1146,7 @@ namespace TestPlatform.TestSequences
         {
             string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
             return (normalized == "EXIT" && _mbdTerminalState == MbdTerminalState.Mbd) ||
-                   (normalized == "REMOTE2" && _mbdTerminalState == MbdTerminalState.Bcm) ||
-                   (normalized == "DIAG ON" &&
-                    _mbdTerminalState == MbdTerminalState.Mbd &&
-                    _mbdDiagnosticsEnabled);
+                   (normalized == "REMOTE2" && _mbdTerminalState == MbdTerminalState.Bcm);
         }
 
         private void RecordMbdCommandState(string command)
@@ -1161,8 +1156,6 @@ namespace TestPlatform.TestSequences
                 _mbdTerminalState = MbdTerminalState.Mbd;
             else if (normalized == "REMOTE2")
                 _mbdTerminalState = MbdTerminalState.Bcm;
-            else if (normalized == "DIAG ON" && _mbdTerminalState == MbdTerminalState.Mbd)
-                _mbdDiagnosticsEnabled = true;
             else if (normalized.StartsWith("W86=", StringComparison.Ordinal))
                 ResetMbdState();
         }
@@ -1170,7 +1163,6 @@ namespace TestPlatform.TestSequences
         private void ResetMbdState()
         {
             _mbdTerminalState = MbdTerminalState.Unknown;
-            _mbdDiagnosticsEnabled = false;
             _mbdReadyObserved = false;
         }
 

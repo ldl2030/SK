@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using TestPlatform;
 using TestPlatform.TestSequences;
 
@@ -25,11 +27,16 @@ namespace Mps125StructureTests
 
                 ValidateStructure(plan, steps);
                 ValidateCatalog();
+                ValidateChapterCommunicationClose(context, device);
+                ValidateSafetyGates(steps);
+                ValidateR71HardwareGate(root);
                 ValidatePowerSafety();
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
+                RunSafetyGateFault(xml, "MPS125.CH16.S005.ACTION", "MPS125.CH16.S006.K02");
+                RunSafetyGateFault(xml, "MPS125.CH17.S014.L04", "MPS125.CH17.S015.ACTION");
 
-                Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, DAQ-only functional relays, USB-B precheck, full simulation and J08 fault cleanup.");
+                Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, DAQ-only functional relays, VBUS/VBATT safety gates, USB-B power-edge handling, full simulation and fault cleanup.");
                 return 0;
             }
             catch (Exception ex)
@@ -77,6 +84,11 @@ namespace Mps125StructureTests
             ValidateLimit(plan, "B06", 19, 60, "mA");
             ValidateLimit(plan, "K01", 1700, 2200, "mV");
             ValidateLimit(plan, "K02", 3000, 3300, "mV");
+            ValidateLimit(plan, "K03", 400, 800, "mV");
+            ValidateLimit(plan, "L01", 3900, 4096, "Count");
+            ValidateLimit(plan, "L05", 0, 100, "Count");
+            ValidateLimit(plan, "L09", 3900, 4096, "Count");
+            ValidateLimit(plan, "L13", 3900, 4096, "Count");
             ValidateLimit(plan, "J08", 200000, 205000, "Count");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.2.2.2", "Firmware expectation mismatch.");
         }
@@ -85,6 +97,14 @@ namespace Mps125StructureTests
         {
             IReadOnlyList<Mps125ActionDefinition> catalog = Mps125ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps125ActionKind.SetVbatt), "VBATT source B actions missing.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbusAndWaitStable) == 2,
+                "B01 and D01 must wait for measured VBUS stability.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline) == 1,
+                "K01 must prepare an isolated/discharged VBATT baseline before sampling.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbattAndWaitStable) == 1,
+                "K03 must wait for measured 125 V VBATT stability.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.MbdCleanupIfConnected) == 1,
+                "Cleanup must not rediscover MBD after fixture release.");
             Require(catalog.Where(x => x.Kind == Mps125ActionKind.DaqShuntCurrent).All(x => x.Channel == 117 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ117/1 ohm shunt.");
             Require(catalog.Any(x => x.Kind == Mps125ActionKind.DaqResistance && x.Channel == 118), "Alarm resistance mapping missing.");
             Require(catalog.Where(x => x.Kind == Mps125ActionKind.MbdCommand).All(x => x.AlwaysRun || (x.Argument ?? "").IndexOf(';') < 0), "Normal commands must be one UI row each.");
@@ -112,6 +132,92 @@ namespace Mps125StructureTests
                 if (item.IsResult)
                     seen.Add(item.ResultId);
             }
+        }
+
+        private static void ValidateChapterCommunicationClose(
+            TestSequenceContext context,
+            SK441Device device)
+        {
+            IList steps = BuildSteps(context, device);
+            object closeStep = steps.Cast<object>().Single(x => string.Equals(
+                Read<string>(x.GetType(), x, "StepId"),
+                "MPS125.CH08.S006.ACTION",
+                StringComparison.OrdinalIgnoreCase));
+
+            bool closeLogged = false;
+            device.LogInfo += message =>
+            {
+                if ((message ?? string.Empty).IndexOf(
+                    "模拟关闭MBD/目标板串口通信",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    closeLogged = true;
+                }
+            };
+
+            var action = (Delegate)closeStep.GetType().GetProperty("Action").GetValue(closeStep);
+            var task = (Task)action.DynamicInvoke(CancellationToken.None);
+            task.GetAwaiter().GetResult();
+            object result = task.GetType().GetProperty("Result").GetValue(task);
+            bool isPass = (bool)result.GetType().GetProperty("IsPass").GetValue(result);
+            Require(isPass, "Chapter 8.10 MBD communication close failed.");
+            Require(closeLogged, "Chapter 8.10 did not execute the MBD communication close action.");
+        }
+
+        private static void ValidateSafetyGates(IList steps)
+        {
+            string[] safetyStepIds =
+            {
+                "MPS125.CH16.S003.K01",
+                "MPS125.CH16.S005.ACTION",
+                "MPS125.CH16.S007.ACTION"
+            };
+            foreach (string stepId in safetyStepIds)
+            {
+                object step = steps.Cast<object>().Single(x => string.Equals(
+                    Read<string>(x.GetType(), x, "StepId"),
+                    stepId,
+                    StringComparison.OrdinalIgnoreCase));
+                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                    stepId + " must be safety-critical.");
+            }
+
+            foreach (object step in steps.Cast<object>().Where(x =>
+                Read<string>(x.GetType(), x, "StepId").StartsWith(
+                    "MPS125.CH17.",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !Read<string>(x.GetType(), x, "StepId").EndsWith(
+                    ".ACTION",
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                    Read<string>(step.GetType(), step, "StepId") +
+                    " must stop and shut down on a heater result failure.");
+            }
+        }
+
+        private static void ValidateR71HardwareGate(string root)
+        {
+            string appConfig = Path.Combine(root, "App.config");
+            var setting = XDocument.Load(appConfig)
+                .Descendants("add")
+                .Single(x => string.Equals(
+                    (string)x.Attribute("key"),
+                    "SKMPS125R71PolarityConfirmed",
+                    StringComparison.OrdinalIgnoreCase));
+            Require(string.Equals(
+                    (string)setting.Attribute("value"),
+                    "false",
+                    StringComparison.OrdinalIgnoreCase),
+                "MPS-125 R71 polarity gate must default to false until hardware confirmation.");
+
+            var hardwareDevice = new SK441Device
+            {
+                SkipComInit = false,
+                SimulationBoardType = "MPS-125"
+            };
+            Require(!hardwareDevice.IsMps125R71PolarityConfirmed(),
+                "Unconfirmed MPS-125 hardware must not execute R71 limit checks.");
         }
 
         private static void ValidateLimit(ResolvedTestPlan plan, string resultId, double lower, double upper, string unit)
@@ -174,6 +280,43 @@ namespace Mps125StructureTests
             }
         }
 
+        private static void RunSafetyGateFault(
+            string xmlPath,
+            string faultStepId,
+            string forbiddenLaterStepId)
+        {
+            string oldMode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
+            string oldFault = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", "Simulation");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP", faultStepId);
+            try
+            {
+                ResolvedTestPlan plan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal);
+                var grid = new RecordingGrid();
+                var context = new TestSequenceContext
+                {
+                    SN = "MPS125-SAFETY-FAULT",
+                    TestPlan = plan,
+                    StopOnFail = false,
+                    ContinueAfterPowerCriticalFailure = true
+                };
+                bool passed = new SKMPS125Sequence(grid).RunAsync(context)
+                    .GetAwaiter().GetResult();
+                Require(!passed, faultStepId + " safety fault unexpectedly passed.");
+                Require(grid.FailedStepIds.Contains(faultStepId),
+                    faultStepId + " safety fault was not reported.");
+                Require(!grid.ObservedStepIds.Contains(forbiddenLaterStepId),
+                    faultStepId + " was bypassed by engineering continuation.");
+                Require(grid.CleanupCompleted == 6,
+                    faultStepId + " did not complete all cleanup rows.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", oldMode);
+                Environment.SetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP", oldFault);
+            }
+        }
+
         private static MethodInfo FindMethod(Type type, string name)
         {
             for (Type current = type; current != null; current = current.BaseType)
@@ -213,6 +356,7 @@ namespace Mps125StructureTests
             public int RowCount => 1000;
             public int CleanupCompleted { get; private set; }
             public HashSet<string> FailedStepIds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public HashSet<string> ObservedStepIds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public Task<bool> IsRowSelectedAsync(int rowIndex) => Task.FromResult(true);
             public Task<bool> IsStepSelectedAsync(string stepId) => Task.FromResult(true);
             public Task SetValueAsync(int channelIndex, int rowIndex, string value) => Task.CompletedTask;
@@ -225,6 +369,7 @@ namespace Mps125StructureTests
             public Task ScrollToStepAsync(string stepId, int durationMs = 150) => Task.CompletedTask;
             public Task SetValueAndStatusByStepIdAsync(int channelIndex, string stepId, string value, StepExecutionStatus status)
             {
+                ObservedStepIds.Add(stepId);
                 if (status == StepExecutionStatus.Failed) FailedStepIds.Add(stepId);
                 if (stepId.StartsWith(Mps125GroupIds.Cleanup + ".", StringComparison.OrdinalIgnoreCase) &&
                     (status == StepExecutionStatus.Passed || status == StepExecutionStatus.PassedAfterRetry)) CleanupCompleted++;

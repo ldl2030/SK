@@ -38,7 +38,7 @@ namespace TestPlatform.TestSequences
 
         private static void AddChapter06(List<Mps125ActionDefinition> x)
         {
-            A(x, 6, "6.1 检查34901A/34903A/34907A、VBUS及VBATT电源在线", Mps125ActionKind.CheckInstruments);
+            A(x, 6, "6.1 检查MPS-125使用的DAQ、VBUS及VBATT电源在线", Mps125ActionKind.CheckInstruments);
             A(x, 6, "6.2 关闭VBUS/VBATT及其它仪器输出", Mps125ActionKind.AllOutputsOff);
             Relay(x, 6, "6.3 断开DAQ301-306功能继电器", Mps125StationMap.AllControlledRelays, false);
         }
@@ -47,7 +47,7 @@ namespace TestPlatform.TestSequences
         {
             Vbus(x, 7, "7.1 设置VBUS 137.5V/2A OVP300", 137.5, 2, 300, false);
             Relay(x, 7, "7.2 闭合Relay_3(DAQ301) withdrawal接点", "3", true);
-            Vbus(x, 7, "7.1 功率路径闭合后打开VBUS输出", 137.5, 2, 300, true);
+            VbusStable(x, 7, "7.1 功率路径闭合后打开VBUS输出并等待实测电压稳定", 137.5, 2, 300);
             Daq(x, 7, "B01", "7.3.I 测量+5V DAQ101", Mps125StationMap.FiveVolt);
             Daq(x, 7, "B02", "7.3.II 测量+VCC DAQ102", Mps125StationMap.Vcc);
             Daq(x, 7, "B03", "7.3.III 测量-VEE DAQ103", Mps125StationMap.Vee);
@@ -72,7 +72,7 @@ namespace TestPlatform.TestSequences
         private static void AddChapter09(List<Mps125ActionDefinition> x)
         {
             Vbus(x, 9, "9.1 设置VBUS 137.5V/2A OVP300", 137.5, 2, 300, false);
-            Vbus(x, 9, "9.1 打开VBUS输出", 137.5, 2, 300, true);
+            VbusStable(x, 9, "9.1 打开VBUS输出并等待实测电压稳定", 137.5, 2, 300);
             Daq(x, 9, "D01", "9.2.I 测量COM_USB DAQ111", Mps125StationMap.ComUsb);
             Daq(x, 9, "D02", "9.2.II 测量3V3 DAQ120", Mps125StationMap.ThreeVoltThree);
             Wait(x, 9, "9.3 等待3000ms");
@@ -226,11 +226,12 @@ namespace TestPlatform.TestSequences
         {
             Cmd(x, 16, "16.1 发送EXIT", "EXIT");
             Cmd(x, 16, "16.2 发送DIAG ON", "DIAG ON");
-            DaqAvg(x, 16, "K01", "16.3 MCU_ISOBATT基线测量约8秒 DAQ105", Mps125StationMap.McuIsoBatt, 16, 500);
-            Vbatt(x, 16, "16.4 设置VBATT 0V/0.1A OVP150并输出", 0, 0.1, 150, true);
-            A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)后输出0V", Mps125ActionKind.SafeVbattConnect, "6");
+            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105",
+                Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline, "6", Mps125StationMap.McuIsoBatt, 0, 16, 500);
+            Vbatt(x, 16, "16.4 预设VBATT 0V/0.1A OVP150并保持输出关闭", 0, 0.1, 150, false);
+            A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)，输出0V并验证实测≤0.5V", Mps125ActionKind.SafeVbattConnect, "6");
             DaqAvg(x, 16, "K02", "16.6 MCU_ISOBATT@0V测量约8秒 DAQ105", Mps125StationMap.McuIsoBatt, 16, 500);
-            Vbatt(x, 16, "16.7 设置VBATT 125V/0.1A OVP150并输出", 125, 0.1, 150, true);
+            A(x, 16, "16.7 设置VBATT 125V/0.1A OVP150并等待实测稳定", Mps125ActionKind.SetVbattAndWaitStable, Numbers(125, 0.1, 150), true);
             DaqAvg(x, 16, "K03", "16.8 MCU_ISOBATT@125V测量约8秒 DAQ105", Mps125StationMap.McuIsoBatt, 16, 500);
             A(x, 16, "16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT", Mps125ActionKind.SafeVbattDisconnect, "6", false);
             Vbatt(x, 16, "16.10 确认VBATT保持关闭", 0, 0, 150, false);
@@ -284,7 +285,7 @@ namespace TestPlatform.TestSequences
 
         private static void AddCleanup(List<Mps125ActionDefinition> x)
         {
-            Cleanup(x, "发送主开关/加热器安全关闭命令", Mps125ActionKind.MbdCommand, "W101=0;W295=0;W95=0;W96=5;W99=0;W100=0;W92=0", true);
+            Cleanup(x, "若USB仍连接则发送主开关/加热器安全关闭命令", Mps125ActionKind.MbdCleanupIfConnected, "W101=0;W295=0;W95=0;W96=5;W99=0;W100=0;W92=0", true);
             Cleanup(x, "关闭VBUS输出", Mps125ActionKind.SetVbus, "0,0,300", false);
             Cleanup(x, "关闭VBATT输出", Mps125ActionKind.SetVbatt, "0,0,300", false);
             Cleanup(x, "断开DAQ301-306功能继电器", Mps125ActionKind.DaqRelays, Mps125StationMap.AllControlledRelays, false);
@@ -306,6 +307,7 @@ namespace TestPlatform.TestSequences
         private static void Cmd(List<Mps125ActionDefinition> x, int ch, string name, string command) => A(x, ch, name, Mps125ActionKind.MbdCommand, command);
         private static void Wait(List<Mps125ActionDefinition> x, int ch, string name) => A(x, ch, name, Mps125ActionKind.Delay);
         private static void Vbus(List<Mps125ActionDefinition> x, int ch, string name, double v, double a, double ovp, bool state) => A(x, ch, name, Mps125ActionKind.SetVbus, Numbers(v, a, ovp), state);
+        private static void VbusStable(List<Mps125ActionDefinition> x, int ch, string name, double v, double a, double ovp) => A(x, ch, name, Mps125ActionKind.SetVbusAndWaitStable, Numbers(v, a, ovp), true);
         private static void Vbatt(List<Mps125ActionDefinition> x, int ch, string name, double v, double a, double ovp, bool state) => A(x, ch, name, Mps125ActionKind.SetVbatt, Numbers(v, a, ovp), state);
         private static void Mbd(List<Mps125ActionDefinition> x, int ch, string id, string name, string command) => Result(x, ch, id, name, Mps125ActionKind.MbdNumeric, command);
         private static void Daq(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps125ActionKind.DaqVoltage, null, channel);

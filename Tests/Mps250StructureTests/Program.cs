@@ -31,12 +31,16 @@ namespace Mps250StructureTests
                 ValidateCatalog();
                 ValidateVbusStableWaits(root);
                 ValidatePowerTelemetry(root);
+                ValidateKAndLSafetyGates(steps);
+                ValidateDaqStartToStartTiming();
                 ValidateFixtureCleanup(steps, device);
                 ValidateMpsFailurePolicy(context, steps);
                 ValidatePowerSafety();
                 ValidateCustomerReport(root, plan);
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
+                RunSafetyGateFault(xml, "MPS250.CH16.S005.ACTION", "MPS250.CH16.S006.K02");
+                RunSafetyGateFault(xml, "MPS250.CH17.S014.L04", "MPS250.CH17.S015.ACTION");
 
                 Console.WriteLine("PASS MPS250: 193 rows, PDF Rev.3 thresholds, 115200 USB-B, verified fixture release, MPS-only failure cleanup, report generation, full simulation and J06 fault injection.");
                 return 0;
@@ -89,6 +93,10 @@ namespace Mps250StructureTests
             ValidateLimit(plan, "K01", 1700, 2200, "mV");
             ValidateLimit(plan, "K02", 3000, 3300, "mV");
             ValidateLimit(plan, "K03", 400, 800, "mV");
+            ValidateLimit(plan, "L01", 3900, 4096, "Count");
+            ValidateLimit(plan, "L05", 0, 100, "Count");
+            ValidateLimit(plan, "L09", 3900, 4096, "Count");
+            ValidateLimit(plan, "L13", 3900, 4096, "Count");
             ValidateLimit(plan, "J06", 200000, 205000, "Count");
             ValidateLimit(plan, "L07", 100, 200, "mA");
             ValidateLimit(plan, "L11", 50, 100, "mA");
@@ -103,6 +111,10 @@ namespace Mps250StructureTests
         {
             IReadOnlyList<Mps250ActionDefinition> catalog = Mps250ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps250ActionKind.SetVbatt), "VBATT source B actions missing.");
+            Require(catalog.Count(x => x.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline) == 1,
+                "K01 must prepare an isolated/discharged VBATT baseline before sampling.");
+            Require(catalog.Count(x => x.Kind == Mps250ActionKind.SetVbattAndWaitStable) == 1,
+                "K03 must wait for measured 250 V VBATT stability.");
             Require(catalog.Where(x => x.Kind == Mps250ActionKind.DaqShuntCurrent).All(x => x.Channel == 117 && Math.Abs(x.Scale - 1.0) < 1e-9), "Current must use DAQ117/1 ohm shunt.");
             Require(catalog.Any(x => x.Kind == Mps250ActionKind.DaqResistance && x.Channel == 118), "Alarm resistance mapping missing.");
             Require(catalog.Where(x => x.Kind == Mps250ActionKind.MbdCommand).All(x => x.AlwaysRun || (x.Argument ?? "").IndexOf(';') < 0), "Normal commands must be one UI row each.");
@@ -208,6 +220,16 @@ namespace Mps250StructureTests
                 settings.ContainsKey("SKMPS250VbusStableTimeoutMs") &&
                 settings["SKMPS250VbusStableTimeoutMs"] == "5000",
                 "MPS-250 VBUS stability timeout must default to 5000 ms.");
+            Require(
+                settings.ContainsKey("SKMbdPowerCycleRecoveryTimeoutMs") &&
+                settings["SKMbdPowerCycleRecoveryTimeoutMs"] == "25000",
+                "MPS-250 MBD power-cycle recovery must allow 25000 ms by default.");
+            Require(settings.ContainsKey("SKMPS250VbattZeroToleranceV") &&
+                settings["SKMPS250VbattZeroToleranceV"] == "0.5",
+                "K-series VBATT zero-voltage tolerance must default to 0.5 V.");
+            Require(settings.ContainsKey("SKMPS250VbattZeroCurrentToleranceA") &&
+                settings["SKMPS250VbattZeroCurrentToleranceA"] == "0.05",
+                "K-series VBATT zero-current tolerance must default to 0.05 A.");
         }
 
         private static void ValidateCustomerReport(string root, ResolvedTestPlan plan)
@@ -320,6 +342,56 @@ namespace Mps250StructureTests
                 if (!keepQaReport && Directory.Exists(temporaryRoot))
                     Directory.Delete(temporaryRoot, true);
             }
+        }
+
+        private static void ValidateKAndLSafetyGates(IList steps)
+        {
+            string[] safetyStepIds =
+            {
+                "MPS250.CH16.S003.K01",
+                "MPS250.CH16.S005.ACTION",
+                "MPS250.CH16.S007.ACTION"
+            };
+            foreach (string stepId in safetyStepIds)
+            {
+                object step = steps.Cast<object>().Single(x => string.Equals(
+                    Read<string>(x.GetType(), x, "StepId"),
+                    stepId,
+                    StringComparison.OrdinalIgnoreCase));
+                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                    stepId + " must be safety-critical.");
+            }
+
+            foreach (object step in steps.Cast<object>().Where(x =>
+                Read<string>(x.GetType(), x, "StepId").StartsWith(
+                    "MPS250.CH17.",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !Read<string>(x.GetType(), x, "StepId").EndsWith(
+                    ".ACTION",
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                    Read<string>(step.GetType(), step, "StepId") +
+                    " must stop and shut down on a heater result failure.");
+            }
+        }
+
+        private static void ValidateDaqStartToStartTiming()
+        {
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "MPS-250"
+            };
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            device.MeasureDaqChannelVoltageAverageAsync(
+                Mps250StationMap.McuIsoBatt,
+                3,
+                100,
+                CancellationToken.None).GetAwaiter().GetResult();
+            stopwatch.Stop();
+            Require(stopwatch.ElapsedMilliseconds < 325,
+                "DAQ intervals were added after each acquisition instead of using start-to-start timing.");
         }
 
         private static void ValidateScaledReportLimit(
@@ -479,6 +551,43 @@ namespace Mps250StructureTests
             }
         }
 
+        private static void RunSafetyGateFault(
+            string xmlPath,
+            string faultStepId,
+            string forbiddenLaterStepId)
+        {
+            string oldMode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
+            string oldFault = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", "Simulation");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", faultStepId);
+            try
+            {
+                ResolvedTestPlan plan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal);
+                var grid = new RecordingGrid();
+                var context = new TestSequenceContext
+                {
+                    SN = "MPS250-SAFETY-FAULT",
+                    TestPlan = plan,
+                    StopOnFail = false,
+                    ContinueAfterPowerCriticalFailure = true
+                };
+                bool passed = new SKMPS250Sequence(grid).RunAsync(context)
+                    .GetAwaiter().GetResult();
+                Require(!passed, faultStepId + " safety fault unexpectedly passed.");
+                Require(grid.FailedStepIds.Contains(faultStepId),
+                    faultStepId + " safety fault was not reported.");
+                Require(!grid.ObservedStepIds.Contains(forbiddenLaterStepId),
+                    faultStepId + " was bypassed by engineering continuation.");
+                Require(grid.CleanupCompleted == 6,
+                    faultStepId + " did not complete all cleanup rows.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", oldMode);
+                Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", oldFault);
+            }
+        }
+
         private static MethodInfo FindMethod(Type type, string name)
         {
             for (Type current = type; current != null; current = current.BaseType)
@@ -518,6 +627,7 @@ namespace Mps250StructureTests
             public int RowCount => 1000;
             public int CleanupCompleted { get; private set; }
             public HashSet<string> FailedStepIds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            public HashSet<string> ObservedStepIds { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public Task<bool> IsRowSelectedAsync(int rowIndex) => Task.FromResult(true);
             public Task<bool> IsStepSelectedAsync(string stepId) => Task.FromResult(true);
             public Task SetValueAsync(int channelIndex, int rowIndex, string value) => Task.CompletedTask;
@@ -530,6 +640,7 @@ namespace Mps250StructureTests
             public Task ScrollToStepAsync(string stepId, int durationMs = 150) => Task.CompletedTask;
             public Task SetValueAndStatusByStepIdAsync(int channelIndex, string stepId, string value, StepExecutionStatus status)
             {
+                ObservedStepIds.Add(stepId);
                 if (status == StepExecutionStatus.Failed) FailedStepIds.Add(stepId);
                 if (stepId.StartsWith(Mps250GroupIds.Cleanup + ".", StringComparison.OrdinalIgnoreCase) &&
                     (status == StepExecutionStatus.Passed || status == StepExecutionStatus.PassedAfterRetry)) CleanupCompleted++;
