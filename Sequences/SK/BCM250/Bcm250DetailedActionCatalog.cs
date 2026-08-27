@@ -82,7 +82,7 @@ namespace TestPlatform.TestSequences
                 Sk250TestSetpoints.Bcm250.MpsBoardVoltage,
                 Sk250TestSetpoints.Bcm250.MpsBoardCurrent,
                 false);
-            Action(items, 8, "2 闭合RL4后开启ANS/MPS板电源", Bcm250ActionKind.SafeAnsPowerOn, "7,275,1", true);
+            Action(items, 8, "2 闭合RL4后开启ANS/MPS板电源并等待2000ms稳定", Bcm250ActionKind.SafeAnsPowerOn, "7,275,1", true);
             Daq(items, 8, "B01", "3.I 测量+5V DAQ CH01", Bcm250StationMap.FiveVoltDaqChannel);
             Daq(items, 8, "B02", "3.II 测量+VCC DAQ CH02", Bcm250StationMap.VccDaqChannel);
             Daq(items, 8, "B03", "3.III 测量-VEE DAQ CH03", Bcm250StationMap.VeeDaqChannel);

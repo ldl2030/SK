@@ -105,8 +105,8 @@ namespace TestPlatform.TestSequences
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
                 AlwaysRun = action.AlwaysRun,
-                SafetyCritical = IsSafetyCritical(action),
-                PowerCritical = IsPowerCritical(action),
+                SafetyCritical = IsSafetyCritical(action) && !IsFinalChapterResult(action),
+                PowerCritical = IsPowerCritical(action) && !IsFinalChapterResult(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps250ActionKind.Cleanup
             };
             step.Action = token => ExecuteActionAsync(step, context, device, action, token);
@@ -277,7 +277,8 @@ namespace TestPlatform.TestSequences
                 };
             }
 
-            if (action.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline)
+            if (action.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline ||
+                action.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline)
             {
                 int relayId = ParseInt(action.Argument);
                 bool baselineReady = await device.PrepareMpsVbattBaselineAsync(
@@ -327,9 +328,18 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.DaqVoltage:
                 case Mps250ActionKind.DaqAverageVoltage:
                 case Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline:
-                    return ScaleVoltage(await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token), unit);
+                    return ScaleVoltage(await ReadDaqAverageAsync(device, action.Channel, ResolveAverageSampleCount(action), action.SampleIntervalMs, token), unit);
+                case Mps250ActionKind.DaqTimedWindowAverageVoltage:
+                case Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline:
+                    return ScaleVoltage(
+                        await device.MeasureDaqChannelVoltageWindowAverageAsync(
+                            action.Channel,
+                            (Math.Max(2, action.SampleCount) - 1) * action.SampleIntervalMs,
+                            action.SampleIntervalMs,
+                            token),
+                        unit);
                 case Mps250ActionKind.DaqShuntCurrent:
-                    return await ReadDaqAverageAsync(device, action.Channel, action.SampleCount, action.SampleIntervalMs, token) / action.Scale * 1000.0;
+                    return await ReadDaqAverageAsync(device, action.Channel, ResolveAverageSampleCount(action), action.SampleIntervalMs, token) / action.Scale * 1000.0;
                 case Mps250ActionKind.DaqResistance:
                     return await device.MeasureDaqChannelResistanceAsync(action.Channel);
                 case Mps250ActionKind.IgnitionRamp:
@@ -337,7 +347,7 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.ComputedGain:
                     return await ComputeGainAsync(device, context, action);
                 default:
-                    return await ReadMbdAverageAsync(device, action.Argument, action.SampleCount, action.SampleIntervalMs, token);
+                    return await ReadMbdAverageAsync(device, action.Argument, ResolveAverageSampleCount(action), action.SampleIntervalMs, token);
             }
         }
 
@@ -358,6 +368,8 @@ namespace TestPlatform.TestSequences
                 case Mps250ActionKind.DaqVoltage:
                 case Mps250ActionKind.DaqAverageVoltage:
                 case Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline:
+                case Mps250ActionKind.DaqTimedWindowAverageVoltage:
+                case Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline:
                 case Mps250ActionKind.DaqShuntCurrent:
                 case Mps250ActionKind.DaqResistance:
                 case Mps250ActionKind.IgnitionRamp:
@@ -380,9 +392,32 @@ namespace TestPlatform.TestSequences
                 return true;
             }
 
-            // Heater feedback/current failures must never be bypassed by the
-            // engineering "continue after power-critical failure" option.
-            return action.Chapter == 17 && action.IsResult;
+            return false;
+        }
+
+        private static bool IsFinalChapterResult(Mps250ActionDefinition action)
+        {
+            return action.IsResult && (action.Chapter == 16 || action.Chapter == 17);
+        }
+
+        private static int ResolveAverageSampleCount(Mps250ActionDefinition action)
+        {
+            if (action.SampleCount != 16 || IsPwmSamplingChapter(action.Chapter))
+                return Math.Max(1, action.SampleCount);
+
+            int configured;
+            return int.TryParse(
+                       System.Configuration.ConfigurationManager.AppSettings["SKMPSNonPwmAverageSampleCount"],
+                       NumberStyles.Integer,
+                       CultureInfo.InvariantCulture,
+                       out configured) && configured > 0
+                ? configured
+                : 16;
+        }
+
+        private static bool IsPwmSamplingChapter(int chapter)
+        {
+            return chapter == 11 || chapter == 13 || chapter == 16 || chapter == 17;
         }
 
         private static async Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)

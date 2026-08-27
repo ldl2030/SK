@@ -512,6 +512,9 @@ namespace TestPlatform
                 }
                 else if (type == 0x02)
                 {
+                    if (count != 2 || record.Length < 6)
+                        throw new InvalidDataException(
+                            $"HEX第{lineNumber}行扩展段地址记录长度无效，应为2字节。");
                     uint segment = (uint)((record[4] << 8) | record[5]) << 4;
                     // Legacy station HEX files may emit a redundant zero segment
                     // immediately after selecting 0x08000000. Preserve Flash base.
@@ -520,6 +523,9 @@ namespace TestPlatform
                 }
                 else if (type == 0x04)
                 {
+                    if (count != 2 || record.Length < 6)
+                        throw new InvalidDataException(
+                            $"HEX第{lineNumber}行扩展线性地址记录长度无效，应为2字节。");
                     addressBase = (uint)((record[4] << 8) | record[5]) << 16;
                     if (addressBase == allowedStart)
                         flashBaseSeen = true;

@@ -84,7 +84,10 @@ namespace Bcm125StructureTests
                 ValidateXmlParameters(executableDefinitions);
                 ValidateDependencies(plan.Definition);
                 ValidateInstrumentMapping();
+                ValidateMbdResponseCleaning();
                 ValidateXmlParameterAuthority(steps);
+                ValidateResetFloatingPointAndSt2Wait(steps);
+                ValidatePowerResultFailureDoesNotBypassPolicy(steps);
                 ValidatePowerSafety();
                 ValidateAllActionSafety(steps, executableDefinitions);
 
@@ -165,7 +168,7 @@ namespace Bcm125StructureTests
                 }
             }
 
-            Require(delayCount == 139, $"Expected 139 XML delay rows, got {delayCount}.");
+            Require(delayCount == 140, $"Expected 140 XML delay rows, got {delayCount}.");
             Require(numericCount == 182, $"Expected 182 numeric XML rows, got {numericCount}.");
         }
 
@@ -223,6 +226,58 @@ namespace Bcm125StructureTests
                 "Strongly typed charging result identifiers are incomplete or duplicated.");
         }
 
+        private static void ValidateMbdResponseCleaning()
+        {
+            string canResponse =
+                "015 = 99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,00 | Ready.\r\n" +
+                "000054 chars answered.\r\nReady.\r\n";
+            int[] canValues = MbdResponseParser.ParseIntegerVector("R15", canResponse, 16);
+            Require(canValues.Length == 16 && canValues[15] == 0,
+                "MBD CAN vector cleanup did not preserve the final 00 value.");
+
+            string version = MbdResponseParser.ParsePayloadText(
+                "R0",
+                "000 = stcu_UP125_V8 | Ready.\r\n000020 chars answered.\r\nReady.\r\n");
+            Require(string.Equals(version, "stcu_UP125_V8", StringComparison.Ordinal),
+                "MBD text payload cleanup retained terminal metadata.");
+
+            double runningTime = MbdResponseParser.ParseScalar(
+                "R10",
+                "010 = 0.953 | Ready.\r\nReady.\r\n");
+            Require(Math.Abs(runningTime - 0.953) < 0.000001,
+                "MBD scalar cleanup changed the floating-point running time.");
+
+            string responseError;
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "W76=1",
+                    "READ ONLY ERROR: 076 = 0 | Ready.\r\n",
+                    out responseError) &&
+                string.Equals(responseError, "READ ONLY ERROR", StringComparison.Ordinal),
+                "MBD READ ONLY ERROR was incorrectly accepted as a successful write.");
+        }
+
+        private static void ValidateResetFloatingPointAndSt2Wait(IList steps)
+        {
+            object runningTimeStep = FindStep(steps, "BCM125.CH12.S007.R10");
+            object runningTimeResult = InvokeStep(runningTimeStep.GetType(), runningTimeStep);
+            double? numericValue = Read<double?>(
+                runningTimeResult.GetType(),
+                runningTimeResult,
+                "NumericValue");
+            Require(numericValue.HasValue &&
+                    Math.Abs(numericValue.Value - Math.Round(numericValue.Value)) > 0.001,
+                "BCM125 reset running time was truncated instead of retaining decimals.");
+
+            object waitStep = FindStep(steps, "BCM125.CH12.S015.ACTION");
+            TestPlanStepDefinition waitDefinition = Read<TestPlanStepDefinition>(
+                waitStep.GetType(),
+                waitStep,
+                "PlanDefinition");
+            Require(waitDefinition.DelayMs == 3000,
+                "BCM125 ST2 pre-reset wait is not controlled by XML DelayMs=3000.");
+        }
+
         private static void ValidateXmlParameterAuthority(IList steps)
         {
             object numericStep = FindStep(steps, "BCM125.CH08.S003.B01");
@@ -245,7 +300,12 @@ namespace Bcm125StructureTests
                     Type type = step.GetType();
                     TestPlanStepDefinition definition =
                         Read<TestPlanStepDefinition>(type, step, "PlanDefinition");
-                    return definition != null && definition.DelayMs.HasValue;
+                    return definition != null &&
+                           definition.DelayMs.HasValue &&
+                           Regex.IsMatch(
+                               definition.Name ?? string.Empty,
+                               @"(?:等待|wait)\s*\d+\s*ms",
+                               RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
                 });
             Type delayType = delayStep.GetType();
             TestPlanStepDefinition delayDefinition =
@@ -260,6 +320,45 @@ namespace Bcm125StructureTests
                     StringComparison.Ordinal),
                 "Changing XML DelayMs did not change the delay action result.");
             delayDefinition.DelayMs = originalDelay;
+        }
+
+        private static void ValidatePowerResultFailureDoesNotBypassPolicy(IList steps)
+        {
+            Require(
+                _simulationDevice.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(),
+                "Cannot reset BCM125 simulation power before failure-policy validation.");
+
+            object powerOnStep = FindStep(steps, "BCM125.CH08.S002.ACTION");
+            object powerOnResult = InvokeStep(powerOnStep.GetType(), powerOnStep);
+            Require(
+                Read<bool>(powerOnResult.GetType(), powerOnResult, "IsPass"),
+                "BCM125 CH8 power-on/stability step failed in simulation.");
+
+            object resultStep = FindStep(steps, "BCM125.CH08.S003.B01");
+            Type resultType = resultStep.GetType();
+            TestPlanStepDefinition definition =
+                Read<TestPlanStepDefinition>(resultType, resultStep, "PlanDefinition");
+            double? originalLower = definition.LowerLimit;
+            double? originalUpper = definition.UpperLimit;
+            definition.LowerLimit = 100000;
+            definition.UpperLimit = 100001;
+            int traceCountBefore = _simulationDevice.GetPowerSafetyTrace().Length;
+
+            object failedResult = InvokeStep(resultType, resultStep);
+            Require(
+                !Read<bool>(failedResult.GetType(), failedResult, "IsPass"),
+                "BCM125 CH8 forced result failure unexpectedly passed.");
+            string[] traceAfter = _simulationDevice.GetPowerSafetyTrace();
+            Require(
+                !traceAfter.Skip(traceCountBefore).Any(x =>
+                    string.Equals(x, "RELAY 7 OPEN", StringComparison.Ordinal)),
+                "BCM125 result step bypassed the common failure policy and opened RL4.");
+
+            definition.LowerLimit = originalLower;
+            definition.UpperLimit = originalUpper;
+            Require(
+                _simulationDevice.DisableAnsThenOpenRl4Async(7).GetAwaiter().GetResult(),
+                "Cannot restore BCM125 simulation power after failure-policy validation.");
         }
 
         private static object FindStep(IList steps, string stepId)

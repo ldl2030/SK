@@ -142,10 +142,10 @@ namespace TestPlatform.TestSequences
             Cmd(x, 14, "14.4 设置主开关 W101=700", "W101=700");
             Cmd(x, 14, "14.5 设置主开关 W101=200", "W101=200");
             A(x, 14, "14.6 文档标记为Removed", Mps250ActionKind.DocumentedBoundary); Wait(x, 14, "14.7 等待600ms");
-            DaqAvg(x, 14, "I01", "14.8 U24.7采样16次/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 14, "I01", "14.8 U24.7按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100);
             Mbd(x, 14, "I02", "14.9 读取R81 st_westngh", "R81");
             Cmd(x, 14, "14.10 置位west_cmd W95=1", "W95=1"); Wait(x, 14, "14.11 等待600ms");
-            DaqAvg(x, 14, "I03", "14.12 U24.7急停后采样16次/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 14, "I03", "14.12 U24.7急停后按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100);
             Mbd(x, 14, "I04", "14.13 读取R81 mcu_west_stat", "R81");
             Cmd(x, 14, "14.14 关闭主开关 W101=0", "W101=0"); Cmd(x, 14, "14.15 清除west_cmd W95=0", "W95=0");
             Wait(x, 14, "14.16 等待200ms"); Cmd(x, 14, "14.17 关闭pmos_sw_mcu W96=5", "W96=5");
@@ -172,14 +172,14 @@ namespace TestPlatform.TestSequences
         private static void AddChapter16(List<Mps250ActionDefinition> x)
         {
             Cmd(x, 16, "16.1 发送EXIT", "EXIT"); Cmd(x, 16, "16.2 发送DIAG ON", "DIAG ON");
-            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105",
-                Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline, "6", Mps250StationMap.McuIsoBatt, 0, 16, 500);
+            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后内部定时采样8秒/100ms DAQ105",
+                Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline, "6", Mps250StationMap.McuIsoBatt, 0, 81, 100);
             Vbatt(x, 16, "16.4 预设VBATT 0V/0.1A OVP300并保持输出关闭", Sk250TestSetpoints.Mps250.VbattZero, false);
             A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)，输出0V并验证实测≤0.5V", Mps250ActionKind.SafeVbattConnect, "6");
-            DaqAvg(x, 16, "K02", "16.6 MCU_ISOBATT@0V测量约8秒 DAQ105", Mps250StationMap.McuIsoBatt, 16, 500);
+            DaqWindow(x, 16, "K02", "16.6 MCU_ISOBATT@0V内部定时采样8秒/100ms DAQ105", Mps250StationMap.McuIsoBatt);
             A(x, 16, "16.7 设置VBATT 250V/0.1A OVP300并等待实测稳定", Mps250ActionKind.SetVbattAndWaitStable,
                 Sk250TestSetpoints.Mps250.VbattIsolation.ToArgument(), true);
-            DaqAvg(x, 16, "K03", "16.8 MCU_ISOBATT@250V测量约8秒 DAQ105", Mps250StationMap.McuIsoBatt, 16, 500);
+            DaqWindow(x, 16, "K03", "16.8 MCU_ISOBATT@250V内部定时采样8秒/100ms DAQ105", Mps250StationMap.McuIsoBatt);
             A(x, 16, "16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT", Mps250ActionKind.SafeVbattDisconnect, "6", false); Vbatt(x, 16, "16.10 确认VBATT保持关闭", Sk250TestSetpoints.Common.OutputOffOvp300, false);
         }
 
@@ -240,6 +240,7 @@ namespace TestPlatform.TestSequences
         private static void Mbd(List<Mps250ActionDefinition> x, int ch, string id, string name, string command) => Result(x, ch, id, name, Mps250ActionKind.MbdNumeric, command);
         private static void Daq(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqVoltage, null, channel);
         private static void DaqAvg(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel, int samples, int interval) => Result(x, ch, id, name, Mps250ActionKind.DaqAverageVoltage, null, channel, 0, samples, interval);
+        private static void DaqWindow(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqTimedWindowAverageVoltage, null, channel, 0, 81, 100);
         private static void Shunt(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel, double ohms) => Result(x, ch, id, name, Mps250ActionKind.DaqShuntCurrent, null, channel, ohms);
         private static void Resistance(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqResistance, null, channel);
         private static void Cleanup(List<Mps250ActionDefinition> x, string name, Mps250ActionKind kind, string arg, bool state) => x.Add(new Mps250ActionDefinition { Chapter = 99, Name = name, Kind = kind, Argument = arg, State = state, AlwaysRun = true });

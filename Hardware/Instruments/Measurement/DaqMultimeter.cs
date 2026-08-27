@@ -15,14 +15,14 @@ namespace TestPlatform
         private SerialPort _serialPort;
         private readonly object _lock = new object();
 
-        public void Connect(string portName, int baudRate = 9600)
+        public void Connect(string portName, int baudRate = 9600, int readTimeoutMs = 5000)
         {
             if (string.IsNullOrWhiteSpace(portName))
                 throw new ArgumentException("[DaqMultimeter] COM口号不能为空，请在设置中配置正确的串口。", nameof(portName));
             Disconnect();
             _serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One);
             _serialPort.NewLine = "\n"; // SCPI 标准换行
-            _serialPort.ReadTimeout = 3000;
+            _serialPort.ReadTimeout = Math.Max(1000, readTimeoutMs);
             _serialPort.WriteTimeout = 2000;
             _serialPort.Open();
             
@@ -256,6 +256,63 @@ namespace TestPlatform
             SendCommand("INIT");
         }
 
+        /// <summary>
+        /// Configure and start a buffered, internally timed DC-voltage scan.
+        /// The DAQ performs all trigger timing internally; the serial link is
+        /// used only for setup and for one bulk fetch after acquisition.
+        /// </summary>
+        public void StartTimedVoltageDcScan(
+            string channelList,
+            double range,
+            double nplc,
+            double intervalSeconds,
+            int triggerCount)
+        {
+            if (string.IsNullOrWhiteSpace(channelList))
+                throw new ArgumentException("DAQ timed scan channel list is required.", nameof(channelList));
+            if (range <= 0)
+                throw new ArgumentOutOfRangeException(nameof(range));
+            if (nplc <= 0)
+                throw new ArgumentOutOfRangeException(nameof(nplc));
+            if (intervalSeconds <= 0)
+                throw new ArgumentOutOfRangeException(nameof(intervalSeconds));
+            if (triggerCount <= 1)
+                throw new ArgumentOutOfRangeException(nameof(triggerCount));
+
+            RecoverVoltageDcMeasurement();
+            SendCommand(
+                $"CONF:VOLT:DC {range.ToString(CultureInfo.InvariantCulture)},DEF,({channelList})");
+            SendCommand(
+                $"VOLT:NPLC {nplc.ToString(CultureInfo.InvariantCulture)},({channelList})");
+
+            // Keep FETCH? compact enough for the 9600-baud link. The scan
+            // timing itself remains inside the DAQ and is not affected by the
+            // later serial transfer.
+            SendCommand("FORM:READ:UNIT OFF");
+            SendCommand("FORM:READ:TIME OFF");
+            SendCommand("FORM:READ:CHAN OFF");
+            SendCommand("FORM:READ:ALAR OFF");
+            SetScanList(channelList);
+            SetChannelDelay(channelList, 0);
+            SetTriggerSource("TIM");
+            SetTriggerTimer((float)intervalSeconds);
+            SetTriggerCount(triggerCount);
+            StartScan();
+        }
+
+        public double[] FetchTimedVoltageDcScan(int expectedCount, out string rawResponse)
+        {
+            rawResponse = FetchAllData();
+            return ParseMeasurementValues(rawResponse, expectedCount);
+        }
+
+        public void RestoreAfterTimedVoltageDcScan()
+        {
+            RecoverVoltageDcMeasurement();
+            SetTriggerSource("IMM");
+            SetTriggerCount(1);
+        }
+
         // ================== 数据回读与统计 ==================
 
         /// <summary>
@@ -402,6 +459,37 @@ namespace TestPlatform
                 return val;
             }
             return 0.0;
+        }
+
+        private static double[] ParseMeasurementValues(string response, int expectedCount)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+                throw new InvalidOperationException("DAQ buffered scan returned no measurements.");
+
+            string[] fields = response.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            var values = new List<double>(fields.Length);
+            foreach (string field in fields)
+            {
+                double value;
+                if (!double.TryParse(
+                        field.Trim(),
+                        NumberStyles.Float | NumberStyles.AllowThousands,
+                        CultureInfo.InvariantCulture,
+                        out value))
+                {
+                    throw new FormatException(
+                        "DAQ buffered scan contains an invalid measurement: " + field.Trim());
+                }
+                values.Add(value);
+            }
+
+            if (values.Count != expectedCount)
+            {
+                throw new InvalidOperationException(
+                    $"DAQ buffered scan expected {expectedCount} measurements but returned {values.Count}.");
+            }
+
+            return values.ToArray();
         }
 
         // ================== 继电器控制 (301-320) ==================

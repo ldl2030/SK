@@ -369,9 +369,10 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>8.2 FIRST START-UP-闭合RL4后开启MPS板电源</Name>
+    <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Unit>ms</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH08.S003.B01</StepId>
@@ -550,7 +551,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9.1 检查编程相关COM连接</Name>
+    <Name>9.1 检查编程电源、负载及TTL连接（MBD上电后识别）</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -636,7 +637,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9.6 BCM1 发送EXIT到MBD</Name>
+    <Name>9.6 BCM1 上电后自动识别USB-B/MBD并发送EXIT</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -721,7 +722,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>C01 BCM1 跳过TTL实际烧录并保存结果</Name>
+    <Name>C01 BCM1 TTL烧录BCM_125_V8.hex（内置STM32 UART Bootloader）</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -877,7 +878,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>C02 BCM2 跳过TTL实际烧录并保存结果</Name>
+    <Name>C02 BCM2 TTL烧录BCM_125_V8.hex（内置STM32 UART Bootloader）</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -1384,10 +1385,11 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>12.15 ST2发送EXIT返回MBD终端</Name>
+    <Name>12.15 ST2等待3000ms后发送EXIT返回MBD终端</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
-    <Unit></Unit>
+    <Unit>ms</Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM125.CH12.S016.ACTION</StepId>
@@ -7680,7 +7682,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.14 ST1 发送DIAG ON到MBD</Name>
+    <Name>23.14 ST1 发送DIAG ON并发送W94=1闭合MBD String继电器，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7949,7 +7952,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.34 ST1 发送W69=0打开CCB</Name>
+    <Name>23.34 ST1 发送W69=0打开CCB，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8215,7 +8219,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.51 ST1 发送ACT-&gt;FLASH保存参数</Name>
+    <Name>23.51 ST1 仅在Q12-Q16计算及写入全部通过后发送ACT-&gt;FLASH</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8315,7 +8319,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.59 ST1 发送EXIT返回MBD终端</Name>
+    <Name>23.59 ST1 发送EXIT并发送W94=0释放MBD String继电器，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8443,7 +8448,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.14 ST2 发送DIAG ON到MBD</Name>
+    <Name>23.14 ST2 发送DIAG ON并发送W91=1闭合MBD String继电器，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8712,7 +8718,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.34 ST2 发送W69=0打开CCB</Name>
+    <Name>23.34 ST2 发送W69=0打开CCB，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8978,7 +8985,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.51 ST2 发送ACT-&gt;FLASH保存参数</Name>
+    <Name>23.51 ST2 仅在Q28-Q32计算及写入全部通过后发送ACT-&gt;FLASH</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -9078,7 +9085,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.59 ST2 发送EXIT返回MBD终端</Name>
+    <Name>23.59 ST2 发送EXIT并发送W91=0释放MBD String继电器，稳定500ms</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

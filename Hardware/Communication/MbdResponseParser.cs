@@ -36,13 +36,15 @@ namespace TestPlatform
             NewErrorPattern("UNKNOWN COMMAND", @"\b(?:UNKNOWN|UNRECOGNIZED)\s+(?:COMMAND|CMD)\b"),
             NewErrorPattern("SYNTAX ERROR", @"\bSYNTAX\s*[:\-]?\s*(?:ERROR|ERR)\b"),
             NewErrorPattern("WRITE ERROR", @"\bWRITE\s*[:\-]?\s*(?:ERROR|ERR)\b"),
+            NewErrorPattern("READ ONLY ERROR", @"\bREAD\s+ONLY\s+ERROR\b"),
+            NewErrorPattern("DIAGNOSTIC MODE IS OFF", @"\bDIAGNOSTIC\s+MODE\s+IS\s+OFF\b"),
             NewErrorPattern("FAILED", @"\b(?:FAILED|FAIL)\b")
         };
 
         public static double ParseScalar(string command, string response)
         {
             Match line = GetRegisterLine(command, response);
-            Match number = NumberRegex.Match(line.Groups["payload"].Value);
+            Match number = NumberRegex.Match(CleanPayload(line.Groups["payload"].Value));
             if (!number.Success)
             {
                 throw new InvalidOperationException(
@@ -55,12 +57,7 @@ namespace TestPlatform
         public static string ParsePayloadText(string command, string response)
         {
             Match line = GetRegisterLine(command, response);
-            string payload = line.Groups["payload"].Value;
-            int metadataIndex = payload.IndexOf(';');
-            if (metadataIndex >= 0)
-                payload = payload.Substring(0, metadataIndex);
-
-            payload = payload.Trim();
+            string payload = CleanPayload(line.Groups["payload"].Value);
             if (payload.Length == 0)
             {
                 throw new InvalidOperationException(
@@ -70,13 +67,28 @@ namespace TestPlatform
             return payload;
         }
 
+        private static string CleanPayload(string payload)
+        {
+            payload = payload ?? string.Empty;
+            int metadataIndex = payload.IndexOf(';');
+            if (metadataIndex >= 0)
+                payload = payload.Substring(0, metadataIndex);
+
+            payload = Regex.Replace(
+                payload,
+                @"\s*\|\s*Ready\.?\s*$",
+                string.Empty,
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            return payload.Trim().Trim('\0');
+        }
+
         public static int[] ParseIntegerVector(
             string command,
             string response,
             int expectedCount)
         {
             Match line = GetRegisterLine(command, response);
-            string[] fields = line.Groups["payload"].Value
+            string[] fields = CleanPayload(line.Groups["payload"].Value)
                 .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             var values = new List<int>();
             foreach (string field in fields)

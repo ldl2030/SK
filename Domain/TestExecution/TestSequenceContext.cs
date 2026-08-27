@@ -39,6 +39,12 @@ namespace TestPlatform.TestSequences
         /// </summary>
         public Func<CancellationToken, Task> WaitIfPausedAsync { get; set; }
 
+        /// <summary>
+        /// Optional engineering-mode gate invoked once before a visible test step.
+        /// The host uses the stable StepId to implement breakpoints and single-step.
+        /// </summary>
+        public Func<string, CancellationToken, Task> WaitBeforeStepAsync { get; set; }
+
         public bool StopOnFail { get; set; }
 
         public bool PromptOnFail { get; set; }

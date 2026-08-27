@@ -178,13 +178,13 @@ namespace TestPlatform.TestSequences
             Cmd(x, 14, "14.7 设置主开关1 W101=200", "W101=200");
             Cmd(x, 14, "14.8 设置主开关2 W295=200", "W295=200");
             Wait(x, 14, "14.9 等待600ms");
-            DaqAvg(x, 14, "I01", "14.10 U20.7采样16次/100ms", Mps125StationMap.U20Pin7, 16, 100);
-            DaqAvg(x, 14, "I02", "14.11 U20.5采样16次/100ms", Mps125StationMap.U20Pin5, 16, 100);
+            DaqAvg(x, 14, "I01", "14.10 U20.7按配置次数采样/100ms", Mps125StationMap.U20Pin7, 16, 100);
+            DaqAvg(x, 14, "I02", "14.11 U20.5按配置次数采样/100ms", Mps125StationMap.U20Pin5, 16, 100);
             Mbd(x, 14, "I03", "14.12 读取R81 st_westngh", "R81");
             Cmd(x, 14, "14.13 置位west_cmd W95=1", "W95=1");
             Wait(x, 14, "14.14 等待600ms");
-            DaqAvg(x, 14, "I04", "14.15 U20.7急停后采样16次/100ms", Mps125StationMap.U20Pin7, 16, 100);
-            DaqAvg(x, 14, "I05", "14.16 U20.5急停后采样16次/100ms", Mps125StationMap.U20Pin5, 16, 100);
+            DaqAvg(x, 14, "I04", "14.15 U20.7急停后按配置次数采样/100ms", Mps125StationMap.U20Pin7, 16, 100);
+            DaqAvg(x, 14, "I05", "14.16 U20.5急停后按配置次数采样/100ms", Mps125StationMap.U20Pin5, 16, 100);
             Mbd(x, 14, "I06", "14.17 读取R81 mcu_west_stat", "R81");
             Cmd(x, 14, "14.18 关闭主开关1 W101=0", "W101=0");
             Cmd(x, 14, "14.19 关闭主开关2 W295=0", "W295=0");
@@ -226,13 +226,13 @@ namespace TestPlatform.TestSequences
         {
             Cmd(x, 16, "16.1 发送EXIT", "EXIT");
             Cmd(x, 16, "16.2 发送DIAG ON", "DIAG ON");
-            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105",
-                Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline, "6", Mps125StationMap.McuIsoBatt, 0, 16, 500);
+            Result(x, 16, "K01", "16.3 断开Relay_6并等待VBATT≤0.5V后内部定时采样8秒/100ms DAQ105",
+                Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline, "6", Mps125StationMap.McuIsoBatt, 0, 81, 100);
             Vbatt(x, 16, "16.4 预设VBATT 0V/0.1A OVP150并保持输出关闭", 0, 0.1, 150, false);
             A(x, 16, "16.5 在VBATT关闭时闭合Relay_6(DAQ304)，输出0V并验证实测≤0.5V", Mps125ActionKind.SafeVbattConnect, "6");
-            DaqAvg(x, 16, "K02", "16.6 MCU_ISOBATT@0V测量约8秒 DAQ105", Mps125StationMap.McuIsoBatt, 16, 500);
+            DaqWindow(x, 16, "K02", "16.6 MCU_ISOBATT@0V内部定时采样8秒/100ms DAQ105", Mps125StationMap.McuIsoBatt);
             A(x, 16, "16.7 设置VBATT 125V/0.1A OVP150并等待实测稳定", Mps125ActionKind.SetVbattAndWaitStable, Numbers(125, 0.1, 150), true);
-            DaqAvg(x, 16, "K03", "16.8 MCU_ISOBATT@125V测量约8秒 DAQ105", Mps125StationMap.McuIsoBatt, 16, 500);
+            DaqWindow(x, 16, "K03", "16.8 MCU_ISOBATT@125V内部定时采样8秒/100ms DAQ105", Mps125StationMap.McuIsoBatt);
             A(x, 16, "16.9 先关闭VBATT再断开Relay_6(DAQ304) ISOBATT_INPUT", Mps125ActionKind.SafeVbattDisconnect, "6", false);
             Vbatt(x, 16, "16.10 确认VBATT保持关闭", 0, 0, 150, false);
         }
@@ -312,6 +312,7 @@ namespace TestPlatform.TestSequences
         private static void Mbd(List<Mps125ActionDefinition> x, int ch, string id, string name, string command) => Result(x, ch, id, name, Mps125ActionKind.MbdNumeric, command);
         private static void Daq(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps125ActionKind.DaqVoltage, null, channel);
         private static void DaqAvg(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel, int samples, int interval) => Result(x, ch, id, name, Mps125ActionKind.DaqAverageVoltage, null, channel, 0, samples, interval);
+        private static void DaqWindow(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps125ActionKind.DaqTimedWindowAverageVoltage, null, channel, 0, 81, 100);
         private static void Shunt(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel, double ohms) => Result(x, ch, id, name, Mps125ActionKind.DaqShuntCurrent, null, channel, ohms);
         private static void Resistance(List<Mps125ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps125ActionKind.DaqResistance, null, channel);
 

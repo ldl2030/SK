@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -26,7 +28,25 @@ namespace TestPlatform
             };
             DispatcherUnhandledException += (s, args) =>
             {
-                MessageBox.Show($"UI线程错误：{args.Exception.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                string details = args.Exception?.ToString() ?? "未知UI异常";
+                try
+                {
+                    string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
+                    Directory.CreateDirectory(logDirectory);
+                    File.AppendAllText(
+                        Path.Combine(logDirectory, "UIUnhandled.log"),
+                        $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\r\n{details}\r\n\r\n",
+                        new UTF8Encoding(false));
+                }
+                catch
+                {
+                    // Exception logging must not recursively fail the UI thread.
+                }
+                MessageBox.Show(
+                    $"UI线程错误：{args.Exception.Message}\n\n完整调用栈已保存到 Logs\\UIUnhandled.log。",
+                    "错误",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
                 args.Handled = true; // 防止崩溃，但可能仍会退出
             };
         }

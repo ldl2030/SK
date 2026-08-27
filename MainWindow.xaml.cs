@@ -54,8 +54,19 @@ namespace TestPlatform
         private bool _updatingRuntimeGroupSummary;
         private readonly Dictionary<string, bool> _runtimeGroupExpansion =
             new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        private string _lastAutoScrollGroupHeader;
+        private readonly object _debugStepSync = new object();
+        private readonly HashSet<string> _engineeringBreakpoints =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private string _runToStepId;
+        private string _debugPendingStepId;
+        private string _debugBypassStepId;
+        private string _pauseAfterCompletedStepId;
+        private int _safePauseWaiterCount;
+        private DataGridColumn _breakpointGridColumn;
         private static readonly object LiveLogSync = new object();
+        private static readonly object LiveLogQueueSync = new object();
+        private static readonly Queue<LiveLogEntry> LiveLogQueue = new Queue<LiveLogEntry>();
+        private static int _liveLogWriterScheduled;
         private readonly object _activityLogQueueSync = new object();
         private readonly Queue<ActivityLogEntry> _activityLogQueue = new Queue<ActivityLogEntry>();
         private int _activityLogFlushScheduled;
@@ -65,6 +76,12 @@ namespace TestPlatform
         {
             public string Text { get; set; }
             public Brush Color { get; set; }
+        }
+
+        private sealed class LiveLogEntry
+        {
+            public string Path { get; set; }
+            public string Line { get; set; }
         }
 
         // 全局计时器
@@ -158,8 +175,10 @@ namespace TestPlatform
                 catch { }
             }
 
-            if (appSettings.RememberWindowPos)
-                RestoreWindowBoundsToVisibleArea();
+            // Always fit the normal window to the current usable desktop. The
+            // design size (1280x820) is taller than the work area of common
+            // 1366x768 displays once the taskbar and DPI scaling are considered.
+            RestoreWindowBoundsToVisibleArea();
 
             // 恢复上次选中的项目
             if (!string.IsNullOrEmpty(appSettings.CurrentProjectName))
@@ -184,30 +203,78 @@ namespace TestPlatform
         }
 
         /// <summary>
-        /// 将保存的窗口位置限制在当前所有显示器的可见工作区域内。
-        /// 复制到分辨率不同的测试 PC，或移除外接显示器后，窗口也不会跑到屏幕外。
+        /// 将普通窗口限制在当前主显示器扣除任务栏后的工作区域内。
+        /// 记忆窗口关闭时使用保存值，否则使用设计尺寸；两者都会随分辨率收敛。
         /// </summary>
         private void RestoreWindowBoundsToVisibleArea()
         {
-            double virtualLeft = SystemParameters.VirtualScreenLeft;
-            double virtualTop = SystemParameters.VirtualScreenTop;
-            double virtualWidth = SystemParameters.VirtualScreenWidth;
-            double virtualHeight = SystemParameters.VirtualScreenHeight;
+            Rect workArea = SystemParameters.WorkArea;
+            const double edgeMargin = 10;
+            double availableWidth = Math.Max(320, workArea.Width - edgeMargin * 2);
+            double availableHeight = Math.Max(320, workArea.Height - edgeMargin * 2);
 
-            double savedWidth = double.IsNaN(appSettings.WindowWidth) ? Width : appSettings.WindowWidth;
-            double savedHeight = double.IsNaN(appSettings.WindowHeight) ? Height : appSettings.WindowHeight;
-            double width = Math.Min(Math.Max(savedWidth, MinWidth), virtualWidth);
-            double height = Math.Min(Math.Max(savedHeight, MinHeight), virtualHeight);
+            // A low-resolution or high-DPI screen can have fewer than 640 DIPs of
+            // usable height. Keep the resize minimum inside the real work area.
+            MinWidth = Math.Min(900, availableWidth);
+            MinHeight = Math.Min(640, availableHeight);
 
-            double defaultLeft = virtualLeft + Math.Max(0, (virtualWidth - width) / 2);
-            double defaultTop = virtualTop + Math.Max(0, (virtualHeight - height) / 2);
-            double savedLeft = double.IsNaN(appSettings.WindowLeft) ? defaultLeft : appSettings.WindowLeft;
-            double savedTop = double.IsNaN(appSettings.WindowTop) ? defaultTop : appSettings.WindowTop;
+            double requestedWidth = appSettings.RememberWindowPos &&
+                                    !double.IsNaN(appSettings.WindowWidth)
+                ? appSettings.WindowWidth
+                : 1280;
+            double requestedHeight = appSettings.RememberWindowPos &&
+                                     !double.IsNaN(appSettings.WindowHeight)
+                ? appSettings.WindowHeight
+                : 820;
+            double width = Math.Min(Math.Max(requestedWidth, MinWidth), availableWidth);
+            double height = Math.Min(Math.Max(requestedHeight, MinHeight), availableHeight);
 
-            Left = Math.Min(Math.Max(savedLeft, virtualLeft), virtualLeft + virtualWidth - width);
-            Top = Math.Min(Math.Max(savedTop, virtualTop), virtualTop + virtualHeight - height);
+            double defaultLeft = workArea.Left + Math.Max(0, (workArea.Width - width) / 2);
+            double defaultTop = workArea.Top + Math.Max(0, (workArea.Height - height) / 2);
+            double requestedLeft = appSettings.RememberWindowPos &&
+                                   !double.IsNaN(appSettings.WindowLeft)
+                ? appSettings.WindowLeft
+                : defaultLeft;
+            double requestedTop = appSettings.RememberWindowPos &&
+                                  !double.IsNaN(appSettings.WindowTop)
+                ? appSettings.WindowTop
+                : defaultTop;
+
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = Math.Min(
+                Math.Max(requestedLeft, workArea.Left + edgeMargin),
+                workArea.Right - edgeMargin - width);
+            Top = Math.Min(
+                Math.Max(requestedTop, workArea.Top + edgeMargin),
+                workArea.Bottom - edgeMargin - height);
             Width = width;
             Height = height;
+            UpdateResponsiveWindowLayout(height);
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateResponsiveWindowLayout(e.NewSize.Height);
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            UpdateResponsiveWindowLayout(ActualHeight);
+        }
+
+        private void UpdateResponsiveWindowLayout(double windowHeight)
+        {
+            if (activityLogRow == null || double.IsNaN(windowHeight) || windowHeight <= 0)
+                return;
+
+            // The table/result area is the primary workspace. In a shorter normal
+            // window reduce the activity log instead of letting bottom controls fall
+            // outside the visible client area. Maximized/design-size layout stays 130.
+            activityLogRow.Height = new GridLength(
+                WindowState == WindowState.Maximized ? 130 :
+                windowHeight < 700 ? 80 :
+                windowHeight < 800 ? 100 :
+                130);
         }
 
         private void SaveSettings()
@@ -333,6 +400,13 @@ namespace TestPlatform
         private async Task<bool> EnsureComPortsInitializedAsync(IProgress<string> progress = null)
         {
             var requiredProps = GetRequiredComPortsForCurrentProject();
+            bool skIdentityDiscoveryEnabled =
+                _projectConfigs.TryGetValue(ProjectSettings.CurrentProjectName, out var currentConfig) &&
+                string.Equals(currentConfig.ComInitKey, "SK441Device", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(
+                    System.Configuration.ConfigurationManager.AppSettings["SKAutoDiscoverPorts"],
+                    "false",
+                    StringComparison.OrdinalIgnoreCase);
 
             if (requiredProps.Count == 0)
             {
@@ -341,7 +415,11 @@ namespace TestPlatform
                 return true;
             }
 
-            // 检查是否所有需要的串口都已配置
+            // A COM number copied from another PC is only a hint. It must exist on
+            // this PC, and SK stations must complete one identity scan per process.
+            var availablePorts = new HashSet<string>(
+                SerialPort.GetPortNames(),
+                StringComparer.OrdinalIgnoreCase);
             bool allConfigured = true;
             foreach (string propName in requiredProps)
             {
@@ -352,15 +430,23 @@ namespace TestPlatform
                     return false;
                 }
                 string value = prop.GetValue(null) as string;
-                if (string.IsNullOrEmpty(value))
+                if (string.IsNullOrWhiteSpace(value) ||
+                    (!string.Equals(value, "SIMULATION", StringComparison.OrdinalIgnoreCase) &&
+                     !availablePorts.Contains(value)))
                 {
                     allConfigured = false;
-                    AppendLog($"串口 {propName} 未配置", LogInfo);
+                    AppendLog(
+                        $"串口 {propName} 未配置或在当前电脑不可用：{value ?? "<空>"}",
+                        LogInfo);
                     break;
                 }
             }
-            if (allConfigured)
+            if (allConfigured && (!skIdentityDiscoveryEnabled || _comPortsReady))
+            {
+                _comPortsReady = true;
+                UpdateTestControlsState();
                 return true;
+            }
 
             if (hasAttemptedComInit)
             {
@@ -369,8 +455,14 @@ namespace TestPlatform
             }
 
             hasAttemptedComInit = true;
-            AppendLog("首次测试，开始自动识别串口...", LogInfo);
-            progress?.Report("开始自动识别串口...");
+            AppendLog(
+                skIdentityDiscoveryEnabled
+                    ? "首次进入SK工位，开始按设备身份校验并识别串口..."
+                    : "首次测试，开始自动识别串口...",
+                LogInfo);
+            progress?.Report(skIdentityDiscoveryEnabled
+                ? "开始校验并识别SK工位串口..."
+                : "开始自动识别串口...");
 
             if (_projectConfigs.TryGetValue(ProjectSettings.CurrentProjectName, out var config))
             {
@@ -402,7 +494,11 @@ namespace TestPlatform
         private List<string> GetRequiredComPortsForCurrentProject()
         {
             if (_projectConfigs.TryGetValue(ProjectSettings.CurrentProjectName, out var config))
-                return config.RequiredComPorts;
+            {
+                return (config.RequiredComPorts ?? new List<string>())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
             return new List<string>();
         }
 
@@ -424,7 +520,7 @@ namespace TestPlatform
                 return true;
             }
 
-            progress?.Report("正在读取SK工位预设COM口；仅对未配置设备自动扫描...");
+            progress?.Report("正在读取SK工位预设COM口并按设备身份扫描校验...");
             var requiredPorts = new HashSet<string>(
                 GetRequiredComPortsForCurrentProject(),
                 StringComparer.OrdinalIgnoreCase);
@@ -590,7 +686,13 @@ namespace TestPlatform
 
             // 淡出覆盖层
             var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(300));
-            fadeOut.Completed += (s, _) => SplashOverlay.Visibility = Visibility.Collapsed;
+            fadeOut.Completed += (s, _) =>
+            {
+                SplashOverlay.Visibility = Visibility.Collapsed;
+                SplashOverlay.BeginAnimation(OpacityProperty, null);
+                SplashRingRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+                SplashGearRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+            };
             SplashOverlay.BeginAnimation(OpacityProperty, fadeOut);
         }
         private async Task InitializeApplicationAsync(IProgress<(int percent, string message)> progress)
@@ -678,12 +780,12 @@ namespace TestPlatform
         private void BuildDataGridColumns(int channelCount)
         {
             dataGridView1.Columns.Clear();
-            _lastAutoScrollGroupHeader = null;
             ProjectSettings.testDataTable = new DataTable();
             ProjectSettings.testDataTable.RowChanged += RuntimeTreeDataTable_RowChanged;
 
             // 固定列
             ProjectSettings.testDataTable.Columns.Add(new DataColumn("Select", typeof(bool)) { Caption = "选择" });
+            ProjectSettings.testDataTable.Columns.Add(new DataColumn("BreakpointMark", typeof(string)));
             ProjectSettings.testDataTable.Columns.Add(new DataColumn("StepId", typeof(string)));
             ProjectSettings.testDataTable.Columns.Add(new DataColumn("GroupId", typeof(string)));
             ProjectSettings.testDataTable.Columns.Add(new DataColumn("GroupHeader", typeof(string)));
@@ -715,6 +817,23 @@ namespace TestPlatform
             dataGridView1.ItemsSource = groupedView;
 
             // 构建 DataGrid 列
+            _breakpointGridColumn = new DataGridTextColumn
+            {
+                Header = "断点",
+                Binding = new Binding("BreakpointMark"),
+                Width = 48,
+                Visibility = GlobalState.IsLoggedIn ? Visibility.Visible : Visibility.Collapsed,
+                ElementStyle = new Style(typeof(TextBlock))
+                {
+                    Setters =
+                    {
+                        new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Center),
+                        new Setter(TextBlock.ForegroundProperty, StatusError),
+                        new Setter(TextBlock.FontWeightProperty, FontWeights.Bold)
+                    }
+                }
+            };
+            dataGridView1.Columns.Add(_breakpointGridColumn);
             dataGridView1.Columns.Add(new DataGridCheckBoxColumn { Header = "选择", Binding = new System.Windows.Data.Binding("Select"), Width = 50 });
             AddTextColumn("TestItem", "测试项", 150);
             AddTextColumn("UpperLimit", "上限", 100);
@@ -900,11 +1019,6 @@ namespace TestPlatform
                     DataRow targetDataRow = table.Rows[rowIndex];
                     string groupHeader =
                         targetDataRow["GroupHeader"]?.ToString() ?? string.Empty;
-                    bool groupChanged = !string.Equals(
-                        _lastAutoScrollGroupHeader,
-                        groupHeader,
-                        StringComparison.OrdinalIgnoreCase);
-                    _lastAutoScrollGroupHeader = groupHeader;
                     EnsureRuntimeGroupExpanded(groupHeader);
                     _lastScrolledRow = rowIndex;
 
@@ -914,29 +1028,10 @@ namespace TestPlatform
                     if (item == null)
                         return;
 
-                    ICollectionView groupedView = dataGridView1.ItemsSource as ICollectionView;
-                    CollectionViewGroup targetGroup = groupedView?.Groups?
-                        .OfType<CollectionViewGroup>()
-                        .FirstOrDefault(group => string.Equals(
-                            group.Name?.ToString(),
-                            groupHeader,
-                            StringComparison.OrdinalIgnoreCase));
-                    if (targetGroup != null && groupChanged)
-                    {
-                        dataGridView1.ScrollIntoView(targetGroup);
-                        dataGridView1.UpdateLayout();
-
-                        GroupItem groupItem = dataGridView1.ItemContainerGenerator
-                            .ContainerFromItem(targetGroup) as GroupItem;
-                        Expander groupExpander = FindVisualChildren<Expander>(groupItem)
-                            .FirstOrDefault();
-                        if (groupExpander != null)
-                        {
-                            groupExpander.IsExpanded = true;
-                            groupExpander.UpdateLayout();
-                        }
-                    }
-
+                    // Scroll only the final row. Forcing a grouped container layout
+                    // and immediately scrolling a second item can invalidate the
+                    // DataGridCellsPanel's virtualized column range while WPF is
+                    // still arranging the previous group.
                     dataGridView1.ScrollIntoView(item);
                     dataGridView1.SelectedItem = item;
                 }
@@ -1441,6 +1536,7 @@ namespace TestPlatform
             if (!ProjectSettings.Channels.Any(c => c.IsBusy))
             {
                 _stopInProgress = false;
+                ClearEngineeringDebugState(clearBreakpoints: false);
                 StopGlobalTimer();
             }
 
@@ -2148,7 +2244,7 @@ namespace TestPlatform
             if (Interlocked.Exchange(ref _activityLogFlushScheduled, 1) != 0)
                 return;
 
-            Task.Delay(75).ContinueWith(_ =>
+            Task.Delay(150).ContinueWith(_ =>
             {
                 try
                 {
@@ -2166,7 +2262,7 @@ namespace TestPlatform
         private void FlushActivityLogQueue()
         {
             const int maximumBatchSize = 200;
-            const int maximumVisibleEntries = 1500;
+            const int maximumVisibleEntries = 1000;
             var batch = new List<ActivityLogEntry>(maximumBatchSize);
             lock (_activityLogQueueSync)
             {
@@ -2211,23 +2307,60 @@ namespace TestPlatform
 
         private static void WriteLiveLog(string level, string message)
         {
+            DateTime now = DateTime.Now;
+            string logDirectory = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "Logs");
+            var entry = new LiveLogEntry
+            {
+                Path = Path.Combine(
+                    logDirectory,
+                    $"Live_{now:yyyyMMdd}.log"),
+                Line = $"{now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}{Environment.NewLine}"
+            };
+            lock (LiveLogQueueSync)
+                LiveLogQueue.Enqueue(entry);
+            ScheduleLiveLogWrite();
+        }
+
+        private static void ScheduleLiveLogWrite()
+        {
+            if (Interlocked.Exchange(ref _liveLogWriterScheduled, 1) != 0)
+                return;
+            ThreadPool.QueueUserWorkItem(_ => FlushLiveLogQueue());
+        }
+
+        private static void FlushLiveLogQueue()
+        {
+            var batch = new List<LiveLogEntry>(256);
+            lock (LiveLogQueueSync)
+            {
+                while (batch.Count < 256 && LiveLogQueue.Count > 0)
+                    batch.Add(LiveLogQueue.Dequeue());
+            }
+
             try
             {
-                string logDirectory = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory,
-                    "Logs");
-                Directory.CreateDirectory(logDirectory);
-                string logPath = Path.Combine(
-                    logDirectory,
-                    $"Live_{DateTime.Now:yyyyMMdd}.log");
-                string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}{Environment.NewLine}";
-                lock (LiveLogSync)
-                    File.AppendAllText(logPath, line, new UTF8Encoding(false));
+                foreach (IGrouping<string, LiveLogEntry> fileBatch in batch.GroupBy(x => x.Path))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileBatch.Key));
+                    string content = string.Concat(fileBatch.Select(x => x.Line));
+                    lock (LiveLogSync)
+                        File.AppendAllText(fileBatch.Key, content, new UTF8Encoding(false));
+                }
             }
             catch
             {
                 // 实时日志不得影响测试流程，也不能递归调用 AppendLog。
             }
+
+            Interlocked.Exchange(ref _liveLogWriterScheduled, 0);
+            lock (LiveLogQueueSync)
+            {
+                if (LiveLogQueue.Count == 0)
+                    return;
+            }
+            ScheduleLiveLogWrite();
         }
 
         private void RefreshStatus()
@@ -2267,6 +2400,21 @@ namespace TestPlatform
             // 根据登录状态启用/禁用管理员按钮
             toolStripButton2.IsEnabled = GlobalState.IsLoggedIn;
             toolStripButton3.IsEnabled = GlobalState.IsLoggedIn;
+            buttonStep.Visibility = GlobalState.IsLoggedIn
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            stepActionColumn.Width = GlobalState.IsLoggedIn
+                ? new GridLength(1, GridUnitType.Star)
+                : new GridLength(0);
+            if (_breakpointGridColumn != null)
+            {
+                _breakpointGridColumn.Visibility = GlobalState.IsLoggedIn
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+            }
+            if (!GlobalState.IsLoggedIn)
+                ClearEngineeringDebugState(clearBreakpoints: true);
+            UpdateTestControlsState();
         }
 
         private void LoadTestDataFromXML()
@@ -2285,7 +2433,7 @@ namespace TestPlatform
             {
                 _loadingRuntimeTree = true;
                 XDocument doc = XDocument.Load(xmlPath);
-                var testItems = doc.Root.Elements("TestItem");
+                var testItems = doc.Root.Elements("TestItem").ToList();
                 var groupNames = doc.Root.Element("Groups")?
                     .Elements("Group")
                     .ToDictionary(
@@ -2295,65 +2443,76 @@ namespace TestPlatform
                              string.Empty,
                         StringComparer.OrdinalIgnoreCase)
                     ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                ProjectSettings.testDataTable.Rows.Clear();
                 int channelCount = appSettings.ParallelTestCount;
-
-                foreach (var elem in testItems)
+                var groupedItemsSource = dataGridView1.ItemsSource;
+                dataGridView1.ItemsSource = null;
+                ProjectSettings.testDataTable.BeginLoadData();
+                try
                 {
-                    DataRow row = ProjectSettings.testDataTable.NewRow();
-                    row["Select"] = (bool?)elem.Element("Enabled") ?? false;
-                    row["StepId"] = (string)elem.Element("StepId") ?? "";
-                    row["GroupId"] = (string)elem.Element("GroupId") ?? "";
-                    string groupId = row["GroupId"]?.ToString() ?? string.Empty;
-                    string groupName;
-                    if (!groupNames.TryGetValue(groupId, out groupName))
-                        groupName = groupId;
-                    row["GroupHeader"] = groupName;
-                    row["GroupStatus"] = "待测";
-                    row["GroupSummary"] = "待测";
-                    row["SequenceOrder"] = (int?)elem.Element("SequenceOrder") ?? ProjectSettings.testDataTable.Rows.Count + 1;
-                    row["DefaultEnabled"] = (bool?)elem.Element("DefaultEnabled") ?? (bool?)elem.Element("Enabled") ?? false;
-                    row["Mandatory"] = (bool?)elem.Element("Mandatory") ?? false;
-                    row["AlwaysRun"] = (bool?)elem.Element("AlwaysRun") ?? false;
-                    row["RunCondition"] = (string)elem.Element("RunCondition") ?? "";
-                    row["DependsOn"] = (string)elem.Element("DependsOn") ?? "";
-                    row["TestItem"] = (string)elem.Element("Name") ?? "";
-                    row["UpperLimit"] = (string)elem.Element("UpperLimit") ?? "";
-                    row["LowerLimit"] = (string)elem.Element("LowerLimit") ?? "";
-                    row["Unit"] = (string)elem.Element("Unit") ?? "";
-                    row["ExecTime"] = "";
-
-                    for (int i = 1; i <= channelCount; i++)
+                    ProjectSettings.testDataTable.Rows.Clear();
+                    foreach (var elem in testItems)
                     {
-                        row[$"Channel{i}Value"] = "";
-                        row[$"Channel{i}Result"] =
-                            string.Equals(
-                                row["RunCondition"]?.ToString(),
-                                "OnChapterFailure",
-                                StringComparison.OrdinalIgnoreCase)
-                                ? "未触发"
-                                : "待测";
+                        DataRow row = ProjectSettings.testDataTable.NewRow();
+                        row["Select"] = (bool?)elem.Element("Enabled") ?? false;
+                        row["StepId"] = (string)elem.Element("StepId") ?? "";
+                        row["BreakpointMark"] = _engineeringBreakpoints.Contains(
+                            row["StepId"]?.ToString() ?? string.Empty) ? "●" : string.Empty;
+                        row["GroupId"] = (string)elem.Element("GroupId") ?? "";
+                        string groupId = row["GroupId"]?.ToString() ?? string.Empty;
+                        string groupName;
+                        if (!groupNames.TryGetValue(groupId, out groupName))
+                            groupName = groupId;
+                        row["GroupHeader"] = groupName;
+                        row["GroupStatus"] = "待测";
+                        row["GroupSummary"] = "待测";
+                        row["SequenceOrder"] = (int?)elem.Element("SequenceOrder") ?? ProjectSettings.testDataTable.Rows.Count + 1;
+                        row["DefaultEnabled"] = (bool?)elem.Element("DefaultEnabled") ?? (bool?)elem.Element("Enabled") ?? false;
+                        row["Mandatory"] = (bool?)elem.Element("Mandatory") ?? false;
+                        row["AlwaysRun"] = (bool?)elem.Element("AlwaysRun") ?? false;
+                        row["RunCondition"] = (string)elem.Element("RunCondition") ?? "";
+                        row["DependsOn"] = (string)elem.Element("DependsOn") ?? "";
+                        row["TestItem"] = (string)elem.Element("Name") ?? "";
+                        row["UpperLimit"] = (string)elem.Element("UpperLimit") ?? "";
+                        row["LowerLimit"] = (string)elem.Element("LowerLimit") ?? "";
+                        row["Unit"] = (string)elem.Element("Unit") ?? "";
+                        row["ExecTime"] = "";
+
+                        for (int i = 1; i <= channelCount; i++)
+                        {
+                            row[$"Channel{i}Value"] = "";
+                            row[$"Channel{i}Result"] =
+                                string.Equals(
+                                    row["RunCondition"]?.ToString(),
+                                    "OnChapterFailure",
+                                    StringComparison.OrdinalIgnoreCase)
+                                    ? "未触发"
+                                    : "待测";
+                        }
+                        ProjectSettings.testDataTable.Rows.Add(row);
                     }
-                    ProjectSettings.testDataTable.Rows.Add(row);
+
+                    if (doc.Root.Element("PlanMetadata") != null)
+                    {
+                        ResolvedTestPlan plan = TestPlanService.Resolve(
+                            xmlPath,
+                            TestPlanRuntimeState.ActiveProfileId,
+                            TestPlanRuntimeState.GetStepOverridesSnapshot());
+                        foreach (DataRow row in ProjectSettings.testDataTable.Rows)
+                        {
+                            row["Select"] = plan.ShouldRun(row["StepId"]?.ToString());
+                        }
+                    }
                 }
-
-                if (doc.Root.Element("PlanMetadata") != null)
+                finally
                 {
-                    ResolvedTestPlan plan = TestPlanService.Resolve(
-                        xmlPath,
-                        TestPlanRuntimeState.ActiveProfileId,
-                        TestPlanRuntimeState.GetStepOverridesSnapshot());
-                    foreach (DataRow row in ProjectSettings.testDataTable.Rows)
-                    {
-                        row["Select"] = plan.ShouldRun(row["StepId"]?.ToString());
-                    }
+                    ProjectSettings.testDataTable.EndLoadData();
+                    dataGridView1.ItemsSource = groupedItemsSource;
                 }
 
                 BuildRuntimeGroupTree(doc, channelCount);
                 _loadingRuntimeTree = false;
                 RefreshRuntimeGroupTree();
-                dataGridView1.UpdateLayout();
-                AppendLog($"成功加载测试数据，共 {testItems.Count()} 项", LogSuccess);
+                AppendLog($"成功加载测试数据，共 {testItems.Count} 项", LogSuccess);
             }
             catch (Exception ex)
             {
@@ -2429,6 +2588,8 @@ namespace TestPlatform
             cmbRuntimeGroupJump.ItemsSource = _runtimeGroups;
             cmbRuntimeGroupJump.SelectedIndex = -1;
             _runtimeGroupExpansion.Clear();
+            if (_runtimeGroups.Count > 0)
+                _runtimeGroupExpansion[_runtimeGroups[0].DisplayName] = true;
         }
 
         private void RuntimeTreeDataTable_RowChanged(object sender, DataRowChangeEventArgs e)
@@ -2444,7 +2605,7 @@ namespace TestPlatform
                 return;
 
             _runtimeTreeRefreshPending = true;
-            Task.Delay(150).ContinueWith(_ => Dispatcher.BeginInvoke(new Action(() =>
+            Task.Delay(350).ContinueWith(_ => Dispatcher.BeginInvoke(new Action(() =>
             {
                 _runtimeTreeRefreshPending = false;
                 RefreshRuntimeGroupTree();
@@ -2659,22 +2820,16 @@ namespace TestPlatform
                 return;
             }
 
-            if (!string.Equals(definition.BoardType, "BCM-250", StringComparison.OrdinalIgnoreCase))
+            TestPlanGroupDefinition selectedDefinition = definition.Groups.FirstOrDefault(group =>
+                string.Equals(
+                    group.GroupId,
+                    selectedGroup.GroupId,
+                    StringComparison.OrdinalIgnoreCase));
+            if (selectedDefinition == null ||
+                selectedDefinition.GroupId.IndexOf(".CH", StringComparison.OrdinalIgnoreCase) < 0)
             {
                 MessageBox.Show(
-                    "当前“单章调试”快捷功能仅用于 BCM-250。",
-                    "单章调试",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
-
-            if (!selectedGroup.GroupId.StartsWith(
-                    "BCM250.CH",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                MessageBox.Show(
-                    "请选择 CH7 至 CH27 中的一个测试章节，不能选择 PRECHECK 或 CLEANUP。",
+                    "请选择一个 CH 测试章节，不能选择 PRECHECK 或 CLEANUP。",
                     "单章调试",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -2687,14 +2842,14 @@ namespace TestPlatform
                             step.GroupId,
                             selectedGroup.GroupId,
                             StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(
-                            step.GroupId,
-                            "BCM250.PRECHECK",
-                            StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(
-                            step.GroupId,
-                            "BCM250.CLEANUP",
-                            StringComparison.OrdinalIgnoreCase),
+                        definition.Groups.Any(group =>
+                            group.Mandatory &&
+                            string.Equals(
+                                group.GroupId,
+                                step.GroupId,
+                                StringComparison.OrdinalIgnoreCase)) ||
+                        step.Mandatory ||
+                        step.AlwaysRun,
                 StringComparer.OrdinalIgnoreCase);
 
             TestPlanRuntimeState.ActiveProfileId = TestProfileIds.SingleChapter;
@@ -2706,9 +2861,9 @@ namespace TestPlatform
                 TestPlanRuntimeState.ActiveProfileId,
                 TestPlanRuntimeState.GetStepOverridesSnapshot());
             string[] enabledChapters = resolved.Definition.Groups
-                .Where(group => group.GroupId.StartsWith(
-                    "BCM250.CH",
-                    StringComparison.OrdinalIgnoreCase))
+                .Where(group => group.GroupId.IndexOf(
+                    ".CH",
+                    StringComparison.OrdinalIgnoreCase) >= 0)
                 .Where(group => resolved.Definition.Steps.Any(step =>
                     string.Equals(step.GroupId, group.GroupId, StringComparison.OrdinalIgnoreCase) &&
                     resolved.ShouldRun(step.StepId)))
@@ -2716,7 +2871,7 @@ namespace TestPlatform
                 .ToArray();
 
             AppendLog(
-                $"BCM250单章调试已设置：目标={selectedGroup.DisplayName}；" +
+                $"{definition.BoardType}单章调试已设置：目标={selectedGroup.DisplayName}；" +
                 $"实际章节={string.Join("、", enabledChapters)}；" +
                 "PRECHECK与CLEANUP按安全规则保留。",
                 LogSuccess);
@@ -2730,7 +2885,7 @@ namespace TestPlatform
             string groupHeader = expander.Tag?.ToString() ?? string.Empty;
             bool expanded;
             expander.IsExpanded =
-                !_runtimeGroupExpansion.TryGetValue(groupHeader, out expanded) || expanded;
+                _runtimeGroupExpansion.TryGetValue(groupHeader, out expanded) && expanded;
         }
 
         private void RuntimeGroupExpander_Expanded(object sender, RoutedEventArgs e)
@@ -2830,6 +2985,9 @@ namespace TestPlatform
             // 检查是否存在空闲通道
             bool hasFreeChannel = ProjectSettings.Channels.Any(c => !c.IsBusy);
             bool hasBusyChannel = ProjectSettings.Channels.Any(c => c.IsBusy);
+            bool hasPendingDebugStep;
+            lock (_debugStepSync)
+                hasPendingDebugStep = !string.IsNullOrWhiteSpace(_debugPendingStepId);
             // 串口就绪且有空闲通道时，才允许测试
             bool canTest = _comPortsReady && hasFreeChannel && !_stopInProgress && !_isPauseRequested;
             Dispatcher.Invoke(() =>
@@ -2839,6 +2997,13 @@ namespace TestPlatform
                 button2.IsEnabled = hasBusyChannel;
                 buttonPause.IsEnabled = hasBusyChannel && !_stopInProgress;
                 buttonPause.Content = _isPauseRequested ? "继续测试" : "暂停测试";
+                buttonStep.IsEnabled =
+                    GlobalState.IsLoggedIn &&
+                    hasBusyChannel &&
+                    !_stopInProgress &&
+                    _isPauseRequested &&
+                    hasPendingDebugStep &&
+                    Volatile.Read(ref _safePauseWaiterCount) > 0;
             });
         }
 
@@ -2999,8 +3164,20 @@ namespace TestPlatform
             }
         }
 
-        private void toolStripButton3_Click(object sender, RoutedEventArgs e)
+        private async void toolStripButton3_Click(object sender, RoutedEventArgs e)
         {
+            if (ProjectSettings.Channels.Any(channel => channel.IsBusy))
+            {
+                MessageBox.Show(
+                    "测试运行期间不能修改系统设置，请先停止测试并等待安全收尾完成。",
+                    "系统设置",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            int previousParallelCount = appSettings.ParallelTestCount;
+            bool previousSkipFirmwareProgramming = appSettings.SkipFirmwareProgramming;
             var settingsWin = new SettingsWindow(appSettings) { Owner = this };
             if (settingsWin.ShowDialog() == true)
             {
@@ -3008,9 +3185,30 @@ namespace TestPlatform
                 SaveSettings();
                 ApplySettingsToUI();
                 RefreshStatus();
-                BuildResultWindows(appSettings.ParallelTestCount);
-                BuildDataGridColumns(appSettings.ParallelTestCount);
-                LoadTestDataFromXML();
+
+                // Recreating a grouped/virtualized DataGrid while WPF still has
+                // deferred container work queued can raise an internal List index
+                // exception. Most settings, including firmware programming, do not
+                // change the grid shape, so preserve the existing view and rows.
+                if (previousParallelCount != appSettings.ParallelTestCount)
+                {
+                    BuildResultWindows(appSettings.ParallelTestCount);
+                    BuildDataGridColumns(appSettings.ParallelTestCount);
+                    LoadTestDataFromXML();
+                }
+
+                if (previousSkipFirmwareProgramming != appSettings.SkipFirmwareProgramming)
+                {
+                    hasAttemptedComInit = false;
+                    _comPortsReady = false;
+                    AppendLog(
+                        appSettings.SkipFirmwareProgramming
+                            ? "固件烧录已关闭：下次测试不要求TTL串口。"
+                            : "固件烧录已启用：启动检查不强制TTL口；执行烧录步骤时校验TTL配置，测试开始时校验HEX文件。",
+                        LogWarning);
+                    _comPortsReady = await EnsureComPortsInitializedAsync();
+                    UpdateTestControlsState();
+                }
             }
         }
 
@@ -3019,7 +3217,162 @@ namespace TestPlatform
             if (!ProjectSettings.Channels.Any(c => c.IsBusy) || _stopInProgress)
                 return;
 
+            if (_isPauseRequested)
+            {
+                lock (_debugStepSync)
+                {
+                    _debugBypassStepId = _debugPendingStepId;
+                    _pauseAfterCompletedStepId = null;
+                }
+            }
             SetPauseRequested(!_isPauseRequested);
+        }
+
+        private void buttonStep_Click(object sender, RoutedEventArgs e)
+        {
+            if (!GlobalState.IsLoggedIn ||
+                !_isPauseRequested ||
+                Volatile.Read(ref _safePauseWaiterCount) <= 0)
+            {
+                return;
+            }
+
+            if (ProjectSettings.Channels.Count(c => c.IsBusy) != 1)
+            {
+                MessageBox.Show(
+                    "单步执行仅支持一个测试通道运行时使用。",
+                    "工程调试",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            string stepId;
+            lock (_debugStepSync)
+            {
+                stepId = _debugPendingStepId;
+                if (string.IsNullOrWhiteSpace(stepId))
+                    return;
+                _debugBypassStepId = stepId;
+                _pauseAfterCompletedStepId = stepId;
+            }
+
+            AppendLog($"工程单步：执行 {stepId}，完成后再次暂停。", LogWarning);
+            SetPauseRequested(false, false);
+        }
+
+        private void dataGridView1_PreviewMouseRightButtonDown(
+            object sender,
+            MouseButtonEventArgs e)
+        {
+            DependencyObject source = e.OriginalSource as DependencyObject;
+            DataGridRow row = ItemsControl.ContainerFromElement(dataGridView1, source) as DataGridRow;
+            if (row != null)
+                dataGridView1.SelectedItem = row.Item;
+        }
+
+        private void TestGridContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            DataRowView row = GetSelectedDebugRow();
+            bool engineering = GlobalState.IsLoggedIn;
+            bool validStep = engineering && IsDebuggableRow(row);
+            menuToggleBreakpoint.IsEnabled = validStep;
+            menuRunToStep.IsEnabled = validStep && ProjectSettings.Channels.Any(c => c.IsBusy);
+            menuClearBreakpoints.IsEnabled = engineering && _engineeringBreakpoints.Count > 0;
+            string stepId = row?["StepId"]?.ToString() ?? string.Empty;
+            menuToggleBreakpoint.Header = _engineeringBreakpoints.Contains(stepId)
+                ? "清除此断点"
+                : "在此暂停";
+        }
+
+        private void MenuToggleBreakpoint_Click(object sender, RoutedEventArgs e)
+        {
+            DataRowView row = GetSelectedDebugRow();
+            if (!GlobalState.IsLoggedIn || !IsDebuggableRow(row))
+                return;
+
+            string stepId = row["StepId"]?.ToString() ?? string.Empty;
+            bool added;
+            lock (_debugStepSync)
+            {
+                if (_engineeringBreakpoints.Contains(stepId))
+                {
+                    _engineeringBreakpoints.Remove(stepId);
+                    added = false;
+                }
+                else
+                {
+                    _engineeringBreakpoints.Add(stepId);
+                    added = true;
+                }
+            }
+            row["BreakpointMark"] = added ? "●" : string.Empty;
+            AppendLog($"工程断点已{(added ? "设置" : "清除")}：{stepId}", LogInfo);
+        }
+
+        private void MenuRunToStep_Click(object sender, RoutedEventArgs e)
+        {
+            DataRowView row = GetSelectedDebugRow();
+            if (!GlobalState.IsLoggedIn || !IsDebuggableRow(row))
+                return;
+
+            string stepId = row["StepId"]?.ToString() ?? string.Empty;
+            lock (_debugStepSync)
+                _runToStepId = stepId;
+            AppendLog($"工程调试：将在 {stepId} 执行前暂停。", LogWarning);
+
+            if (_isPauseRequested)
+            {
+                lock (_debugStepSync)
+                    _debugBypassStepId = _debugPendingStepId;
+                SetPauseRequested(false, false);
+            }
+        }
+
+        private void MenuClearBreakpoints_Click(object sender, RoutedEventArgs e)
+        {
+            if (!GlobalState.IsLoggedIn)
+                return;
+            ClearEngineeringDebugState(clearBreakpoints: true);
+            AppendLog("已清除全部工程断点。", LogInfo);
+        }
+
+        private DataRowView GetSelectedDebugRow()
+        {
+            return dataGridView1.SelectedItem as DataRowView;
+        }
+
+        private static bool IsDebuggableRow(DataRowView row)
+        {
+            if (row == null || string.IsNullOrWhiteSpace(row["StepId"]?.ToString()))
+                return false;
+            string runCondition = row["RunCondition"]?.ToString() ?? string.Empty;
+            string groupId = row["GroupId"]?.ToString() ?? string.Empty;
+            return !string.Equals(runCondition, "OnChapterFailure", StringComparison.OrdinalIgnoreCase) &&
+                   groupId.IndexOf("CLEANUP", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        private void ClearEngineeringDebugState(bool clearBreakpoints)
+        {
+            lock (_debugStepSync)
+            {
+                _runToStepId = null;
+                _debugPendingStepId = null;
+                _debugBypassStepId = null;
+                _pauseAfterCompletedStepId = null;
+                if (clearBreakpoints)
+                    _engineeringBreakpoints.Clear();
+            }
+
+            if (clearBreakpoints && ProjectSettings.testDataTable != null &&
+                ProjectSettings.testDataTable.Columns.Contains("BreakpointMark"))
+            {
+                foreach (DataRow row in ProjectSettings.testDataTable.Rows)
+                {
+                    if (!string.IsNullOrEmpty(row["BreakpointMark"]?.ToString()))
+                        row["BreakpointMark"] = string.Empty;
+                }
+            }
         }
 
         private void SetPauseRequested(bool pause, bool writeLog = true)
@@ -3066,6 +3419,7 @@ namespace TestPlatform
         private void button2_Click(object sender, RoutedEventArgs e)
         {
             // 先打开暂停门，确保所有等待中的通道都能观察到取消令牌并进入安全收尾。
+            ClearEngineeringDebugState(clearBreakpoints: false);
             SetPauseRequested(false, false);
             _stopInProgress = true;
             foreach (var channel in ProjectSettings.Channels.Where(c => c.IsBusy))
@@ -3091,6 +3445,70 @@ namespace TestPlatform
         #region 公共测试方法
 
         /// <summary>
+        /// 在独立序列的可见测试项执行前处理工程断点和单步状态。
+        /// </summary>
+        private async Task WaitBeforeDebugStepAsync(
+            int channelIndex,
+            string stepId,
+            CancellationToken cancellationToken)
+        {
+            if (!GlobalState.IsLoggedIn || string.IsNullOrWhiteSpace(stepId))
+            {
+                await WaitWhilePausedAsync(channelIndex, cancellationToken);
+                return;
+            }
+
+            bool shouldPause = false;
+            string pauseReason = null;
+            lock (_debugStepSync)
+            {
+                bool bypassCurrent = string.Equals(
+                    _debugBypassStepId,
+                    stepId,
+                    StringComparison.OrdinalIgnoreCase);
+                if (bypassCurrent)
+                    _debugBypassStepId = null;
+
+                if (!string.IsNullOrWhiteSpace(_pauseAfterCompletedStepId) &&
+                    !string.Equals(
+                        _pauseAfterCompletedStepId,
+                        stepId,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    shouldPause = true;
+                    pauseReason = $"单步 {_pauseAfterCompletedStepId} 已完成";
+                    _pauseAfterCompletedStepId = null;
+                }
+
+                bool permanentBreakpoint = _engineeringBreakpoints.Contains(stepId);
+                bool runToBreakpoint = string.Equals(
+                    _runToStepId,
+                    stepId,
+                    StringComparison.OrdinalIgnoreCase);
+                if (!bypassCurrent && (permanentBreakpoint || runToBreakpoint))
+                {
+                    shouldPause = true;
+                    pauseReason = runToBreakpoint ? "已运行到指定测试项" : "命中工程断点";
+                    if (runToBreakpoint)
+                        _runToStepId = null;
+                }
+
+                _debugPendingStepId = stepId;
+            }
+
+            if (shouldPause && !_isPauseRequested)
+            {
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    SetPauseRequested(true, false);
+                    AppendLog($"{pauseReason}：将在 {stepId} 执行前暂停。", LogWarning);
+                });
+            }
+
+            await WaitWhilePausedAsync(channelIndex, cancellationToken);
+        }
+
+        /// <summary>
         /// 在测试步骤边界响应暂停。不会在线程或硬件通信执行到一半时强制挂起。
         /// </summary>
         private async Task WaitWhilePausedAsync(int channelIndex, CancellationToken cancellationToken)
@@ -3099,6 +3517,7 @@ namespace TestPlatform
                 return;
 
             AppendLog($"[通道{channelIndex + 1}] 已到达安全暂停点。", LogWarning);
+            Interlocked.Increment(ref _safePauseWaiterCount);
             await Dispatcher.InvokeAsync(() =>
             {
                 ChannelContext channel = ProjectSettings.Channels.FirstOrDefault(c => c.Index == channelIndex);
@@ -3109,12 +3528,21 @@ namespace TestPlatform
                     $"通道 {channel.Index + 1}\nSN: {channel.CurrentSN}\n已暂停，可调整调试参数";
                 channel.ResultModel.Background = StatusWarning;
                 channel.ResultModel.DisplayForeground = Brushes.Black;
+                UpdateTestControlsState();
             });
 
-            while (_isPauseRequested)
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await Task.Delay(100, cancellationToken);
+                while (_isPauseRequested)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await Task.Delay(100, cancellationToken);
+                }
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _safePauseWaiterCount);
+                await Dispatcher.InvokeAsync(UpdateTestControlsState);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -10235,7 +10663,8 @@ namespace TestPlatform
                         ScrollToTestRowAsync,
                         UpdateChannelStepResultDisplay
                     ),
-                    ShowSequenceConfirmAsync
+                    ShowSequenceConfirmAsync,
+                    appSettings?.SkipFirmwareProgramming ?? false
                 )
             };
         }
@@ -10287,6 +10716,19 @@ namespace TestPlatform
                         $"已为 {sequence.GetType().Name} 加载XML测试计划，" +
                         $"步骤数={resolvedPlan.Definition.Steps.Count}",
                         LogInfo);
+                    string[] enabledGroups = resolvedPlan.Definition.Groups
+                        .Where(group => resolvedPlan.Definition.Steps.Any(step =>
+                            string.Equals(
+                                step.GroupId,
+                                group.GroupId,
+                                StringComparison.OrdinalIgnoreCase) &&
+                            resolvedPlan.ShouldRun(step.StepId)))
+                        .Select(group => group.GroupId)
+                        .ToArray();
+                    AppendLog(
+                        $"本次运行计划：模式={resolvedPlan.Profile.ProfileId}；" +
+                        $"执行章节={string.Join("、", enabledGroups)}",
+                        LogInfo);
                 }
 
                 var context = new TestSequenceContext
@@ -10295,6 +10737,8 @@ namespace TestPlatform
                     SN = sn,
                     CancellationToken = ct,
                     WaitIfPausedAsync = token => WaitWhilePausedAsync(channelIndex, token),
+                    WaitBeforeStepAsync = (stepId, token) =>
+                        WaitBeforeDebugStepAsync(channelIndex, stepId, token),
                     StopOnFail = appSettings.StopOnFail,
                     PromptOnFail = appSettings.PromptOnFail,
                     ContinueAfterPowerCriticalFailure =

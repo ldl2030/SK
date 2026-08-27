@@ -10,7 +10,8 @@
         WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         FontFamily="Microsoft YaHei UI, Segoe UI" FontSize="13"
-        Loaded="Window_Loaded">
+        Loaded="Window_Loaded" SizeChanged="MainWindow_SizeChanged"
+        StateChanged="MainWindow_StateChanged">
     <Window.Resources>
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#172033"/>
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="#40516B"/>
@@ -218,7 +219,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="130" MinHeight="90"/>
+                <RowDefinition x:Name="activityLogRow" Height="130" MinHeight="80"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -371,12 +372,23 @@
                           VerticalScrollBarVisibility="Auto"
                           RowHeaderWidth="40"
                           LoadingRow="dataGridView1_LoadingRow"
+                          PreviewMouseRightButtonDown="dataGridView1_PreviewMouseRightButtonDown"
+                          EnableRowVirtualization="True"
+                          EnableColumnVirtualization="False"
                           VirtualizingPanel.IsVirtualizing="True"
                           VirtualizingPanel.IsVirtualizingWhenGrouping="True"
-                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          VirtualizingPanel.VirtualizationMode="Standard"
                           ScrollViewer.CanContentScroll="True"
                           VerticalAlignment="Stretch"
                           HorizontalAlignment="Stretch">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Opened="TestGridContextMenu_Opened">
+                            <MenuItem x:Name="menuToggleBreakpoint" Header="在此暂停" Click="MenuToggleBreakpoint_Click"/>
+                            <MenuItem x:Name="menuRunToStep" Header="运行到此项" Click="MenuRunToStep_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="menuClearBreakpoints" Header="清除全部断点" Click="MenuClearBreakpoints_Click"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.GroupStyle>
                         <GroupStyle>
                             <GroupStyle.ContainerStyle>
@@ -385,7 +397,7 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="{x:Type GroupItem}">
                                                 <Expander Tag="{Binding Name}"
-                                                          IsExpanded="True"
+                                                          IsExpanded="False"
                                                           Loaded="RuntimeGroupExpander_Loaded"
                                                           Expanded="RuntimeGroupExpander_Expanded"
                                                           Collapsed="RuntimeGroupExpander_Collapsed">
@@ -487,9 +499,10 @@
                          BorderBrush="{StaticResource BorderBrushHighContrast}"/>
                 <Grid Grid.Row="3" Margin="0,5,0,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition x:Name="startActionColumn" Width="*"/>
+                        <ColumnDefinition x:Name="pauseActionColumn" Width="*"/>
+                        <ColumnDefinition x:Name="stepActionColumn" Width="0"/>
+                        <ColumnDefinition x:Name="stopActionColumn" Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Button x:Name="btn_statsTest" Grid.Column="0" Content="开始测试 (Space)"
                             Style="{StaticResource PrimaryActionButton}" Margin="5"
@@ -497,7 +510,11 @@
                     <Button x:Name="buttonPause" Grid.Column="1" Content="暂停测试"
                             Style="{StaticResource PauseActionButton}" Margin="5"
                             Click="buttonPause_Click"/>
-                    <Button x:Name="button2" Grid.Column="2" Content="停止测试 (Esc)"
+                    <Button x:Name="buttonStep" Grid.Column="2" Content="单步执行"
+                            Style="{StaticResource PauseActionButton}" Margin="5"
+                            Visibility="Collapsed" IsEnabled="False"
+                            Click="buttonStep_Click"/>
+                    <Button x:Name="button2" Grid.Column="3" Content="停止测试 (Esc)"
                             Style="{StaticResource DangerActionButton}" Margin="5"
                             Click="button2_Click"/>
                 </Grid>
@@ -572,7 +589,7 @@
                         <Ellipse Width="80" Height="80" Stroke="#4CAF50" StrokeThickness="4"
                                  StrokeDashArray="5 2" Opacity="0.6" RenderTransformOrigin="0.5,0.5">
                             <Ellipse.RenderTransform>
-                                <RotateTransform Angle="0"/>
+                                <RotateTransform x:Name="SplashRingRotation" Angle="0"/>
                             </Ellipse.RenderTransform>
                             <Ellipse.Triggers>
                                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">
@@ -589,7 +606,7 @@
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    RenderTransformOrigin="0.5,0.5">
                             <TextBlock.RenderTransform>
-                                <RotateTransform Angle="0"/>
+                                <RotateTransform x:Name="SplashGearRotation" Angle="0"/>
                             </TextBlock.RenderTransform>
                             <TextBlock.Triggers>
                                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">

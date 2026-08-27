@@ -100,9 +100,9 @@ namespace TestPlatform
         }
 
         /// <summary>
-        /// Uses explicitly configured COM ports first. Automatic discovery is only
-        /// started when at least one required station device has no configured port.
-        /// Configured values always win over discovery results.
+        /// Verifies explicitly configured COM ports first. If every required device
+        /// answers with the expected identity, no full-port scan is needed. Otherwise
+        /// the station is scanned and a newly identified port wins over configuration.
         /// </summary>
         public static async Task<SKSerialDeviceDiscoveryResult> ResolveConfiguredOrDiscoverAsync(
             Action<string> logAction = null,
@@ -113,18 +113,45 @@ namespace TestPlatform
             RemoveUnavailableConfiguredPorts(configured, logAction);
             LogConfiguredPorts(configured, logAction);
 
-            if (configured.IsCompleteFor(requiredPorts))
+            string[] availablePorts = SerialPort.GetPortNames();
+            string[] configuredActivePorts = new[]
             {
-                logAction?.Invoke("SK工位必需设备均已指定COM口，跳过自动扫描。");
-                ApplyToCommunicationState(configured);
-                return configured;
+                configured.AnsPowerPort,
+                configured.HengHuiPowerAPort,
+                configured.HengHuiPowerBPort,
+                configured.ElectronicLoadPort,
+                configured.DaqPort,
+                configured.DigitalInputPort,
+                configured.FixtureRelayPort,
+                configured.Relay16Port
+            }
+                .Where(port => !string.IsNullOrWhiteSpace(port))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            logAction?.Invoke(
+                $"先校验预设设备端口：{(configuredActivePorts.Length == 0 ? "无" : string.Join(", ", configuredActivePorts))}");
+            PortProbe[] configuredProbes = await Task.WhenAll(
+                configuredActivePorts.Select(port =>
+                    Task.Run(() => ProbePort(port, logAction))));
+            SKSerialDeviceDiscoveryResult verifiedConfigured = BuildResultFromProbes(
+                configuredProbes,
+                availablePorts,
+                configured.TtlPort,
+                requireTtl,
+                logAction);
+            if (verifiedConfigured.IsCompleteFor(requiredPorts))
+            {
+                logAction?.Invoke("预设COM口身份校验全部通过，直接使用，不执行全端口扫描。");
+                ApplyToCommunicationState(verifiedConfigured);
+                return verifiedConfigured;
             }
 
             logAction?.Invoke(
-                $"以下设备未指定COM口，将开启自动扫描：" +
-                string.Join("、", configured.GetMissingDeviceNames(requiredPorts)));
+                "预设COM口未通过全部必需设备身份校验，开始全端口扫描；" +
+                "扫描识别结果将覆盖对应默认值。");
             SKSerialDeviceDiscoveryResult discovered = await DiscoverAsync(logAction);
-            ApplyConfiguredPorts(configured, discovered);
+            ApplyConfiguredFallbackPorts(configured, discovered);
             ApplyToCommunicationState(discovered);
             return discovered;
         }
@@ -180,29 +207,41 @@ namespace TestPlatform
             return string.IsNullOrWhiteSpace(portName) ? null : portName.Trim();
         }
 
-        private static void ApplyConfiguredPorts(
+        private static void ApplyConfiguredFallbackPorts(
             SKSerialDeviceDiscoveryResult configured,
             SKSerialDeviceDiscoveryResult result)
         {
-            if (!string.IsNullOrWhiteSpace(configured.AnsPowerPort))
+            // A positive identity probe is stronger evidence than a COM number
+            // copied from another PC. Only fill gaps in the scan from configuration.
+            if (string.IsNullOrWhiteSpace(result.AnsPowerPort) &&
+                !string.IsNullOrWhiteSpace(configured.AnsPowerPort))
                 result.AnsPowerPort = configured.AnsPowerPort;
-            if (!string.IsNullOrWhiteSpace(configured.HengHuiPowerAPort))
+            if (string.IsNullOrWhiteSpace(result.HengHuiPowerAPort) &&
+                !string.IsNullOrWhiteSpace(configured.HengHuiPowerAPort))
                 result.HengHuiPowerAPort = configured.HengHuiPowerAPort;
-            if (!string.IsNullOrWhiteSpace(configured.HengHuiPowerBPort))
+            if (string.IsNullOrWhiteSpace(result.HengHuiPowerBPort) &&
+                !string.IsNullOrWhiteSpace(configured.HengHuiPowerBPort))
                 result.HengHuiPowerBPort = configured.HengHuiPowerBPort;
-            if (!string.IsNullOrWhiteSpace(configured.ElectronicLoadPort))
+            if (string.IsNullOrWhiteSpace(result.ElectronicLoadPort) &&
+                !string.IsNullOrWhiteSpace(configured.ElectronicLoadPort))
                 result.ElectronicLoadPort = configured.ElectronicLoadPort;
-            if (!string.IsNullOrWhiteSpace(configured.DaqPort))
+            if (string.IsNullOrWhiteSpace(result.DaqPort) &&
+                !string.IsNullOrWhiteSpace(configured.DaqPort))
                 result.DaqPort = configured.DaqPort;
-            if (!string.IsNullOrWhiteSpace(configured.DigitalInputPort))
+            if (string.IsNullOrWhiteSpace(result.DigitalInputPort) &&
+                !string.IsNullOrWhiteSpace(configured.DigitalInputPort))
                 result.DigitalInputPort = configured.DigitalInputPort;
-            if (!string.IsNullOrWhiteSpace(configured.FixtureRelayPort))
+            if (string.IsNullOrWhiteSpace(result.FixtureRelayPort) &&
+                !string.IsNullOrWhiteSpace(configured.FixtureRelayPort))
                 result.FixtureRelayPort = configured.FixtureRelayPort;
-            if (!string.IsNullOrWhiteSpace(configured.Relay16Port))
+            if (string.IsNullOrWhiteSpace(result.Relay16Port) &&
+                !string.IsNullOrWhiteSpace(configured.Relay16Port))
                 result.Relay16Port = configured.Relay16Port;
-            if (!string.IsNullOrWhiteSpace(configured.TargetBoardPort))
+            if (string.IsNullOrWhiteSpace(result.TargetBoardPort) &&
+                !string.IsNullOrWhiteSpace(configured.TargetBoardPort))
                 result.TargetBoardPort = configured.TargetBoardPort;
-            if (!string.IsNullOrWhiteSpace(configured.TtlPort))
+            if (string.IsNullOrWhiteSpace(result.TtlPort) &&
+                !string.IsNullOrWhiteSpace(configured.TtlPort))
                 result.TtlPort = configured.TtlPort;
         }
 
@@ -226,6 +265,35 @@ namespace TestPlatform
 
             foreach (var item in configured.Where(item => !string.IsNullOrWhiteSpace(item.Port)))
                 logAction?.Invoke($"使用预设串口：{item.Name}={item.Port}");
+        }
+
+        private static SKSerialDeviceDiscoveryResult BuildResultFromProbes(
+            IEnumerable<PortProbe> probes,
+            IEnumerable<string> availablePorts,
+            string configuredTtlPort,
+            bool requireTtl,
+            Action<string> logAction)
+        {
+            PortProbe[] probeArray = probes?.ToArray() ?? new PortProbe[0];
+            var result = new SKSerialDeviceDiscoveryResult
+            {
+                TtlRequired = requireTtl
+            };
+            AssignSingle(probeArray, "DAQ", "GWInstek DAQ-9600", value => result.DaqPort = value, result);
+            AssignSingle(probeArray, "LOAD", "KUNKIN 7303电子负载", value => result.ElectronicLoadPort = value, result);
+            AssignSingle(probeArray, "ANS", "ANS电源", value => result.AnsPowerPort = value, result);
+            AssignSingle(probeArray, "DI", "16路数字量输入模块(站号02)", value => result.DigitalInputPort = value, result);
+            AssignFixtureRelay(probeArray, result);
+            AssignRelay16(probeArray, result);
+            AssignHengHui(probeArray, result, logAction);
+            result.TtlPort = ValidateConfiguredPassivePort(
+                availablePorts,
+                configuredTtlPort,
+                "独立TTL烧录口",
+                requireTtl,
+                logAction,
+                result);
+            return result;
         }
 
         public static async Task<SKSerialDeviceDiscoveryResult> DiscoverAsync(
@@ -330,14 +398,21 @@ namespace TestPlatform
                 $"DUT已上电，开始识别MBD UART；候选端口：" +
                 $"{(candidates.Length == 0 ? "无" : string.Join(", ", candidates))}");
 
-            Task<PortProbe>[] tasks = candidates
-                .Select(portName => Task.Run(() => ProbeMbdPort(
+            // Probe serially and stop at the first verified response. Opening every
+            // candidate in parallel can race a USB CDC device that is still
+            // enumerating, and also makes a known-good MBD wait for unrelated ports.
+            var probeResults = new List<PortProbe>();
+            foreach (string portName in candidates)
+            {
+                PortProbe probe = await Task.Run(() => ProbeMbdPort(
                     portName,
                     logAction,
-                    baudRate ?? GetIntSetting("SKTargetBoardBaudRate", 9600))))
-                .ToArray();
-            PortProbe[] probes = await Task.WhenAll(tasks);
-            PortProbe[] matches = probes.Where(probe => probe.Kind == "MBD").ToArray();
+                    baudRate ?? GetIntSetting("SKTargetBoardBaudRate", 9600)));
+                probeResults.Add(probe);
+                if (probe.Kind == "MBD")
+                    break;
+            }
+            PortProbe[] matches = probeResults.Where(probe => probe.Kind == "MBD").ToArray();
             if (matches.Length != 1)
             {
                 if (matches.Length == 0 && allowUnverifiedFallback)
@@ -363,8 +438,8 @@ namespace TestPlatform
                 if (matches.Length == 0 && !allowUnverifiedFallback)
                 {
                     logAction?.Invoke(
-                        "MPS-250要求严格MBD响应，未收到COMMAND ERROR + Ready.，" +
-                        "不会使用唯一候选口或固定COM口兜底。");
+                        "MBD探测未收到COMMAND ERROR + Ready.；端口存在不等于设备可通信，" +
+                        "不会使用无回包的唯一候选口或固定COM口兜底。");
                 }
 
                 logAction?.Invoke(matches.Length == 0

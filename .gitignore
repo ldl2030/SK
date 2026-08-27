@@ -37,3 +37,4 @@ ProjectConfig/**/JLink_x64.dll
 # Product firmware artifacts: keep them in the controlled deployment package
 ProjectConfig/**/*.bin
 ProjectConfig/**/*.hex
+!ProjectConfig/SK/BCM-125/Firmware/BCM_125_V8.hex

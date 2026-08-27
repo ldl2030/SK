@@ -21,14 +21,28 @@ namespace TestPlatform.TestSequences
                 }
             });
 
+            int powerOnRowIndex = steps.Count;
             steps.Add(new TestStepItem
             {
                 Name = "8.2 FIRST START-UP-闭合RL4后开启MPS板电源",
-                RowIndex = steps.Count,
+                RowIndex = powerOnRowIndex,
                 PowerCritical = true,
                 Action = async (token) =>
                 {
                     bool ok = await deviceManager.CloseRl4ThenEnableAnsAsync(7, 140.0f, 1.0f);
+                    if (ok)
+                    {
+                        int stableTimeoutMs = GetPlanDelayMs(
+                            steps,
+                            powerOnRowIndex,
+                            5000);
+                        ok = await deviceManager.WaitForPowerVoltageStableAsync(
+                            "ANS",
+                            140.0f,
+                            Math.Min(2000, stableTimeoutMs),
+                            stableTimeoutMs,
+                            token);
+                    }
                     return new StepResult { IsPass = ok, Value = ok ? "RL4 ON / 140V ON" : "Safe Power-On Fail" };
                 }
             });
@@ -51,19 +65,19 @@ namespace TestPlatform.TestSequences
         {
             int row = steps.Count;
 
-            AddProgrammingActionStep(steps, row++, "9.1 检查编程相关COM连接", token => deviceManager.CheckProgrammingInstrumentsAsync(), "Ready", "Check Fail");
+            AddProgrammingActionStep(steps, row++, "9.1 检查编程电源、负载及TTL连接（MBD上电后识别）", token => deviceManager.CheckBcm125ProgrammingInstrumentsAsync(), "Ready", "Check Fail");
             AddProgrammingActionStep(steps, row++, "9.1 关闭仪器输出并复位设定值为0", token => deviceManager.TurnOffAllInstrumentsAsync(), "Off/Reset", "Off Fail");
             AddFixtureRelayStep(steps, row++, deviceManager, "9.2 BCM1 闭合RLP1/RLP2/RLP3连接J4", "SKBCM125Rlp1To3Relays", "3,4,5", true, "RLP1-3 ON");
             AddDelayStep(steps, row++, "9.3 BCM1 等待300ms", 300);
             AddProgrammingActionStep(steps, row++, "9.4 BCM1 闭合RL4后开启ANS给DUT供电", token => deviceManager.CloseRl4ThenEnableAnsAsync(7, 140, 1), "RL4/ANS ON", "Safe Power-On Fail");
             AddDelayStep(steps, row++, "9.5 BCM1 等待6000ms", 6000);
-            AddMbdCommandStep(steps, row++, deviceManager, "9.6 BCM1 发送EXIT到MBD", "EXIT", 50);
+            AddMbdCommandStep(steps, row++, deviceManager, "9.6 BCM1 上电后自动识别USB-B/MBD并发送EXIT", "EXIT", 50);
             AddMbdCommandStep(steps, row++, deviceManager, "9.7 BCM1 发送DIAG ON到MBD", "DIAG ON ", 50);
             AddMbdCommandStep(steps, row++, deviceManager, "9.8 BCM1 RESET置位 W86=1", "W86=1 ", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.9 BCM1 闭合RLP4=DAQ CH5引入BOOT0 3.3V", "SKBCM125Rlp4DaqRelays", Bcm125StationMap.ProgrammingBcm1DaqRelay, true, "RLP4 ON");
             AddDelayStep(steps, row++, "9.10 BCM1 等待50ms", 50);
             AddMbdCommandStep(steps, row++, deviceManager, "9.11 BCM1 RESET释放 W86=0", "W86=0 ", 50);
-            AddSkippedFlashResultStep(steps, row++, deviceManager, "C01 BCM1 跳过TTL实际烧录并保存结果", "BCM125.PROGRAMMING.C01_BCM1_FLASH");
+            AddFirmwareFlashResultStep(steps, row++, deviceManager, "C01 BCM1 TTL烧录BCM_125_V8.hex", "BCM125.PROGRAMMING.C01_BCM1_FLASH");
             AddMbdCommandStep(steps, row++, deviceManager, "9.13 BCM1 烧录后RESET置位 W86=1", "W86=1 ", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.14 BCM1 断开RLP4=DAQ CH5", "SKBCM125Rlp4DaqRelays", Bcm125StationMap.ProgrammingBcm1DaqRelay, false, "RLP4 OFF");
             AddMbdCommandStep(steps, row++, deviceManager, "9.15 BCM1 RESET释放 W86=0", "W86=0 ", 50);
@@ -75,7 +89,7 @@ namespace TestPlatform.TestSequences
             AddDaqRelayStep(steps, row++, deviceManager, "9.20 BCM2 闭合RLP8=DAQ CH6引入BOOT0 3.3V", "SKBCM125Rlp8DaqRelays", Bcm125StationMap.ProgrammingBcm2DaqRelay, true, "RLP8 ON");
             AddDelayStep(steps, row++, "9.21 BCM2 等待50ms", 50);
             AddMbdCommandStep(steps, row++, deviceManager, "9.22 BCM2 RESET释放 W86=0", "W86=0 ", 50);
-            AddSkippedFlashResultStep(steps, row++, deviceManager, "C02 BCM2 跳过TTL实际烧录并保存结果", "BCM125.PROGRAMMING.C02_BCM2_FLASH");
+            AddFirmwareFlashResultStep(steps, row++, deviceManager, "C02 BCM2 TTL烧录BCM_125_V8.hex", "BCM125.PROGRAMMING.C02_BCM2_FLASH");
             AddMbdCommandStep(steps, row++, deviceManager, "9.24 BCM2 烧录后RESET置位 W86=1", "W86=1", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.25 BCM2 断开RLP8=DAQ CH6", "SKBCM125Rlp8DaqRelays", Bcm125StationMap.ProgrammingBcm2DaqRelay, false, "RLP8 OFF");
             AddMbdCommandStep(steps, row++, deviceManager, "9.26 BCM2 RESET释放 W86=0", "W86=0", 50);
@@ -116,7 +130,164 @@ namespace TestPlatform.TestSequences
 
         private void AddMbdCommandStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string command, int waitAfterMs)
         {
-            AddProgrammingActionStep(steps, rowIndex, name, token => deviceManager.SendMbdCommandAsync(command, waitAfterMs), "Sent", "Send Fail");
+            AddProgrammingActionStep(
+                steps,
+                rowIndex,
+                name,
+                token => SendBcm125MbdCommandAsync(
+                    deviceManager,
+                    command,
+                    waitAfterMs),
+                "Sent",
+                "Send Fail");
+        }
+
+        private void AddMbdCommandPairStep(
+            System.Collections.Generic.List<TestStepItem> steps,
+            int rowIndex,
+            SK441Device deviceManager,
+            string name,
+            string firstCommand,
+            string secondCommand,
+            int waitAfterMs)
+        {
+            AddProgrammingActionStep(
+                steps,
+                rowIndex,
+                name,
+                async token =>
+                {
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, firstCommand, 0))
+                        return false;
+                    return await SendBcm125MbdCommandAsync(
+                        deviceManager,
+                        secondCommand,
+                        waitAfterMs > 0
+                            ? GetPlanDelayMs(steps, rowIndex, waitAfterMs)
+                            : 0);
+                },
+                "Sent",
+                "Send Fail");
+        }
+
+        private bool IsBcm125RemoteTerminal =>
+            _mbdTerminalState == Bcm125MbdTerminalState.Bcm1 ||
+            _mbdTerminalState == Bcm125MbdTerminalState.Bcm2;
+
+        private async Task<bool> CheckBcm125MbdCommunicationAsync(SK441Device deviceManager)
+        {
+            if (IsBcm125RemoteTerminal && deviceManager.IsTargetBoardCommunicationConnected)
+            {
+                OnLogInfo(
+                    "BCM-125已处于REMOTE终端且串口保持连接；跳过空命令探测，避免破坏终端上下文。");
+                return true;
+            }
+
+            bool connected = await deviceManager.CheckMbdCommunicationAsync();
+            if (!connected)
+                _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+            return connected;
+        }
+
+        private async Task<bool> SendBcm125MbdCommandAsync(
+            SK441Device deviceManager,
+            string command,
+            int waitAfterMs)
+        {
+            string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            bool keepCurrentConnection = IsBcm125RemoteTerminal;
+            Bcm125MbdTerminalState remoteState = _mbdTerminalState;
+            bool sent = keepCurrentConnection
+                ? await deviceManager.SendMbdCommandOnCurrentConnectionAsync(command, waitAfterMs)
+                : await deviceManager.SendMbdCommandAsync(command, waitAfterMs);
+
+            if (!sent && keepCurrentConnection)
+            {
+                sent = await RestoreBcm125RemoteTerminalAsync(deviceManager, remoteState);
+                if (sent && normalized != "DIAG ON")
+                {
+                    sent = await deviceManager.SendMbdCommandOnCurrentConnectionAsync(
+                        command,
+                        waitAfterMs);
+                }
+            }
+
+            if (!sent)
+            {
+                _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                return false;
+            }
+
+            if (normalized == "EXIT")
+                _mbdTerminalState = Bcm125MbdTerminalState.Mbd;
+            else if (normalized == "REMOTE1")
+                _mbdTerminalState = Bcm125MbdTerminalState.Bcm1;
+            else if (normalized == "REMOTE2")
+                _mbdTerminalState = Bcm125MbdTerminalState.Bcm2;
+            else if (normalized.StartsWith("W86=", StringComparison.Ordinal))
+                _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+
+            return true;
+        }
+
+        private async Task<string> QueryBcm125MbdCommandAsync(
+            SK441Device deviceManager,
+            string command,
+            int waitAfterMs)
+        {
+            if (!IsBcm125RemoteTerminal)
+                return await deviceManager.QueryMbdCommandAsync(command, waitAfterMs);
+
+            Bcm125MbdTerminalState remoteState = _mbdTerminalState;
+            try
+            {
+                return await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
+                    command,
+                    waitAfterMs);
+            }
+            catch (Exception ex)
+            {
+                OnLogWarning(
+                    $"BCM-125有状态查询失败：{command}，{ex.Message}；" +
+                    "准备重新连接并恢复REMOTE终端状态。");
+                if (!await RestoreBcm125RemoteTerminalAsync(deviceManager, remoteState))
+                    throw;
+
+                return await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
+                    command,
+                    waitAfterMs);
+            }
+        }
+
+        private async Task<bool> RestoreBcm125RemoteTerminalAsync(
+            SK441Device deviceManager,
+            Bcm125MbdTerminalState remoteState)
+        {
+            string remoteCommand = remoteState == Bcm125MbdTerminalState.Bcm1
+                ? "REMOTE1"
+                : remoteState == Bcm125MbdTerminalState.Bcm2
+                    ? "REMOTE2"
+                    : null;
+            if (remoteCommand == null)
+                return false;
+
+            OnLogWarning(
+                $"BCM-125 USB-B/MBD连接丢失，开始重建{remoteCommand}终端上下文。");
+            _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+            if (!await deviceManager.SendMbdCommandAsync("EXIT", 0) ||
+                !await deviceManager.SendMbdCommandAsync("DIAG ON", 0) ||
+                !await deviceManager.SendMbdCommandAsync(remoteCommand, 0) ||
+                !await deviceManager.SendMbdCommandOnCurrentConnectionAsync("DIAG ON", 0))
+            {
+                _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                OnLogWarning(
+                    $"BCM-125未能重建{remoteCommand}终端上下文，停止后续寄存器命令。");
+                return false;
+            }
+
+            _mbdTerminalState = remoteState;
+            OnLogInfo($"BCM-125已重建{remoteCommand}终端上下文。");
+            return true;
         }
 
         private void AddFixtureRelayStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string configKey, string defaultRelays, bool close, string passValue)
@@ -144,7 +315,7 @@ namespace TestPlatform.TestSequences
                 "Relay Fail");
         }
 
-        private void AddSkippedFlashResultStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string storeKey)
+        private void AddFirmwareFlashResultStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string storeKey)
         {
             steps.Add(new TestStepItem
             {
@@ -155,11 +326,20 @@ namespace TestPlatform.TestSequences
                 {
                     if (deviceManager.IsTtlProgrammingRequired)
                     {
-                        OnLogError(name + "：SKRequireTtl=true，但当前没有已实现并连接的TTL烧录路径。");
-                        return new StepResult { IsPass = false, Value = "TTL REQUIRED" };
+                        bool flashed = await deviceManager.FlashBcm125FirmwareAsync(
+                            Bcm125Commands.FirmwareFile,
+                            token);
+                        return new StepResult
+                        {
+                            IsPass = flashed,
+                            Value = flashed ? "1" : "0",
+                            StoreKey = storeKey,
+                            NumericValue = flashed ? 1 : 0,
+                            Unit = string.Empty
+                        };
                     }
 
-                    OnLogWarning(name + "：SKRequireTtl=false，记录为SKIPPED；未执行也未模拟TTL烧录。");
+                    OnLogWarning(name + "：固件烧录已跳过；未执行也未模拟TTL烧录。");
                     await Task.Delay(200, token);
                     return new StepResult
                     {
@@ -180,7 +360,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "10.1 先关闭ANS输出再断开RL4", token => deviceManager.DisableAnsThenOpenRl4Async(7), "ANS/RL4 OFF", "Safe Power-Off Fail");
             AddDelayStep(steps, row++, "10.2 等待6500ms", 6500);
             AddProgrammingActionStep(steps, row++, "10.3 闭合RL4后重新开启ANS给DUT供电", token => deviceManager.CloseRl4ThenEnableAnsAsync(7, 140, 1), "RL4/ANS ON", "Safe Power-On Fail");
-            AddProgrammingActionStep(steps, row++, "10.4 检查USB-B/MBD串口通信已打开", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "10.4 检查USB-B/MBD串口通信已打开", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "10.5 发送EXIT到MBD", "EXIT ", 0);
             AddCanBusQueryStep(steps, row++, deviceManager, "D01 读取R14检查BCM内部CAN响应", "R14", "BCM125.CAN.D01_R14_BCM", 1);
             AddCanBusQueryStep(steps, row++, deviceManager, "D02 读取R15检查SAFE内部CAN响应", "R15", "BCM125.CAN.D02_R15_SAFE", -1);
@@ -196,19 +376,14 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    string response = await deviceManager.QueryMbdCommandAsync(command, 0);
-                    string[] values = ParseMbdRegisterValues(response);
-                    if (values.Length == 0)
-                    {
-                        await OpenBcm125Rl4AfterFailureAsync(deviceManager);
-                        return new StepResult { IsPass = false, Value = "No Data" };
-                    }
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, command, 0);
+                    int[] values = MbdResponseParser.ParseIntegerVector(command, response, 16);
 
                     int index = expectedZeroIndex >= 0 ? expectedZeroIndex : values.Length - 1;
-                    bool pass = index >= 0 && index < values.Length && values[index] == "00";
-                    string display = index >= 0 && index < values.Length ? values[index] : "Index Err";
-                    if (!pass)
-                        await OpenBcm125Rl4AfterFailureAsync(deviceManager);
+                    bool pass = index >= 0 && index < values.Length && values[index] == 0;
+                    string display = index >= 0 && index < values.Length
+                        ? values[index].ToString("00", System.Globalization.CultureInfo.InvariantCulture)
+                        : "Index Err";
 
                     return new StepResult
                     {
@@ -222,29 +397,12 @@ namespace TestPlatform.TestSequences
             });
         }
 
-        private static string[] ParseMbdRegisterValues(string response)
-        {
-            if (string.IsNullOrWhiteSpace(response))
-                return new string[0];
-
-            int equals = response.IndexOf('=');
-            int semicolon = response.IndexOf(';');
-            if (equals < 0)
-                return new string[0];
-
-            string payload = semicolon > equals ? response.Substring(equals + 1, semicolon - equals - 1) : response.Substring(equals + 1);
-            return payload.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
-                .Where(x => x.Length > 0)
-                .ToArray();
-        }
-
         protected void AddBcm125FirmwareVersionSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager)
         {
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "11.1 闭合RL4给DUT供电（如未上电）", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "11.2 检查USB-B/MBD串口通信已打开", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "11.2 检查USB-B/MBD串口通信已打开", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "11.3 发送REMOTE1进入BCM1终端", "REMOTE1 ", 0);
             AddFirmwareVersionQueryStep(steps, row++, deviceManager, "E01 读取R0检查BCM1固件版本", "BCM125.FIRMWARE.E01_FW_ST1_VERSION");
             AddMbdCommandStep(steps, row++, deviceManager, "11.5 发送EXIT返回MBD终端", "EXIT", 0);
@@ -262,12 +420,10 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    string response = await deviceManager.QueryMbdCommandAsync("R0", 0);
-                    string version = ParseFirmwareVersion(response);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, "R0", 0);
+                    string version = MbdResponseParser.ParsePayloadText("R0", response).Trim('"');
                     string expected = deviceManager.GetBcm125ExpectedFirmwareVersion();
                     bool pass = string.Equals(version, expected, StringComparison.OrdinalIgnoreCase);
-                    if (!pass)
-                        await OpenBcm125Rl4AfterFailureAsync(deviceManager);
 
                     return new StepResult
                     {
@@ -281,27 +437,13 @@ namespace TestPlatform.TestSequences
             });
         }
 
-        private static string ParseFirmwareVersion(string response)
-        {
-            if (string.IsNullOrWhiteSpace(response))
-                return string.Empty;
-
-            int equals = response.IndexOf('=');
-            string value = equals >= 0 ? response.Substring(equals + 1) : response;
-            int semicolon = value.IndexOf(';');
-            if (semicolon >= 0)
-                value = value.Substring(0, semicolon);
-
-            return value.Trim().Trim('"');
-        }
-
         protected void AddBcm125ResetFlatCableSteps(System.Collections.Generic.List<TestStepItem> steps, TestSequenceContext context, SK441Device deviceManager)
         {
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "12.1 闭合RL4给DUT供电（如未上电）", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
             AddDelayStep(steps, row++, "12.2 等待3000ms", 3000);
-            AddProgrammingActionStep(steps, row++, "12.3 检查USB-B/MBD串口通信已打开", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "12.3 检查USB-B/MBD串口通信已打开", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "12.4 发送EXIT进入MBD终端", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "12.5 发送DIAG ON到MBD", "DIAG ON", 0);
 
@@ -315,7 +457,19 @@ namespace TestPlatform.TestSequences
             AddRunningTimeReadStep(steps, row++, deviceManager, "12.13 ST1再次读取R10 running_time y", "BCM125.RESET_FLAT.ST1_Y");
             AddResetFlatResultStep(steps, row++, context, "F01 ST1判断Reset from flat cable", "BCM125.RESET_FLAT.ST1_X", "BCM125.RESET_FLAT.ST1_Y", "BCM125.RESET_FLAT.F01_ST1_RESULT");
 
-            AddMbdCommandStep(steps, row++, deviceManager, "12.15 ST2发送EXIT返回MBD终端", "EXIT", 0);
+            int st2WaitExitRow = row++;
+            AddProgrammingActionStep(
+                steps,
+                st2WaitExitRow,
+                "12.15 ST2等待3000ms后发送EXIT返回MBD终端",
+                async token =>
+                {
+                    int delayMs = GetPlanDelayMs(steps, st2WaitExitRow, 3000);
+                    await Task.Delay(delayMs, token);
+                    return await SendBcm125MbdCommandAsync(deviceManager, "EXIT", 0);
+                },
+                "Waited / Sent",
+                "Wait / Send Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "12.16 ST2发送REMOTE2进入BCM2终端", "REMOTE2", 0);
             AddRunningTimeReadStep(steps, row++, deviceManager, "12.17 ST2读取R10 running_time x", "BCM125.RESET_FLAT.ST2_X");
             AddMbdCommandStep(steps, row++, deviceManager, "12.18 ST2发送EXIT返回MBD终端", "EXIT", 0);
@@ -340,15 +494,14 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    string response = await deviceManager.QueryMbdCommandAsync("R10", 0);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, "R10", 0);
                     double runningTime = MbdResponseParser.ParseScalar("R10", response);
-                    int integerPart = (int)Math.Floor(runningTime);
                     return new StepResult
                     {
                         IsPass = true,
-                        Value = integerPart.ToString(),
+                        Value = runningTime.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
                         StoreKey = storeKey,
-                        NumericValue = integerPart,
+                        NumericValue = runningTime,
                         Unit = "s"
                     };
                 }
@@ -368,7 +521,9 @@ namespace TestPlatform.TestSequences
                     double y;
                     bool hasX = TryGetStoredNumericValue(context, xKey, out x);
                     bool hasY = TryGetStoredNumericValue(context, yKey, out y);
-                    bool pass = hasX && hasY && Math.Abs(x - y) >= 2 && Math.Abs(y - 1) < 0.001;
+                    bool pass = hasX && hasY &&
+                        x - y >= 2.0 &&
+                        y >= 0.5 && y <= 1.5;
                     if (!pass)
                         await Task.Delay(1, token);
 
@@ -389,7 +544,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "13.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "13.2 Check USB-B/MBD serial open", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "13.2 Check USB-B/MBD serial open", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "13.3 Send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "13.4 ST1 send REMOTE1", "REMOTE1", 0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "G01 ST1 read R55 adc13 vref PC3", "R55", "BCM125.VREF.G01_ADC13_VREF_PC3_ST1", 1500, 1600, "count");
@@ -404,7 +559,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "14.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "14.2 Check USB-B/MBD serial open", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "14.2 Check USB-B/MBD serial open", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "14.3 Send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "14.4 ST1 send REMOTE1", "REMOTE1", 0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "H01 ST1 read R53 adc11 vcc PC1", "R53", "BCM125.POWER_VOLTAGE.H01_ADC11_VCC_PC1_ST1", 3700, 4100, "count");
@@ -422,7 +577,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "15.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "15.2 Check USB-B/MBD serial open", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "15.2 Check USB-B/MBD serial open", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "15.3 Send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "15.4 ST1 send REMOTE1", "REMOTE1", 0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "I01 ST1 read R52 adc10 hs_temp PC0", "R52", "BCM125.HEATSINK_TEMP.I01_ADC10_HS_TEMP_PC0_ST1", 1800, 2500, "0.1C");
@@ -437,7 +592,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "16.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "16.2 Check USB-B/MBD serial open", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "16.2 Check USB-B/MBD serial open", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "16.3 ST1 send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "16.4 ST1 send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "16.5 ST1 activate MPS RL2 W94=1", "W94=1", 0);
@@ -487,7 +642,6 @@ namespace TestPlatform.TestSequences
                     double voltage = await deviceManager.MeasureDaqChannelVoltageAsync(channel);
                     double mv = voltage * 1000.0;
                     bool pass = mv > 0;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(mv, "mV"), StoreKey = storeKey, NumericValue = mv, Unit = "mV" };
                 }
             });
@@ -509,8 +663,7 @@ namespace TestPlatform.TestSequences
                     bool pass = hasVbus && hasAdc && Math.Abs(adc) > 0.001;
                     double gain = pass ? Math.Round(4096.0 * vbus / adc) : 0;
                     if (pass)
-                        pass = await deviceManager.SendMbdCommandAsync("W18=" + gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
+                        pass = await SendBcm125MbdCommandAsync(deviceManager, "W18=" + gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
                     return new StepResult { IsPass = pass, Value = gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), StoreKey = storeKey, NumericValue = gain, Unit = "count" };
                 }
             });
@@ -526,10 +679,9 @@ namespace TestPlatform.TestSequences
                 Action = async (token) =>
                 {
                     double expected;
-                    string response = await deviceManager.QueryMbdCommandAsync(command, 0);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, command, 0);
                     double actual = MbdResponseParser.ParseScalar(command, response);
                     bool pass = TryGetStoredNumericValue(context, expectedKey, out expected) && Math.Abs(actual - expected) <= 1.0;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(actual, unit), StoreKey = storeKey, NumericValue = actual, Unit = unit };
                 }
             });
@@ -548,7 +700,7 @@ namespace TestPlatform.TestSequences
                     int count = 0;
                     for (int i = 0; i < sampleCount; i++)
                     {
-                        string response = await deviceManager.QueryMbdCommandAsync(command, 0);
+                        string response = await QueryBcm125MbdCommandAsync(deviceManager, command, 0);
                         double value = MbdResponseParser.ParseScalar(command, response);
                         sum += value;
                         count++;
@@ -560,7 +712,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, unit);
                     bool pass = !double.IsNaN(average) && average >= plannedLower && average <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = double.IsNaN(average) ? "No Data" : FormatValue(average, plannedUnit), StoreKey = storeKey, NumericValue = double.IsNaN(average) ? 0 : average, Unit = plannedUnit };
                 }
             });
@@ -584,7 +735,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mV");
                     bool pass = average >= plannedLower && average <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(average, plannedUnit), StoreKey = storeKey, NumericValue = average, Unit = plannedUnit };
                 }
             });
@@ -611,8 +761,7 @@ namespace TestPlatform.TestSequences
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "count");
                     pass = pass && gain >= plannedLower && gain <= plannedUpper;
                     if (pass)
-                        pass = await deviceManager.SendMbdCommandAsync("W20=" + gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
+                        pass = await SendBcm125MbdCommandAsync(deviceManager, "W20=" + gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
                     return new StepResult { IsPass = pass, Value = gain.ToString("0", System.Globalization.CultureInfo.InvariantCulture), StoreKey = storeKey, NumericValue = gain, Unit = plannedUnit };
                 }
             });
@@ -638,8 +787,7 @@ namespace TestPlatform.TestSequences
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mV");
                     pass = pass && offset >= plannedLower && offset <= plannedUpper;
                     if (pass)
-                        pass = await deviceManager.SendMbdCommandAsync("W21=" + offset.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
+                        pass = await SendBcm125MbdCommandAsync(deviceManager, "W21=" + offset.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
                     return new StepResult { IsPass = pass, Value = offset.ToString("0", System.Globalization.CultureInfo.InvariantCulture), StoreKey = storeKey, NumericValue = offset, Unit = plannedUnit };
                 }
             });
@@ -664,7 +812,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");
                     bool pass = currentMa >= plannedLower && currentMa <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(currentMa, plannedUnit), StoreKey = storeKey, NumericValue = currentMa, Unit = plannedUnit };
                 }
             });
@@ -730,12 +877,27 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double value;
-                    bool pass = TryGetStoredNumericValue(context, storeKey, out value);
+                    TestSequenceValue storedValue = null;
+                    double value = 0.0;
+                    bool sourcePassed = context != null
+                        && context.TryGetValue(storeKey, out storedValue)
+                        && storedValue.Pass;
+                    if (sourcePassed)
+                        value = storedValue.NumericValue;
+
+                    bool pass = sourcePassed;
                     if (pass)
-                        pass = await deviceManager.SendMbdCommandAsync(commandPrefix + value.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
-                    return new StepResult { IsPass = pass, Value = pass ? value.ToString("0", System.Globalization.CultureInfo.InvariantCulture) : "Missing", Unit = string.Empty };
+                        pass = await SendBcm125MbdCommandAsync(deviceManager, commandPrefix + value.ToString("0", System.Globalization.CultureInfo.InvariantCulture), 0);
+                    return new StepResult
+                    {
+                        IsPass = pass,
+                        Value = pass
+                            ? value.ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                            : (sourcePassed ? "Write Fail" : "Source Failed"),
+                        StoreKey = storeKey + ".WRITE_OK",
+                        NumericValue = pass ? 1 : 0,
+                        Unit = string.Empty
+                    };
                 }
             });
         }
@@ -753,7 +915,7 @@ namespace TestPlatform.TestSequences
         private void AddWestinghouseStringSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager, ref int row, string suffix, string remoteCommand, string k01, string k02, string k03, string k04, string k05, string k06)
         {
             AddProgrammingActionStep(steps, row++, "17.1 " + suffix + " close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddProgrammingActionStep(steps, row++, "17.2 " + suffix + " check USB-B/MBD serial open", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "17.2 " + suffix + " check USB-B/MBD serial open", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "17.3 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "17.4 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "17.5 " + suffix + " enable MBD Westinghouse W95=1", "W95=1", 0);
@@ -785,7 +947,7 @@ namespace TestPlatform.TestSequences
             AddDaqRelayStep(steps, row++, deviceManager, "18.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "18.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "18.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
-            AddProgrammingActionStep(steps, row++, "18.6 Check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "18.6 Check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "18.7 Send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "18.8 Read R68 verify C21 discharged", "R68", "BCM125.PRECHARGE.C21_DISCHARGED", 0, 49, "count");
             AddMbdCommandStep(steps, row++, deviceManager, "18.9 Send REMOTE1", "REMOTE1", 0);
@@ -847,11 +1009,11 @@ namespace TestPlatform.TestSequences
                 "18.39 " + suffix + " activate precharge W75=1",
                 async token =>
                 {
-                    if (!await deviceManager.SendMbdCommandAsync(remoteCommand, 0))
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, remoteCommand, 0))
                         return false;
-                    if (!await deviceManager.SendMbdCommandAsync("DIAG ON", 0))
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, "DIAG ON", 0))
                         return false;
-                    return await deviceManager.SendMbdCommandAsync("W75=1", 0);
+                    return await SendBcm125MbdCommandAsync(deviceManager, "W75=1", 0);
                 },
                 "Precharge ON",
                 "Precharge Fail");
@@ -861,9 +1023,9 @@ namespace TestPlatform.TestSequences
                 "18.39 " + suffix + " send EXIT to MBD",
                 async token =>
                 {
-                    if (!await deviceManager.SendMbdCommandAsync("EXIT", 0))
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, "EXIT", 0))
                         return false;
-                    if (!await deviceManager.SendMbdCommandAsync("DIAG ON", 0))
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, "DIAG ON", 0))
                         return false;
                     await Task.Delay(500, token);
                     return true;
@@ -880,9 +1042,9 @@ namespace TestPlatform.TestSequences
                 {
                     if (!await deviceManager.SetVbusGeneratorAsync(0, 0, 150, false))
                         return false;
-                    if (!await deviceManager.SendMbdCommandAsync(remoteCommand, 0))
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, remoteCommand, 0))
                         return false;
-                    return await deviceManager.SendMbdCommandAsync("W75=0", 0);
+                    return await SendBcm125MbdCommandAsync(deviceManager, "W75=0", 0);
                 },
                 "VBUS Reset/Precharge OFF",
                 "Cleanup Fail");
@@ -917,7 +1079,7 @@ namespace TestPlatform.TestSequences
             string prefix = "BCM125.MIDPOINT." + suffix + ".";
             AddProgrammingActionStep(steps, row++, "19.8 " + suffix + " set VMID 62.5V/0.1A OVP300", token => deviceManager.SetVbusGeneratorAsync(62.5f, 0.1f, 300, true), "VMID Set", "VMID Fail");
             AddDelayStep(steps, row++, "19.8 " + suffix + " wait 10000ms", 10000);
-            AddProgrammingActionStep(steps, row++, "19.9 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "19.9 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "19.10 " + suffix + " send EXIT", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "19.11 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
             AddDelayStep(steps, row++, "19.12 " + suffix + " wait 500ms", 500);
@@ -983,7 +1145,7 @@ namespace TestPlatform.TestSequences
             AddDelayStep(steps, row++, "20.7 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "20.8 " + suffix + " set string generator 12V/1A OVP16", token => deviceManager.SetStringGeneratorAsync(12, 1, 16, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "20.9 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(12, 1, 16, true), "String ON", "String Fail");
-            AddProgrammingActionStep(steps, row++, "20.10 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "20.10 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "20.11 " + suffix + " send " + remoteCommand, remoteCommand, 0);
             AddMbdAverageQueryStep(steps, row++, deviceManager, n01 + " " + suffix + " average R57 at 1A", "R57", prefix + n01 + "_ADC15_1A", 40, 50, "count", 16, 20);
             AddDaqShuntCurrentStep(steps, row++, deviceManager, n02 + " " + suffix + " DAQ CH" + (shuntChannel - 100) + " shunt current 1000mA", shuntChannel, shuntOhm, prefix + n02 + "_1000MA", 950, 1050);
@@ -1035,7 +1197,7 @@ namespace TestPlatform.TestSequences
             AddDelayStep(steps, row++, "21.8 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "21.9 " + suffix + " set string generator 5V/0.3A OVP10", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.10 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, true), "String ON", "String Fail");
-            AddProgrammingActionStep(steps, row++, "21.11 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "21.11 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "21.12 " + suffix + " send " + remoteCommand, remoteCommand, 0);
             AddDischargeMosfetRampStep(steps, row++, deviceManager, stepName + " " + suffix + " ramp R45/R59 trigger", "BCM125.DISCHARGE_MOSFET." + stepName + "_" + suffix);
             AddProgrammingActionStep(steps, row++, "21.14 " + suffix + " turn off string generator", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, false), "String OFF", "String Fail");
@@ -1067,10 +1229,10 @@ namespace TestPlatform.TestSequences
                         await Task.Delay(200, token);
                         double idch = MbdResponseParser.ParseScalar(
                             "R45",
-                            await deviceManager.QueryMbdCommandAsync("R45", 0));
+                            await QueryBcm125MbdCommandAsync(deviceManager, "R45", 0));
                         int gate = (int)MbdResponseParser.ParseScalar(
                             "R59",
-                            await deviceManager.QueryMbdCommandAsync("R59", 0));
+                            await QueryBcm125MbdCommandAsync(deviceManager, "R59", 0));
                         if (previousGate == 0 && gate == 1)
                         {
                             triggerIdch = idch;
@@ -1083,7 +1245,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, 200, 1100, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");
                     bool pass = !double.IsNaN(triggerIdch) && triggerIdch >= plannedLower && triggerIdch <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = double.IsNaN(triggerIdch) ? "No Trigger" : FormatValue(triggerIdch, plannedUnit), StoreKey = storeKey, NumericValue = double.IsNaN(triggerIdch) ? 0 : triggerIdch, Unit = plannedUnit };
                 }
             });
@@ -1116,7 +1277,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "22.9 " + suffix + " set string generator 137.5V/1A OVP10", token => deviceManager.SetStringGeneratorAsync(137.5f, 1, 10, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "22.10 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(137.5f, 1, 10, true), "String ON", "String Fail");
             AddDelayStep(steps, row++, "22.11 " + suffix + " wait 1000ms", 1000);
-            AddProgrammingActionStep(steps, row++, "22.12 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "22.12 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "22.13 " + suffix + " send " + remoteCommand, remoteCommand, 0);
             AddMbdCommandStep(steps, row++, deviceManager, "22.14 " + suffix + " send DIAG ON", "DIAG ON", 0);
             AddProgrammingActionStep(steps, row++, "22.15 " + suffix + " open RL CORTO CH4, " + pointName + " = NC 2.9V", token => deviceManager.SetShortProtectionSimulatorAsync(pointName, 2.9), "NC 2.9V", "Signal Fail");
@@ -1178,6 +1339,7 @@ namespace TestPlatform.TestSequences
             string gainIccbWrite = channel.CalibrationWriteCommands[2];
             string gainIccbVstrWrite = channel.CalibrationWriteCommands[3];
             string offsetIccbWrite = channel.CalibrationWriteCommands[4];
+            string mbdRelayCommandPrefix = channel.MbdRelayCommandPrefix;
             string prefix = "BCM125.CHARGING." + suffix + ".";
             AddFixtureRelayStep(steps, row++, deviceManager, "23.7 " + suffix + " close charging calibration relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "23.8 " + suffix + " wait 20ms", 20);
@@ -1185,9 +1347,16 @@ namespace TestPlatform.TestSequences
             AddDelayStep(steps, row++, "23.10 " + suffix + " wait 1000ms", 1000);
             AddProgrammingActionStep(steps, row++, "23.11 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, true), "String ON", "String Fail");
             AddProgrammingActionStep(steps, row++, "23.12 " + suffix + " set VSTR_NEG bus generator 1V/1A OVP150", token => deviceManager.SetVbusGeneratorAsync(1, 1, 150, true), "VBUS ON", "VBUS Fail");
-            AddProgrammingActionStep(steps, row++, "23.13 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "23.13 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "23.14 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
-            AddMbdCommandStep(steps, row++, deviceManager, "23.14 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "23.14 " + suffix + " send DIAG ON and close MBD string relay " + mbdRelayCommandPrefix + "1",
+                "DIAG ON",
+                mbdRelayCommandPrefix + "1",
+                500);
             AddMbdCommandStep(steps, row++, deviceManager, "23.15 " + suffix + " send " + remoteCommand, remoteCommand, 0);
             AddMbdCommandStep(steps, row++, deviceManager, "23.16 " + suffix + " send DIAG ON to BCM", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "23.17 " + suffix + " set W69=1 CCB off", "W69=1", 0);
@@ -1206,7 +1375,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "23.32 " + suffix + " set VSTR_NEG bus generator 1V/1A OVP150", token => deviceManager.SetVbusGeneratorAsync(1, 1, 150, true), "VBUS Set", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "23.33 " + suffix + " set string generator 10V/6A OVP150", token => deviceManager.SetStringGeneratorAsync(10, 6, 150, true), "String Set", "String Fail");
             AddDelayStep(steps, row++, "23.34 " + suffix + " wait 7000ms", 7000);
-            AddMbdCommandStep(steps, row++, deviceManager, "23.34 " + suffix + " set W69=0 CCB on", "W69=0", 0);
+            AddMbdCommandStep(steps, row++, deviceManager, "23.34 " + suffix + " set W69=0 CCB on and settle 500ms", "W69=0", 500);
             AddMbdAverageQueryStep(steps, row++, deviceManager, q08 + " " + suffix + " average R50 adc0 @ 0V 6A", "R50", prefix + q08 + "_ADC0_0V_6A", 25, 40, "count", 4, 20);
             AddMbdAverageQueryStep(steps, row++, deviceManager, q09 + " " + suffix + " average R56 adc14 @ 0V 6A", "R56", prefix + q09 + "_ADC14_0V_6A", 2650, 3100, "count", 4, 20);
             AddDaqSignedShuntCurrentStep(steps, row++, deviceManager, q10 + " " + suffix + " shunt current -6000mA", shuntChannel, shuntOhm, -1, prefix + q10 + "_CURRENT_6000MA", -6500, -5500);
@@ -1221,14 +1390,79 @@ namespace TestPlatform.TestSequences
             AddWriteStoredNumericStep(steps, row++, context, deviceManager, "23.50 " + suffix + " write " + q14 + " gain_iccb", gainIccbWrite, prefix + q14 + "_GAIN_ICCB");
             AddWriteStoredNumericStep(steps, row++, context, deviceManager, "23.50 " + suffix + " write " + q15 + " gain_iccb_vstr_neg", gainIccbVstrWrite, prefix + q15 + "_GAIN_ICCB_VSTR_NEG");
             AddWriteStoredNumericStep(steps, row++, context, deviceManager, "23.50 " + suffix + " write " + q16 + " offset_iccb", offsetIccbWrite, prefix + q16 + "_OFFSET_ICCB");
-            AddMbdCommandStep(steps, row++, deviceManager, "23.51 " + suffix + " send ACT->FLASH", "ACT->FLASH", 0);
+            AddConditionalActFlashStep(
+                steps,
+                row++,
+                context,
+                deviceManager,
+                "23.51 " + suffix + " send ACT->FLASH only after complete calibration",
+                prefix + q12 + "_GAIN_VSTR_NEG",
+                prefix + q13 + "_OFFSET_VSTR_NEG",
+                prefix + q14 + "_GAIN_ICCB",
+                prefix + q15 + "_GAIN_ICCB_VSTR_NEG",
+                prefix + q16 + "_OFFSET_ICCB");
             AddProgrammingActionStep(steps, row++, "23.52 " + suffix + " turn off string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 10, false), "String OFF", "String Fail");
             AddProgrammingActionStep(steps, row++, "23.55 " + suffix + " reset generators 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "23.56 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "23.57 " + suffix + " wait 1000ms", 1000);
             AddFixtureRelayStep(steps, row++, deviceManager, "23.58 " + suffix + " open charging calibration relays", "SKBCM125ChargingOpenRelays", "8,9,10,11,12,13,15,16", false, "Relays Open");
             AddDelayStep(steps, row++, "23.59 " + suffix + " wait 200ms", 200);
-            AddMbdCommandStep(steps, row++, deviceManager, "23.59 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "23.59 " + suffix + " send EXIT and open MBD string relay " + mbdRelayCommandPrefix + "0",
+                "EXIT",
+                mbdRelayCommandPrefix + "0",
+                500);
+        }
+
+        private void AddConditionalActFlashStep(
+            System.Collections.Generic.List<TestStepItem> steps,
+            int rowIndex,
+            TestSequenceContext context,
+            SK441Device deviceManager,
+            string name,
+            params string[] calibrationKeys)
+        {
+            steps.Add(new TestStepItem
+            {
+                Name = name,
+                RowIndex = rowIndex,
+                PowerCritical = true,
+                Action = async token =>
+                {
+                    foreach (string key in calibrationKeys)
+                    {
+                        TestSequenceValue calculated;
+                        TestSequenceValue written;
+                        if (context == null
+                            || !context.TryGetValue(key, out calculated)
+                            || !calculated.Pass
+                            || !context.TryGetValue(key + ".WRITE_OK", out written)
+                            || !written.Pass)
+                        {
+                            OnLogError(
+                                "BCM-125 calibration is incomplete; ACT->FLASH skipped: " + key);
+                            return new StepResult
+                            {
+                                IsPass = false,
+                                Value = "Calibration Invalid / FLASH Skipped"
+                            };
+                        }
+                    }
+
+                    bool pass = await SendBcm125MbdCommandAsync(
+                        deviceManager,
+                        "ACT->FLASH",
+                        0);
+                    return new StepResult
+                    {
+                        IsPass = pass,
+                        Value = pass ? "Saved" : "FLASH Fail"
+                    };
+                }
+            });
         }
 
         private void AddDaqAverageMvLimitedStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, int channel, string storeKey, double lower, double upper)
@@ -1249,7 +1483,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mV");
                     bool pass = mv >= plannedLower && mv <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(mv, plannedUnit), StoreKey = storeKey, NumericValue = mv, Unit = plannedUnit };
                 }
             });
@@ -1274,7 +1507,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");
                     bool pass = currentMa >= plannedLower && currentMa <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = FormatValue(currentMa, plannedUnit), StoreKey = storeKey, NumericValue = currentMa, Unit = plannedUnit };
                 }
             });
@@ -1294,10 +1526,10 @@ namespace TestPlatform.TestSequences
                 () =>
                 {
                     double adc0Low, adc0High, vLow, vHigh;
-                    if (!TryGetStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
-                        || !TryGetStoredNumericValue(context, prefix + q03 + "_VSTR_NEG_1000MV_0A", out vLow)
-                        || !TryGetStoredNumericValue(context, prefix + q05 + "_ADC0_15V_0A", out adc0High)
-                        || !TryGetStoredNumericValue(context, prefix + q07 + "_VSTR_NEG_15000MV_0A", out vHigh)
+                    if (!TryGetPassedStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q03 + "_VSTR_NEG_1000MV_0A", out vLow)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q05 + "_ADC0_15V_0A", out adc0High)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q07 + "_VSTR_NEG_15000MV_0A", out vHigh)
                         || Math.Abs(adc0High - adc0Low) <= 0.001)
                         return null;
 
@@ -1316,9 +1548,9 @@ namespace TestPlatform.TestSequences
                 () =>
                 {
                     double adc0Low, vLow, gainVstr;
-                    if (!TryGetStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
-                        || !TryGetStoredNumericValue(context, prefix + q03 + "_VSTR_NEG_1000MV_0A", out vLow)
-                        || !TryGetStoredNumericValue(context, prefix + q12 + "_GAIN_VSTR_NEG", out gainVstr))
+                    if (!TryGetPassedStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q03 + "_VSTR_NEG_1000MV_0A", out vLow)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q12 + "_GAIN_VSTR_NEG", out gainVstr))
                         return null;
 
                     return Math.Round(vLow - (gainVstr * adc0Low) / 4096.0);
@@ -1336,10 +1568,10 @@ namespace TestPlatform.TestSequences
                 () =>
                 {
                     double adc14Low, adc14Six, current0, currentSix;
-                    if (!TryGetStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
-                        || !TryGetStoredNumericValue(context, prefix + q04 + "_CURRENT_0MA", out current0)
-                        || !TryGetStoredNumericValue(context, prefix + q09 + "_ADC14_0V_6A", out adc14Six)
-                        || !TryGetStoredNumericValue(context, prefix + q10 + "_CURRENT_6000MA", out currentSix)
+                    if (!TryGetPassedStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q04 + "_CURRENT_0MA", out current0)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q09 + "_ADC14_0V_6A", out adc14Six)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q10 + "_CURRENT_6000MA", out currentSix)
                         || Math.Abs(adc14Six - adc14Low) <= 0.001)
                         return null;
 
@@ -1358,11 +1590,11 @@ namespace TestPlatform.TestSequences
                 () =>
                 {
                     double adc0Low, adc0High, adc14Low, adc14High, gainIccb;
-                    if (!TryGetStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
-                        || !TryGetStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
-                        || !TryGetStoredNumericValue(context, prefix + q05 + "_ADC0_15V_0A", out adc0High)
-                        || !TryGetStoredNumericValue(context, prefix + q06 + "_ADC14_15V_0A", out adc14High)
-                        || !TryGetStoredNumericValue(context, prefix + q14 + "_GAIN_ICCB", out gainIccb)
+                    if (!TryGetPassedStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q05 + "_ADC0_15V_0A", out adc0High)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q06 + "_ADC14_15V_0A", out adc14High)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q14 + "_GAIN_ICCB", out gainIccb)
                         || Math.Abs(adc0High - adc0Low) <= 0.001)
                         return null;
 
@@ -1381,14 +1613,31 @@ namespace TestPlatform.TestSequences
                 () =>
                 {
                     double adc0Low, adc14Low, gainIccb, gainIccbVstr;
-                    if (!TryGetStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
-                        || !TryGetStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
-                        || !TryGetStoredNumericValue(context, prefix + q14 + "_GAIN_ICCB", out gainIccb)
-                        || !TryGetStoredNumericValue(context, prefix + q15 + "_GAIN_ICCB_VSTR_NEG", out gainIccbVstr))
+                    if (!TryGetPassedStoredNumericValue(context, prefix + q01 + "_ADC0_0V_0A", out adc0Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q02 + "_ADC14_0V_0A", out adc14Low)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q14 + "_GAIN_ICCB", out gainIccb)
+                        || !TryGetPassedStoredNumericValue(context, prefix + q15 + "_GAIN_ICCB_VSTR_NEG", out gainIccbVstr))
                         return null;
 
                     return Math.Round(-1.0 * ((gainIccb * adc14Low) + (gainIccbVstr * adc0Low)) / 4096.0);
                 });
+        }
+
+        private bool TryGetPassedStoredNumericValue(
+            TestSequenceContext context,
+            string key,
+            out double value)
+        {
+            TestSequenceValue stored;
+            if (context != null && context.TryGetValue(key, out stored) && stored.Pass)
+            {
+                value = stored.NumericValue;
+                return true;
+            }
+
+            value = 0.0;
+            OnLogError("Missing or failed calibration dependency: " + key);
+            return false;
         }
 
         private void AddChargingCalculatedValueStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string storeKey, double lower, double upper, string unit, Func<double?> calculate)
@@ -1407,7 +1656,6 @@ namespace TestPlatform.TestSequences
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, unit);
                     bool pass = calculated.HasValue && value >= plannedLower && value <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult
                     {
                         IsPass = pass,
@@ -1462,7 +1710,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "24.9 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, true), "String ON", "String Fail");
             AddProgrammingActionStep(steps, row++, "24.10 " + suffix + " set bus generator 1V/1A OVP150", token => deviceManager.SetVbusGeneratorAsync(1, 1, 150, false), "VBUS Set", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "24.11 " + suffix + " turn on bus generator", token => deviceManager.SetVbusGeneratorAsync(1, 1, 150, true), "VBUS ON", "VBUS Fail");
-            AddProgrammingActionStep(steps, row++, "24.12 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "24.12 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "24.13 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "24.13 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "24.14 " + suffix + " send " + remoteCommand, remoteCommand, 0);
@@ -1541,7 +1789,7 @@ namespace TestPlatform.TestSequences
             string prefix = "BCM125.CCB." + suffix + ".";
             AddFixtureRelayStep(steps, row++, deviceManager, "25.7 " + suffix + " close CCB relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "25.8 " + suffix + " wait 50ms", 50);
-            AddProgrammingActionStep(steps, row++, "25.9 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "25.9 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "25.10 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "25.11 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "25.12 " + suffix + " close MBD battery relay " + mbdRelayCommandPrefix + "1", mbdRelayCommandPrefix + "1", 0);
@@ -1625,7 +1873,7 @@ namespace TestPlatform.TestSequences
             AddDelayStep(steps, row++, "26.11 " + suffix + " wait 3000ms", 3000);
             AddProgrammingActionStep(steps, row++, "26.12 " + suffix + " set string generator 45V/3A OVP150", token => deviceManager.SetStringGeneratorAsync(45, 3, 150, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "26.13 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(45, 3, 150, true), "String ON", "String Fail");
-            AddProgrammingActionStep(steps, row++, "26.14 " + suffix + " check serial communication", token => deviceManager.CheckMbdCommunicationAsync(), "Open", "COM Fail");
+            AddProgrammingActionStep(steps, row++, "26.14 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "26.15 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "26.16 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "26.17 " + suffix + " close MBD string relay " + mbdRelayCommandPrefix + "1", mbdRelayCommandPrefix + "1", 0);
@@ -1769,9 +2017,8 @@ namespace TestPlatform.TestSequences
                 Action = async (token) =>
                 {
                     string value = DateTime.Now.ToString("dd/MM/yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
-                    bool pass = await deviceManager.SendMbdCommandAsync("W40=" + value, 0);
+                    bool pass = await SendBcm125MbdCommandAsync(deviceManager, "W40=" + value, 0);
                     if (pass) capture(value);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = pass ? value : "Write Fail" };
                 }
             });
@@ -1787,9 +2034,8 @@ namespace TestPlatform.TestSequences
                 Action = async (token) =>
                 {
                     string value = (context.SN ?? string.Empty).Trim();
-                    bool pass = !string.IsNullOrWhiteSpace(value) && await deviceManager.SendMbdCommandAsync("W41=" + value, 0);
+                    bool pass = !string.IsNullOrWhiteSpace(value) && await SendBcm125MbdCommandAsync(deviceManager, "W41=" + value, 0);
                     if (pass) capture(value);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = pass ? value : "SN Missing/Write Fail" };
                 }
             });
@@ -1804,11 +2050,10 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    string response = await deviceManager.QueryMbdCommandAsync("ACT->FLASH", 0);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, "ACT->FLASH", 0);
                     bool pass = !string.IsNullOrWhiteSpace(response)
                         && response.IndexOf("ACT values copied to FLASH", StringComparison.OrdinalIgnoreCase) >= 0
                         && response.IndexOf("Ready", StringComparison.OrdinalIgnoreCase) >= 0;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = pass ? "1" : (response ?? "No Data"), StoreKey = storeKey, NumericValue = pass ? 1 : 0, Unit = string.Empty };
                 }
             });
@@ -1824,11 +2069,10 @@ namespace TestPlatform.TestSequences
                 Action = async (token) =>
                 {
                     string expected = expectedFactory() ?? string.Empty;
-                    string response = await deviceManager.QueryMbdCommandAsync(command, 0);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, command, 0);
                     string actual = MbdResponseParser.ParsePayloadText(command, response);
                     bool pass = !string.IsNullOrWhiteSpace(expected)
                         && string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult { IsPass = pass, Value = pass ? "1" : actual, StoreKey = storeKey, NumericValue = pass ? 1 : 0, Unit = string.Empty };
                 }
             });
@@ -1843,14 +2087,12 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    string response = await deviceManager.QueryMbdCommandAsync(command, 0);
+                    string response = await QueryBcm125MbdCommandAsync(deviceManager, command, 0);
                     double value = MbdResponseParser.ParseScalar(command, response);
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, unit);
                     bool pass = value >= plannedLower && value <= plannedUpper;
-                    if (!pass)
-                        await OpenBcm125Rl4AfterFailureAsync(deviceManager);
 
                     return new StepResult
                     {
@@ -1874,7 +2116,10 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double measuredVolts = await deviceManager.MeasureDaqChannelVoltageAsync(channel);
+                    double measuredVolts = await MeasureBcm125DaqChannelVoltageWithRecoveryAsync(
+                        deviceManager,
+                        channel,
+                        token);
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lower, upper, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, unit);
@@ -1882,7 +2127,6 @@ namespace TestPlatform.TestSequences
                         ? measuredVolts * 1000.0
                         : measuredVolts;
                     bool pass = value >= plannedLower && value <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult
                     {
                         IsPass = pass,
@@ -1905,13 +2149,15 @@ namespace TestPlatform.TestSequences
                 PowerCritical = true,
                 Action = async (token) =>
                 {
-                    double voltage = await deviceManager.MeasureDaqChannelVoltageAsync(channel);
+                    double voltage = await MeasureBcm125DaqChannelVoltageWithRecoveryAsync(
+                        deviceManager,
+                        channel,
+                        token);
                     double currentMa = voltage / shuntOhm * 1000.0;
                     double plannedLower, plannedUpper;
                     GetPlanRange(steps, rowIndex, lowerMa, upperMa, out plannedLower, out plannedUpper);
                     string plannedUnit = GetPlanUnit(steps, rowIndex, "mA");
                     bool pass = currentMa >= plannedLower && currentMa <= plannedUpper;
-                    if (!pass) await OpenBcm125Rl4AfterFailureAsync(deviceManager);
                     return new StepResult
                     {
                         IsPass = pass,
@@ -1924,10 +2170,28 @@ namespace TestPlatform.TestSequences
             });
         }
 
-        private async Task OpenBcm125Rl4AfterFailureAsync(SK441Device deviceManager)
+        private async Task<double> MeasureBcm125DaqChannelVoltageWithRecoveryAsync(
+            SK441Device deviceManager,
+            int channel,
+            CancellationToken token)
         {
-            OnLogWarning("BCM-125 供电相关测试失败：断开 RL4，关闭 DUT 供电。");
-            await EnsureRl4OffAsync(deviceManager);
+            try
+            {
+                return await deviceManager.MeasureDaqChannelVoltageAsync(channel);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                OnLogWarning(
+                    $"BCM-125 DAQ通道{channel}首次测量失败：{ex.Message}；" +
+                    "恢复DAQ状态后重读一次。");
+                deviceManager.Daq.RecoverVoltageDcMeasurement();
+                await Task.Delay(100, token);
+                return await deviceManager.MeasureDaqChannelVoltageAsync(channel);
+            }
         }
 
         private static string FormatValue(double value, string unit)

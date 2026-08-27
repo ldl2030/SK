@@ -1931,7 +1931,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>I01 14.8 U24.7采样16次/100ms</Name>
+    <Name>I01 14.8 U24.7按配置次数采样/100ms</Name>
     <LowerLimit>2800</LowerLimit>
     <UpperLimit>3200</UpperLimit>
     <Unit>mV</Unit>
@@ -1999,7 +1999,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>I03 14.12 U24.7急停后采样16次/100ms</Name>
+    <Name>I03 14.12 U24.7急停后按配置次数采样/100ms</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -2458,7 +2458,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K01 16.3 断开Relay_6并等待VBATT≤0.5V后测量MCU_ISOBATT约8秒 DAQ105</Name>
+    <Name>K01 16.3 断开Relay_6并等待VBATT≤0.5V后内部定时采样8秒/100ms DAQ105</Name>
     <LowerLimit>1700</LowerLimit>
     <UpperLimit>2200</UpperLimit>
     <Unit>mV</Unit>
@@ -2509,7 +2509,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K02 16.6 MCU_ISOBATT@0V测量约8秒 DAQ105</Name>
+    <Name>K02 16.6 MCU_ISOBATT@0V内部定时采样8秒/100ms DAQ105</Name>
     <LowerLimit>3000</LowerLimit>
     <UpperLimit>3300</UpperLimit>
     <Unit>mV</Unit>
@@ -2543,7 +2543,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>K03 16.8 MCU_ISOBATT@250V测量约8秒 DAQ105</Name>
+    <Name>K03 16.8 MCU_ISOBATT@250V内部定时采样8秒/100ms DAQ105</Name>
     <LowerLimit>400</LowerLimit>
     <UpperLimit>800</UpperLimit>
     <Unit>mV</Unit>

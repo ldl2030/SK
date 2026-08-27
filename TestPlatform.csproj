@@ -634,6 +634,9 @@
     <Content Include="ProjectConfig\SK\BCM-125\BCM-125_profiles.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="ProjectConfig\SK\BCM-125\Firmware\BCM_125_V8.hex">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="ProjectConfig\SK\BCM-250\BCM-250_autoTest.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

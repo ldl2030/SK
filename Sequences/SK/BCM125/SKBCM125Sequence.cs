@@ -6,15 +6,31 @@ namespace TestPlatform.TestSequences
 {
     public partial class SKBCM125Sequence : SKBcmSequenceBase
     {
+        private readonly bool _skipFirmwareProgramming;
+        private Bcm125MbdTerminalState _mbdTerminalState;
+
+        private enum Bcm125MbdTerminalState
+        {
+            Unknown,
+            Mbd,
+            Bcm1,
+            Bcm2
+        }
+
         public override string SequenceKey => "SK_BCM125_Sequence";
 
         public override string ExpectedBoardType => "BCM-125";
 
+        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming;
+
         public SKBCM125Sequence(
             ITestGridService grid = null,
-            Func<string, Task<bool>> confirmAsync = null)
+            Func<string, Task<bool>> confirmAsync = null,
+            bool skipFirmwareProgramming = false)
             : base(grid, confirmAsync)
         {
+            _skipFirmwareProgramming = skipFirmwareProgramming;
+            _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
         }
 
         protected override void AddElectricalTestSteps(

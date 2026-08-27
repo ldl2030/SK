@@ -50,6 +50,7 @@ namespace Bcm250StructureTests
                 ValidateStructure(plan, steps);
                 ValidateVariableDependencies();
                 ValidateProgrammingSkipOption();
+                ValidateProgrammingGuards(root, steps);
                 ValidatePowerSafety();
                 ValidateCustomerReport(root, plan);
                 RunSimulation(context, steps);
@@ -541,6 +542,9 @@ namespace Bcm250StructureTests
             Require(firmwareCount == 1, "Expected one XML firmware expected value.");
             Require(resultIds.Count == 91, "Expected 91 unique result IDs, got " + resultIds.Count + ".");
             Require(cleanupCount == 6, "Expected six cleanup steps.");
+            Require(
+                plan.GetStep("BCM250.CH08.S002.ACTION").DelayMs == 2000,
+                "BCM250 B01 must be preceded by a 2000 ms power stabilization delay.");
             Require(definitions.Count(x => x.GroupId == Bcm250GroupIds.Chapter(23)) == 61,
                 "Chapter 23 must expose all 61 PDF operations.");
             for (int chapter = 7; chapter <= 27; chapter++)
@@ -960,6 +964,37 @@ namespace Bcm250StructureTests
             };
             Require(!device.IsTtlProgrammingRequired,
                 "BCM250 programming skip option did not remove the TTL requirement.");
+        }
+
+        private static void ValidateProgrammingGuards(string root, IList steps)
+        {
+            object programmingStep = steps.Cast<object>().First(step => string.Equals(
+                Read<string>(step.GetType(), step, "StepId"),
+                "BCM250.CH09.S020.C01",
+                StringComparison.OrdinalIgnoreCase));
+            Require(Read<bool>(programmingStep.GetType(), programmingStep, "PowerCritical"),
+                "Real BCM250 firmware programming must be power critical.");
+
+            string malformedHex = Path.Combine(Path.GetTempPath(), "bcm250_bad_extended_address.hex");
+            File.WriteAllText(malformedHex, ":00000004FC\r\n");
+            try
+            {
+                bool rejected = false;
+                try
+                {
+                    Stm32IntelHexParser.Parse(malformedHex, 0x08000000, 0x0801FFFF);
+                }
+                catch (InvalidDataException ex)
+                {
+                    rejected = ex.Message.Contains("扩展线性地址记录长度无效");
+                }
+                Require(rejected,
+                    "Malformed HEX extended-address records must fail explicitly instead of indexing past the record.");
+            }
+            finally
+            {
+                File.Delete(malformedHex);
+            }
         }
 
         private static void Require(bool condition, string message)

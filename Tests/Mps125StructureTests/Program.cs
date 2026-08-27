@@ -29,12 +29,13 @@ namespace Mps125StructureTests
                 ValidateCatalog();
                 ValidateChapterCommunicationClose(context, device);
                 ValidateSafetyGates(steps);
-                ValidateR71HardwareGate(root);
+                ValidateConfiguredAverageSampleCounts();
                 ValidatePowerSafety();
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
                 RunSafetyGateFault(xml, "MPS125.CH16.S005.ACTION", "MPS125.CH16.S006.K02");
-                RunSafetyGateFault(xml, "MPS125.CH17.S014.L04", "MPS125.CH17.S015.ACTION");
+                RunGlobalResultFailureContinue(xml, "MPS125.CH16.S003.K01", "MPS125.CH16.S004.ACTION");
+                RunGlobalResultFailureContinue(xml, "MPS125.CH17.S014.L04", "MPS125.CH17.S015.ACTION");
 
                 Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, DAQ-only functional relays, VBUS/VBATT safety gates, USB-B power-edge handling, full simulation and fault cleanup.");
                 return 0;
@@ -85,10 +86,17 @@ namespace Mps125StructureTests
             ValidateLimit(plan, "K01", 1700, 2200, "mV");
             ValidateLimit(plan, "K02", 3000, 3300, "mV");
             ValidateLimit(plan, "K03", 400, 800, "mV");
-            ValidateLimit(plan, "L01", 3900, 4096, "Count");
-            ValidateLimit(plan, "L05", 0, 100, "Count");
-            ValidateLimit(plan, "L09", 3900, 4096, "Count");
-            ValidateLimit(plan, "L13", 3900, 4096, "Count");
+            ValidateOpenUpperLimit(plan, "L01", 0, "mV");
+            ValidateOpenUpperLimit(plan, "L05", 0, "mV");
+            ValidateOpenUpperLimit(plan, "L09", 0, "mV");
+            ValidateOpenUpperLimit(plan, "L13", 0, "mV");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "W99=0",
+                    "DIAGNOSTIC MODE is OFF.\rReady.\r",
+                    out string diagnosticModeError) &&
+                diagnosticModeError == "DIAGNOSTIC MODE IS OFF",
+                "MBD diagnostic-mode-off response must fail a write command.");
             ValidateLimit(plan, "J08", 200000, 205000, "Count");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.2.2.2", "Firmware expectation mismatch.");
         }
@@ -99,7 +107,7 @@ namespace Mps125StructureTests
             Require(catalog.Any(x => x.Kind == Mps125ActionKind.SetVbatt), "VBATT source B actions missing.");
             Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbusAndWaitStable) == 2,
                 "B01 and D01 must wait for measured VBUS stability.");
-            Require(catalog.Count(x => x.Kind == Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline) == 1,
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline) == 1,
                 "K01 must prepare an isolated/discharged VBATT baseline before sampling.");
             Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbattAndWaitStable) == 1,
                 "K03 must wait for measured 125 V VBATT stability.");
@@ -168,7 +176,6 @@ namespace Mps125StructureTests
         {
             string[] safetyStepIds =
             {
-                "MPS125.CH16.S003.K01",
                 "MPS125.CH16.S005.ACTION",
                 "MPS125.CH16.S007.ACTION"
             };
@@ -184,46 +191,65 @@ namespace Mps125StructureTests
 
             foreach (object step in steps.Cast<object>().Where(x =>
                 Read<string>(x.GetType(), x, "StepId").StartsWith(
-                    "MPS125.CH17.",
+                    "MPS125.CH",
                     StringComparison.OrdinalIgnoreCase) &&
                 !Read<string>(x.GetType(), x, "StepId").EndsWith(
                     ".ACTION",
                     StringComparison.OrdinalIgnoreCase)))
             {
-                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                Require(!Read<bool>(step.GetType(), step, "SafetyCritical"),
                     Read<string>(step.GetType(), step, "StepId") +
-                    " must stop and shut down on a heater result failure.");
+                    " numeric result must follow the global stop-on-fail policy.");
+                Require(!Read<bool>(step.GetType(), step, "PowerCritical"),
+                    Read<string>(step.GetType(), step, "StepId") +
+                    " numeric result must not override the global stop-on-fail policy.");
             }
         }
 
-        private static void ValidateR71HardwareGate(string root)
+        private static void ValidateConfiguredAverageSampleCounts()
         {
-            string appConfig = Path.Combine(root, "App.config");
-            var setting = XDocument.Load(appConfig)
-                .Descendants("add")
-                .Single(x => string.Equals(
-                    (string)x.Attribute("key"),
-                    "SKMPS125R71PolarityConfirmed",
-                    StringComparison.OrdinalIgnoreCase));
-            Require(string.Equals(
-                    (string)setting.Attribute("value"),
-                    "false",
-                    StringComparison.OrdinalIgnoreCase),
-                "MPS-125 R71 polarity gate must default to false until hardware confirmation.");
-
-            var hardwareDevice = new SK441Device
-            {
-                SkipComInit = false,
-                SimulationBoardType = "MPS-125"
-            };
-            Require(!hardwareDevice.IsMps125R71PolarityConfirmed(),
-                "Unconfirmed MPS-125 hardware must not execute R71 limit checks.");
+            MethodInfo resolver = FindMethod(typeof(SKMPS125Sequence), "ResolveAverageSampleCount");
+            Mps125ActionDefinition nonPwm = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH14.S010.I01");
+            Mps125ActionDefinition mainSwitchPwm = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH13.S003.H01");
+            Mps125ActionDefinition isobattPwm = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH16.S003.K01");
+            Mps125ActionDefinition heaterPwm = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH17.S012.L02");
+            Require((int)resolver.Invoke(null, new object[] { nonPwm }) == 3, "Configured non-PWM average count was not applied.");
+            Require((int)resolver.Invoke(null, new object[] { mainSwitchPwm }) == 16, "Main-switch PWM sampling must remain at 16.");
+            Require((int)resolver.Invoke(null, new object[] { isobattPwm }) == 81, "ISOBATT timed-window sampling must use 81 endpoint-inclusive samples.");
+            Require(isobattPwm.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline,
+                "ISOBATT K01 must use the DAQ internal timed-window action.");
+            Require((isobattPwm.SampleCount - 1) * isobattPwm.SampleIntervalMs == 8000,
+                "ISOBATT K01 must span a real 8-second sampling window.");
+            Mps125ActionDefinition isobattAtZero = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH16.S006.K02");
+            Mps125ActionDefinition isobattAtVoltage = Mps125ActionCatalog.Create().Single(x => x.StepId == "MPS125.CH16.S008.K03");
+            Require(isobattAtZero.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltage &&
+                    isobattAtVoltage.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltage,
+                "ISOBATT K02/K03 must use the DAQ internal timed-window action.");
+            Require((isobattAtZero.SampleCount - 1) * isobattAtZero.SampleIntervalMs == 8000 &&
+                    (isobattAtVoltage.SampleCount - 1) * isobattAtVoltage.SampleIntervalMs == 8000,
+                "ISOBATT K02/K03 must span real 8-second sampling windows.");
+            Require((int)resolver.Invoke(null, new object[] { heaterPwm }) == 16, "Heater PWM sampling must remain at 16.");
         }
 
         private static void ValidateLimit(ResolvedTestPlan plan, string resultId, double lower, double upper, string unit)
         {
             TestPlanStepDefinition item = plan.Definition.Steps.Single(x => x.StepId.EndsWith("." + resultId, StringComparison.OrdinalIgnoreCase));
             Require(item.LowerLimit == lower && item.UpperLimit == upper && item.Unit == unit, "Limit mismatch " + resultId + ".");
+        }
+
+        private static void ValidateOpenUpperLimit(
+            ResolvedTestPlan plan,
+            string resultId,
+            double lower,
+            string unit)
+        {
+            TestPlanStepDefinition item = plan.Definition.Steps.Single(
+                x => x.StepId.EndsWith("." + resultId, StringComparison.OrdinalIgnoreCase));
+            Require(
+                item.LowerLimit == lower &&
+                !item.UpperLimit.HasValue &&
+                item.Unit == unit,
+                "Open-upper limit mismatch " + resultId + ".");
         }
 
         private static void ValidatePowerSafety()
@@ -307,6 +333,43 @@ namespace Mps125StructureTests
                     faultStepId + " safety fault was not reported.");
                 Require(!grid.ObservedStepIds.Contains(forbiddenLaterStepId),
                     faultStepId + " was bypassed by engineering continuation.");
+                Require(grid.CleanupCompleted == 6,
+                    faultStepId + " did not complete all cleanup rows.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", oldMode);
+                Environment.SetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP", oldFault);
+            }
+        }
+
+        private static void RunGlobalResultFailureContinue(
+            string xmlPath,
+            string faultStepId,
+            string expectedLaterStepId)
+        {
+            string oldMode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
+            string oldFault = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", "Simulation");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP", faultStepId);
+            try
+            {
+                ResolvedTestPlan plan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal);
+                var grid = new RecordingGrid();
+                var context = new TestSequenceContext
+                {
+                    SN = "MPS125-GLOBAL-CONTINUE",
+                    TestPlan = plan,
+                    StopOnFail = false,
+                    ContinueAfterPowerCriticalFailure = false
+                };
+                bool passed = new SKMPS125Sequence(grid).RunAsync(context)
+                    .GetAwaiter().GetResult();
+                Require(!passed, faultStepId + " injected result failure unexpectedly passed.");
+                Require(grid.FailedStepIds.Contains(faultStepId),
+                    faultStepId + " result failure was not reported.");
+                Require(grid.ObservedStepIds.Contains(expectedLaterStepId),
+                    faultStepId + " did not follow the global continue-after-failure setting.");
                 Require(grid.CleanupCompleted == 6,
                     faultStepId + " did not complete all cleanup rows.");
             }

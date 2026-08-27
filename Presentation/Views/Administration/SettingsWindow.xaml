@@ -643,10 +643,10 @@
                                                   Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
                                                   Content="工程模式：供电关键步骤失败后继续（高风险）"
                                                   ToolTip="仅在工程 Profile 且未勾选失败时停止整个测试时生效；急停、治具和接口等安全关键失败仍会停止。"/>
-                                        <CheckBox x:Name="chkSkipFirmwareProgramming"
+                                        <CheckBox x:Name="chkFirmwareProgrammingEnabled"
                                                   Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
-                                                  Content="所有项目：跳过固件烧录"
-                                                  ToolTip="勾选后，所有板型均不执行固件烧录；BCM250 也不再要求连接 TTL 烧录串口，烧录结果记录为已跳过。"/>
+                                                  Content="BCM250：启用真实 TTL 固件烧录"
+                                                  ToolTip="勾选后执行真实固件烧录，并要求配置独立 TTL 串口和有效 HEX 文件；取消勾选时跳过烧录。"/>
                                     </Grid>
                                 </Grid>
                             </Border>

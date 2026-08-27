@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,6 +51,74 @@ namespace TestPlatform
         public bool IsTtlProgrammingRequired =>
             !SkipFirmwareProgramming && GetBoolAppSetting("SKRequireTtl", true);
 
+        public bool TryResolveBcm250FirmwarePath(
+            string firmwareFileName,
+            out string firmwarePath,
+            out string error)
+        {
+            return TryResolveBcmFirmwarePath(
+                "BCM250",
+                "SKBCM250FirmwarePath",
+                null,
+                firmwareFileName,
+                out firmwarePath,
+                out error);
+        }
+
+        public bool TryResolveBcm125FirmwarePath(
+            string firmwareFileName,
+            out string firmwarePath,
+            out string error)
+        {
+            return TryResolveBcmFirmwarePath(
+                "BCM125",
+                "SKBCM125FirmwarePath",
+                Path.Combine("ProjectConfig", "SK", "BCM-125", "Firmware"),
+                firmwareFileName,
+                out firmwarePath,
+                out error);
+        }
+
+        private static bool TryResolveBcmFirmwarePath(
+            string boardName,
+            string settingKey,
+            string defaultRelativeDirectory,
+            string firmwareFileName,
+            out string firmwarePath,
+            out string error)
+        {
+            string configuredPath = GetAppSetting(settingKey);
+            firmwarePath = string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    defaultRelativeDirectory ?? string.Empty,
+                    firmwareFileName ?? string.Empty)
+                : Environment.ExpandEnvironmentVariables(configuredPath.Trim());
+            if (!Path.IsPathRooted(firmwarePath))
+            {
+                firmwarePath = Path.GetFullPath(Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    firmwarePath));
+            }
+
+            if (!string.Equals(
+                    Path.GetExtension(firmwarePath),
+                    ".hex",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                error = boardName + "固件必须是HEX文件：" + firmwarePath;
+                return false;
+            }
+            if (!File.Exists(firmwarePath))
+            {
+                error = boardName + "固件文件不存在：" + firmwarePath;
+                return false;
+            }
+
+            error = string.Empty;
+            return true;
+        }
+
         public async Task<bool> FlashBcm250FirmwareAsync(
             string firmwareFileName,
             CancellationToken cancellationToken)
@@ -63,14 +132,46 @@ namespace TestPlatform
                 return false;
             }
 
-            string configuredPath = GetAppSetting("SKBCM250FirmwarePath");
-            string firmwarePath = string.IsNullOrWhiteSpace(configuredPath)
-                ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, firmwareFileName)
-                : Environment.ExpandEnvironmentVariables(configuredPath.Trim());
-            if (!Path.IsPathRooted(firmwarePath))
-                firmwarePath = Path.GetFullPath(Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory,
-                    firmwarePath));
+            string firmwarePath;
+            string firmwareError;
+            if (!TryResolveBcm250FirmwarePath(
+                    firmwareFileName,
+                    out firmwarePath,
+                    out firmwareError))
+            {
+                LogError?.Invoke("BCM250烧录失败：" + firmwareError);
+                return false;
+            }
+
+            return await Flasher.FlashFirmwareAsync(
+                firmwarePath,
+                port,
+                cancellationToken);
+        }
+
+        public async Task<bool> FlashBcm125FirmwareAsync(
+            string firmwareFileName,
+            CancellationToken cancellationToken)
+        {
+            string port = string.IsNullOrWhiteSpace(ComName.uartComName)
+                ? GetAppSetting("TtlPort")
+                : ComName.uartComName;
+            if (string.IsNullOrWhiteSpace(port))
+            {
+                LogError?.Invoke("BCM125烧录失败：未配置独立TTL串口 TtlPort。");
+                return false;
+            }
+
+            string firmwarePath;
+            string firmwareError;
+            if (!TryResolveBcm125FirmwarePath(
+                    firmwareFileName,
+                    out firmwarePath,
+                    out firmwareError))
+            {
+                LogError?.Invoke("BCM125烧录失败：" + firmwareError);
+                return false;
+            }
 
             return await Flasher.FlashFirmwareAsync(
                 firmwarePath,
@@ -112,6 +213,7 @@ namespace TestPlatform
         private float _ansConfiguredCurrent = float.NaN;
         private string _digitalInputPort;
         private string _targetBoardPortCandidate;
+        private string _lastSuccessfulTargetBoardPort;
         private string _lastLoggedDigitalInputBits;
 
         public SK441Device()
@@ -310,6 +412,8 @@ namespace TestPlatform
             int electronicLoadBaudRate = GetIntAppSetting("SKElectronicLoadBaudRate", 38400);
             _digitalInputPort = digitalInputPort;
             _targetBoardPortCandidate = targetBoardPort;
+            if (!string.IsNullOrWhiteSpace(targetBoardPort))
+                _lastSuccessfulTargetBoardPort = targetBoardPort;
             ComName.fixtureRelayComName = fixtureRelayPort;
             ComName.relay16ComName = relay16Port;
             ComName.rs485ComName = fixtureRelayPort;
@@ -339,7 +443,10 @@ namespace TestPlatform
             if (isRequired("daqComName") || !string.IsNullOrWhiteSpace(daqPort))
                 connect("GWInstek DAQ-9600", isRequired("daqComName"), () =>
             {
-                Daq.Connect(daqPort);
+                Daq.Connect(
+                    daqPort,
+                    9600,
+                    GetIntAppSetting("SKDaqReadTimeoutMs", 5000));
                 string daqIdn = Daq.GetIdn();
                 if (string.IsNullOrWhiteSpace(daqIdn) ||
                     daqIdn.IndexOf("DAQ-9600", StringComparison.OrdinalIgnoreCase) < 0)
@@ -606,8 +713,25 @@ namespace TestPlatform
                             "已取消额外等待并按最快可用速度连续采样。");
                     }
                     currentSample = index + 1;
-                    double value = Daq.ReadVoltageDcMeasurementSeriesSample(
-                        out string rawResponse);
+                    double value;
+                    string rawResponse;
+                    try
+                    {
+                        value = Daq.ReadVoltageDcMeasurementSeriesSample(
+                            out rawResponse);
+                    }
+                    catch (TimeoutException firstTimeout)
+                    {
+                        LogInfo?.Invoke(
+                            $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次读取超时；" +
+                            "执行ABOR/*CLS、重新配置通道后重读一次。原因: " +
+                            firstTimeout.Message);
+                        Daq.RecoverVoltageDcMeasurement();
+                        Daq.PrepareVoltageDcMeasurementSeries(channelList);
+                        await Task.Delay(100, token);
+                        value = Daq.ReadVoltageDcMeasurementSeriesSample(
+                            out rawResponse);
+                    }
                     total += value;
                     LogInfo?.Invoke(
                         $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次测量电压: " +
@@ -636,6 +760,102 @@ namespace TestPlatform
                     $"DAQ 通道 {channel} 第 {currentSample}/{sampleCount} 次测量失败，整批平均值无效: {ex.Message}";
                 LogError?.Invoke(message);
                 throw new InvalidOperationException(message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Measure a PWM-related voltage over a real elapsed-time window using
+        /// the DAQ-9600 internal timer and reading memory. Both endpoints are
+        /// sampled, so an 8000 ms window at 100 ms uses 81 readings (0..8000 ms).
+        /// </summary>
+        public async Task<double> MeasureDaqChannelVoltageWindowAverageAsync(
+            int channel,
+            int windowMs,
+            int intervalMs,
+            CancellationToken token)
+        {
+            if (windowMs <= 0)
+                throw new ArgumentOutOfRangeException(nameof(windowMs));
+            if (intervalMs <= 0 || intervalMs > windowMs)
+                throw new ArgumentOutOfRangeException(nameof(intervalMs));
+            if (windowMs % intervalMs != 0)
+            {
+                throw new ArgumentException(
+                    "DAQ window must be an exact multiple of the sample interval.",
+                    nameof(windowMs));
+            }
+
+            if (SkipComInit)
+                return await MeasureDaqChannelVoltageAsync(channel);
+
+            int sampleCount = (windowMs / intervalMs) + 1;
+            string channelList = "@" + channel.ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+            var elapsed = System.Diagnostics.Stopwatch.StartNew();
+            bool scanConfigurationAttempted = false;
+            try
+            {
+                // MCU_ISOBATT ranges from approximately 0 V to 3.3 V. A fixed
+                // 10 V range avoids autorange switching on the PWM edges.
+                scanConfigurationAttempted = true;
+                Daq.StartTimedVoltageDcScan(
+                    channelList,
+                    10.0,
+                    0.15,
+                    intervalMs / 1000.0,
+                    sampleCount);
+                // Depending on firmware, the first TIM trigger can be immediate
+                // or one interval after INIT. FETCH? waits for a final reading,
+                // so leave one interval plus a small margin before bulk readback.
+                await Task.Delay(windowMs + intervalMs + 250, token);
+                int bufferedCount = Daq.GetPointsCount();
+                if (bufferedCount != sampleCount)
+                {
+                    throw new InvalidOperationException(
+                        $"DAQ internal timer produced {bufferedCount}/{sampleCount} readings " +
+                        $"within the {windowMs}ms window; the requested {intervalMs}ms " +
+                        "sample interval was not maintained.");
+                }
+                double[] values = Daq.FetchTimedVoltageDcScan(
+                    sampleCount,
+                    out string rawResponse);
+                double average = values.Average();
+                double minimum = values.Min();
+                double maximum = values.Max();
+                LogInfo?.Invoke(
+                    $"DAQ 通道 {channel} 内部定时窗口采样完成：" +
+                    $"窗口={windowMs / 1000.0:0.000}s，间隔={intervalMs}ms，" +
+                    $"点数={values.Length}，缓存校验={bufferedCount}，最小={minimum:0.######}V，" +
+                    $"最大={maximum:0.######}V，平均={average:0.######}V，" +
+                    $"含批量回读总耗时={elapsed.ElapsedMilliseconds}ms，" +
+                    $"原始响应长度={rawResponse.Length}。");
+                return average;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                string message =
+                    $"DAQ 通道 {channel} {windowMs}ms内部定时窗口采样失败: {ex.Message}";
+                LogError?.Invoke(message);
+                throw new InvalidOperationException(message, ex);
+            }
+            finally
+            {
+                if (scanConfigurationAttempted)
+                {
+                    try
+                    {
+                        Daq.RestoreAfterTimedVoltageDcScan();
+                    }
+                    catch (Exception recoveryEx)
+                    {
+                        LogError?.Invoke(
+                            $"DAQ 通道 {channel} 定时窗口采样后恢复失败: {recoveryEx.Message}");
+                    }
+                }
             }
         }
 
@@ -1080,8 +1300,168 @@ namespace TestPlatform
             }
         }
 
+        public async Task<bool> CheckBcm125ProgrammingInstrumentsAsync()
+        {
+            try
+            {
+                if (SkipComInit)
+                {
+                    await Task.Delay(50);
+                    LogInfo?.Invoke(
+                        "[调试模式] 模拟检查BCM-125编程所需电源、电子负载和TTL接口；" +
+                        "USB-B/MBD将在DUT上电后识别。");
+                    return true;
+                }
+
+                bool allSuccess = true;
+                allSuccess = allSuccess && CheckConnected(
+                    HengHuiPower1.IsConnected,
+                    "BUS generator / 电源A");
+                allSuccess = allSuccess && CheckConnected(
+                    HengHuiPower2.IsConnected,
+                    "String generator / 电源B");
+                allSuccess = allSuccess && CheckConnected(
+                    ElectronicLoad.IsConnected,
+                    "电子负载");
+                if (IsTtlProgrammingRequired)
+                {
+                    allSuccess = allSuccess && CheckConnected(
+                        Flasher.IsConnected,
+                        "BCM-125 TTL烧录接口");
+                }
+                else
+                {
+                    LogInfo?.Invoke(
+                        "BCM-125已配置跳过TTL烧录；本步骤不要求TTL串口在线。");
+                }
+
+                LogInfo?.Invoke(
+                    "USB-B/MBD不在编程预检中判定；将在RL4上电和6000ms启动等待后自动识别。");
+                return allSuccess;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke("BCM-125编程仪器检查发生异常: " + ex.Message);
+                return false;
+            }
+        }
+
         public bool IsTargetBoardCommunicationConnected =>
             SkipComInit || (TargetBoard != null && TargetBoard.IsConnected);
+
+        public async Task<bool> SendMbdCommandOnCurrentConnectionAsync(
+            string command,
+            int waitAfterMs)
+        {
+            if (SkipComInit)
+                return await SendMbdCommandAsync(command, waitAfterMs);
+
+            if (TargetBoard == null || !TargetBoard.IsConnected)
+            {
+                LogError?.Invoke(
+                    $"MBD有状态命令禁止重新枚举，当前串口已断开：{command}");
+                return false;
+            }
+
+            int timeoutMs = Math.Max(
+                500,
+                GetIntAppSetting("SKMbdStatefulCommandTimeoutMs", 2000));
+            int retryCount = Math.Max(
+                1,
+                GetIntAppSetting("SKMbdStatefulRetryCount", 3));
+            int retryDelayMs = Math.Max(
+                0,
+                GetIntAppSetting("SKMbdStatefulRetryDelayMs", 250));
+            for (int attempt = 1; attempt <= retryCount; attempt++)
+            {
+                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
+                string responseError;
+                if (MbdResponseParser.IsSuccessfulCommandResponse(
+                    command,
+                    response,
+                    out responseError))
+                {
+                    await Task.Delay(Math.Max(0, waitAfterMs));
+                    if (attempt > 1)
+                    {
+                        LogInfo?.Invoke(
+                            $"MBD有状态命令已在当前连接恢复：{command}，尝试次数={attempt}。");
+                    }
+                    return true;
+                }
+
+                if (!string.IsNullOrWhiteSpace(response))
+                {
+                    LogError?.Invoke(
+                        $"MBD有状态命令失败：{command}，设备返回={responseError}，" +
+                        $"原始响应={response}；为保持终端状态，不重新枚举串口。");
+                    return false;
+                }
+
+                if (attempt < retryCount)
+                {
+                    LogInfo?.Invoke(
+                        $"MBD有状态命令无响应：{command}；保持当前串口和终端上下文，" +
+                        $"等待{retryDelayMs}ms后重试（{attempt}/{retryCount}）。");
+                    await Task.Delay(retryDelayMs);
+                }
+            }
+
+            LogError?.Invoke(
+                $"MBD有状态命令通信失败：{command}；已在当前连接重试{retryCount}次，" +
+                "为保持终端状态，未重新枚举串口。");
+            return false;
+        }
+
+        public async Task<string> QueryMbdCommandOnCurrentConnectionAsync(
+            string command,
+            int waitAfterMs)
+        {
+            if (SkipComInit)
+                return await QueryMbdCommandAsync(command, waitAfterMs);
+
+            if (TargetBoard == null || !TargetBoard.IsConnected)
+            {
+                throw new InvalidOperationException(
+                    "MBD有状态查询禁止重新枚举，当前串口已断开：" + command);
+            }
+
+            int timeoutMs = Math.Max(
+                500,
+                GetIntAppSetting("SKMbdStatefulCommandTimeoutMs", 2000));
+            int retryCount = Math.Max(
+                1,
+                GetIntAppSetting("SKMbdStatefulRetryCount", 3));
+            int retryDelayMs = Math.Max(
+                0,
+                GetIntAppSetting("SKMbdStatefulRetryDelayMs", 250));
+            for (int attempt = 1; attempt <= retryCount; attempt++)
+            {
+                string response = await TargetBoard.SendCommandAsync(command, timeoutMs);
+                if (!string.IsNullOrWhiteSpace(response))
+                {
+                    await Task.Delay(Math.Max(0, waitAfterMs));
+                    if (attempt > 1)
+                    {
+                        LogInfo?.Invoke(
+                            $"MBD有状态查询已在当前连接恢复：{command}，尝试次数={attempt}。");
+                    }
+                    return response;
+                }
+
+                if (attempt < retryCount)
+                {
+                    LogInfo?.Invoke(
+                        $"MBD有状态查询无响应：{command}；保持当前串口和终端上下文，" +
+                        $"等待{retryDelayMs}ms后重试（{attempt}/{retryCount}）。");
+                    await Task.Delay(retryDelayMs);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "MBD有状态查询通信失败：" + command +
+                $"；已在当前连接重试{retryCount}次，为保持终端状态，未重新枚举串口。");
+        }
 
         public async Task<bool> SendMbdCleanupCommandsOnCurrentConnectionAsync(string commands)
         {
@@ -1236,7 +1616,7 @@ namespace TestPlatform
                 if (attempt > 1)
                     await Task.Delay(retryIntervalMs, token);
 
-                TargetBoard?.Disconnect();
+                await CloseMbdPortAndWaitForReleaseAsync(token);
                 LogInfo?.Invoke(
                     $"DUT电源循环后MBD就绪检查 {attempt}：重新枚举并验证终端响应。");
                 if (!await EnsureMbdConnectedAsync())
@@ -1278,9 +1658,11 @@ namespace TestPlatform
                 : GetIntAppSetting("SKTargetBoardBaudRate", 9600);
             string detectedPort = await SKSerialDeviceDiscovery.DiscoverMbdPortAsync(
                 message => LogInfo?.Invoke(message),
-                isManualMpsUsbB ? null : _targetBoardPortCandidate,
+                isManualMpsUsbB
+                    ? null
+                    : _lastSuccessfulTargetBoardPort ?? _targetBoardPortCandidate,
                 ignoreConfiguredPort: isManualMpsUsbB,
-                allowUnverifiedFallback: !isManualMpsUsbB,
+                allowUnverifiedFallback: false,
                 baudRate: targetBoardBaudRate);
             if (string.IsNullOrWhiteSpace(detectedPort))
             {
@@ -1294,6 +1676,7 @@ namespace TestPlatform
                 int settleMs = GetIntAppSetting("SKMbdOpenSettleMs", 500);
                 TargetBoard.Connect(detectedPort, targetBoardBaudRate, settleMs);
                 _targetBoardPortCandidate = detectedPort;
+                _lastSuccessfulTargetBoardPort = detectedPort;
                 ComName.testComName = detectedPort;
                 return true;
             }
@@ -1318,7 +1701,7 @@ namespace TestPlatform
                     $"USB-B/MBD 首次命令无响应，准备释放旧句柄并重新枚举：{command}");
             }
 
-            TargetBoard?.Disconnect();
+            await CloseMbdPortAndWaitForReleaseAsync(CancellationToken.None);
             int recoveryTimeoutMs = Math.Max(
                 1000,
                 GetIntAppSetting("SKMbdRecoveryTimeoutMs", 15000));
@@ -1337,6 +1720,8 @@ namespace TestPlatform
                 if (attempt > 1)
                     await Task.Delay(retryIntervalMs);
 
+                await WaitForKnownMbdPortToReenumerateAsync(deadline);
+
                 LogInfo?.Invoke(
                     $"USB-B/MBD 恢复尝试 {attempt}：重新枚举COM并发送 {command}");
                 if (!await EnsureMbdConnectedAsync())
@@ -1352,12 +1737,69 @@ namespace TestPlatform
                     return response;
                 }
 
-                TargetBoard?.Disconnect();
+                await CloseMbdPortAndWaitForReleaseAsync(CancellationToken.None);
             }
 
             LogError?.Invoke(
                 $"USB-B/MBD 在 {recoveryTimeoutMs} ms 内未恢复：{command}");
             return null;
+        }
+
+        private async Task CloseMbdPortAndWaitForReleaseAsync(CancellationToken token)
+        {
+            TargetBoard?.Disconnect();
+            int releaseWaitMs = Math.Max(
+                0,
+                GetIntAppSetting("SKMbdPortReleaseWaitMs", 300));
+            if (releaseWaitMs <= 0)
+                return;
+
+            LogInfo?.Invoke(
+                $"已确认旧MBD串口关闭，等待 {releaseWaitMs} ms 让Windows释放端口句柄。");
+            await Task.Delay(releaseWaitMs, token);
+        }
+
+        private async Task WaitForKnownMbdPortToReenumerateAsync(DateTime recoveryDeadline)
+        {
+            string preferredPort = _lastSuccessfulTargetBoardPort;
+            if (string.IsNullOrWhiteSpace(preferredPort))
+                return;
+
+            string[] available = SerialPort.GetPortNames();
+            if (available.Contains(preferredPort, StringComparer.OrdinalIgnoreCase))
+                return;
+
+            int maximumWaitMs = Math.Max(
+                500,
+                GetIntAppSetting("SKMbdEnumerationWaitMs", 4000));
+            DateTime waitDeadline = DateTime.UtcNow.AddMilliseconds(maximumWaitMs);
+            if (waitDeadline > recoveryDeadline)
+                waitDeadline = recoveryDeadline;
+
+            LogInfo?.Invoke(
+                $"历史MBD端口 {preferredPort} 已从Windows枚举中消失，等待USB设备稳定重新出现。");
+            int consecutiveSamples = 0;
+            while (DateTime.UtcNow <= waitDeadline)
+            {
+                await Task.Delay(250);
+                available = SerialPort.GetPortNames();
+                if (available.Contains(preferredPort, StringComparer.OrdinalIgnoreCase))
+                {
+                    consecutiveSamples++;
+                    if (consecutiveSamples >= 2)
+                    {
+                        LogInfo?.Invoke($"历史MBD端口 {preferredPort} 已稳定重新枚举。");
+                        return;
+                    }
+                }
+                else
+                {
+                    consecutiveSamples = 0;
+                }
+            }
+
+            LogInfo?.Invoke(
+                $"等待历史MBD端口 {preferredPort} 重新枚举超时，继续扫描其他候选端口。");
         }
 
         public string GetBcm125ExpectedFirmwareVersion()
@@ -1653,7 +2095,9 @@ namespace TestPlatform
             if (string.Equals(command, "R10", StringComparison.OrdinalIgnoreCase))
             {
                 _mockR10ReadCount++;
-                return _mockR10ReadCount % 2 == 1 ? "running_time = 5.0" : "running_time = 1.0";
+                return _mockR10ReadCount % 2 == 1
+                    ? "010 = 5.264\r\nReady.\r\n"
+                    : "010 = 0.953\r\nReady.\r\n";
             }
 
             if (string.Equals(command, "R61", StringComparison.OrdinalIgnoreCase))

@@ -31,4 +31,16 @@
       <Group Id="BCM125.CLEANUP"><Enabled>true</Enabled></Group>
     </Groups>
   </Profile>
+  <Profile Id="SINGLE_CHAPTER">
+    <Name>单章验证</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>true</AllowStepOverride>
+    <ResetFromBaselineEveryRun>false</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM125.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CH07"><Enabled>true</Enabled></Group>
+      <Group Id="BCM125.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
 </Profiles>

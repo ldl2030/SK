@@ -6,12 +6,6 @@ namespace TestPlatform
 {
     public partial class SK441Device
     {
-        public bool IsMps125R71PolarityConfirmed()
-        {
-            return SkipComInit ||
-                GetBoolAppSetting("SKMPS125R71PolarityConfirmed", false);
-        }
-
         public async Task<bool> CheckMpsRequiredInstrumentsAsync()
         {
             if (SkipComInit)

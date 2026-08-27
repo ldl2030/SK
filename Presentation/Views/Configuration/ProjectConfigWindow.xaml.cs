@@ -554,6 +554,62 @@ namespace TestPlatform
             {
                 applyingProfile = false;
             }
+
+            // Profile changes and chapter selections are runtime controls. Publish
+            // them immediately; requiring an XML save caused the first selection to
+            // run the previous plan until the operator toggled it a second time.
+            PublishRuntimeSelectionFromUi();
+        }
+
+        private void PublishRuntimeSelectionFromUi()
+        {
+            if (applyingProfile || !hasStructuredTestPlan ||
+                !(cmbTestProfile.SelectedItem is TestProfileOption option) ||
+                !testProfiles.TryGetValue(option.ProfileId, out TestProfileDefinition profile))
+            {
+                return;
+            }
+
+            TestPlanRuntimeState.ActiveProfileId = option.ProfileId;
+            TestPlanRuntimeState.SetStepOverrides(
+                profile.ResetFromBaselineEveryRun
+                    ? null
+                    : testItems.ToDictionary(
+                        item => item.StepId,
+                        item => item.Enabled,
+                        StringComparer.OrdinalIgnoreCase));
+        }
+
+        private void DisableOtherGroupsForSingleChapter(string selectedGroupId)
+        {
+            if (!(cmbTestProfile.SelectedItem is TestProfileOption option) ||
+                !string.Equals(
+                    option.ProfileId,
+                    TestProfileIds.SingleChapter,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            foreach (TestGroupItem otherGroup in testGroups.Where(group =>
+                !group.Mandatory &&
+                !string.Equals(
+                    group.GroupId,
+                    selectedGroupId,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                otherGroup.Enabled = false;
+                otherGroup.IsExpanded = false;
+                foreach (TestItem otherItem in testItems.Where(item =>
+                    string.Equals(
+                        item.GroupId,
+                        otherGroup.GroupId,
+                        StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (!otherItem.Mandatory && !otherItem.AlwaysRun)
+                        otherItem.Enabled = false;
+                }
+            }
         }
 
         private static int ProfileOrder(string profileId)
@@ -667,7 +723,10 @@ namespace TestPlatform
             group.Enabled = checkBox.IsChecked == true;
             group.IsExpanded = group.Enabled;
             if (group.Enabled)
+            {
+                DisableOtherGroupsForSingleChapter(group.GroupId);
                 EnableGroupDependencies(group);
+            }
             else
                 DisableDependentGroups(group.GroupId);
 
@@ -679,6 +738,8 @@ namespace TestPlatform
                 if (!item.Mandatory && !item.AlwaysRun)
                     item.Enabled = group.Enabled;
             }
+
+            PublishRuntimeSelectionFromUi();
         }
 
         private void TvTestGroups_SelectedItemChanged(
@@ -778,11 +839,15 @@ namespace TestPlatform
 
             item.Enabled = checkBox.IsChecked == true;
             if (item.Enabled)
+            {
+                DisableOtherGroupsForSingleChapter(item.GroupId);
                 EnableStepDependencies(item);
+            }
             else
                 DisableDependentSteps(item.StepId);
 
             RefreshGroupState(item.GroupId);
+            PublishRuntimeSelectionFromUi();
         }
 
         private void EnableStepDependencies(TestItem item)
@@ -892,6 +957,9 @@ namespace TestPlatform
                 if (item.CanToggle)
                     item.Enabled = isChecked;
             }
+            foreach (TestGroupItem group in testGroups)
+                RefreshGroupState(group.GroupId);
+            PublishRuntimeSelectionFromUi();
         }
         private void CommitGridEdit()
         {
@@ -1023,6 +1091,8 @@ namespace TestPlatform
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
+            CommitGridEdit();
+            PublishRuntimeSelectionFromUi();
             if (cmbTestProjects.SelectedItem is TestProject selected)
                 ProjectSettings.CurrentProjectName = selected.DisplayName;
             DialogResult = true;  // 告诉主窗口数据已变更

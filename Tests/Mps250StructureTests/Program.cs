@@ -31,7 +31,9 @@ namespace Mps250StructureTests
                 ValidateCatalog();
                 ValidateVbusStableWaits(root);
                 ValidatePowerTelemetry(root);
-                ValidateKAndLSafetyGates(steps);
+                ValidateFinalChapterFailureRules(steps);
+                ValidateConfiguredAverageSampleCounts();
+                ValidateBufferedDaqResponseParsing();
                 ValidateDaqStartToStartTiming();
                 ValidateFixtureCleanup(steps, device);
                 ValidateMpsFailurePolicy(context, steps);
@@ -40,7 +42,8 @@ namespace Mps250StructureTests
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
                 RunSafetyGateFault(xml, "MPS250.CH16.S005.ACTION", "MPS250.CH16.S006.K02");
-                RunSafetyGateFault(xml, "MPS250.CH17.S014.L04", "MPS250.CH17.S015.ACTION");
+                RunGlobalResultFailureContinue(xml, "MPS250.CH16.S003.K01", "MPS250.CH16.S004.ACTION");
+                RunGlobalResultFailureContinue(xml, "MPS250.CH17.S014.L04", "MPS250.CH17.S015.ACTION");
 
                 Console.WriteLine("PASS MPS250: 193 rows, PDF Rev.3 thresholds, 115200 USB-B, verified fixture release, MPS-only failure cleanup, report generation, full simulation and J06 fault injection.");
                 return 0;
@@ -111,7 +114,7 @@ namespace Mps250StructureTests
         {
             IReadOnlyList<Mps250ActionDefinition> catalog = Mps250ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps250ActionKind.SetVbatt), "VBATT source B actions missing.");
-            Require(catalog.Count(x => x.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline) == 1,
+            Require(catalog.Count(x => x.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline) == 1,
                 "K01 must prepare an isolated/discharged VBATT baseline before sampling.");
             Require(catalog.Count(x => x.Kind == Mps250ActionKind.SetVbattAndWaitStable) == 1,
                 "K03 must wait for measured 250 V VBATT stability.");
@@ -344,11 +347,10 @@ namespace Mps250StructureTests
             }
         }
 
-        private static void ValidateKAndLSafetyGates(IList steps)
+        private static void ValidateFinalChapterFailureRules(IList steps)
         {
             string[] safetyStepIds =
             {
-                "MPS250.CH16.S003.K01",
                 "MPS250.CH16.S005.ACTION",
                 "MPS250.CH16.S007.ACTION"
             };
@@ -363,17 +365,59 @@ namespace Mps250StructureTests
             }
 
             foreach (object step in steps.Cast<object>().Where(x =>
-                Read<string>(x.GetType(), x, "StepId").StartsWith(
-                    "MPS250.CH17.",
-                    StringComparison.OrdinalIgnoreCase) &&
+                (Read<string>(x.GetType(), x, "StepId").StartsWith(
+                    "MPS250.CH16.", StringComparison.OrdinalIgnoreCase) ||
+                 Read<string>(x.GetType(), x, "StepId").StartsWith(
+                    "MPS250.CH17.", StringComparison.OrdinalIgnoreCase)) &&
                 !Read<string>(x.GetType(), x, "StepId").EndsWith(
                     ".ACTION",
                     StringComparison.OrdinalIgnoreCase)))
             {
-                Require(Read<bool>(step.GetType(), step, "SafetyCritical"),
+                Require(!Read<bool>(step.GetType(), step, "SafetyCritical"),
                     Read<string>(step.GetType(), step, "StepId") +
-                    " must stop and shut down on a heater result failure.");
+                    " must follow the global stop-on-fail policy.");
+                Require(!Read<bool>(step.GetType(), step, "PowerCritical"),
+                    Read<string>(step.GetType(), step, "StepId") +
+                    " must not require the power-critical continuation override.");
             }
+        }
+
+        private static void ValidateConfiguredAverageSampleCounts()
+        {
+            MethodInfo resolver = FindMethod(typeof(SKMPS250Sequence), "ResolveAverageSampleCount");
+            Mps250ActionDefinition nonPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH14.S008.I01");
+            Mps250ActionDefinition mainSwitchPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH13.S003.H01");
+            Mps250ActionDefinition isobattPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH16.S003.K01");
+            Mps250ActionDefinition heaterPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH17.S012.L02");
+            Require((int)resolver.Invoke(null, new object[] { nonPwm }) == 3, "Configured non-PWM average count was not applied.");
+            Require((int)resolver.Invoke(null, new object[] { mainSwitchPwm }) == 16, "Main-switch PWM sampling must remain at 16.");
+            Require((int)resolver.Invoke(null, new object[] { isobattPwm }) == 81, "ISOBATT timed-window sampling must use 81 endpoint-inclusive samples.");
+            Require(isobattPwm.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline,
+                "ISOBATT K01 must use the DAQ internal timed-window action.");
+            Require((isobattPwm.SampleCount - 1) * isobattPwm.SampleIntervalMs == 8000,
+                "ISOBATT K01 must span a real 8-second sampling window.");
+            Mps250ActionDefinition isobattAtZero = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH16.S006.K02");
+            Mps250ActionDefinition isobattAtVoltage = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH16.S008.K03");
+            Require(isobattAtZero.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltage &&
+                    isobattAtVoltage.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltage,
+                "ISOBATT K02/K03 must use the DAQ internal timed-window action.");
+            Require((isobattAtZero.SampleCount - 1) * isobattAtZero.SampleIntervalMs == 8000 &&
+                    (isobattAtVoltage.SampleCount - 1) * isobattAtVoltage.SampleIntervalMs == 8000,
+                "ISOBATT K02/K03 must span real 8-second sampling windows.");
+            Require((int)resolver.Invoke(null, new object[] { heaterPwm }) == 16, "Heater PWM sampling must remain at 16.");
+        }
+
+        private static void ValidateBufferedDaqResponseParsing()
+        {
+            MethodInfo parser = FindMethod(typeof(DaqMultimeter), "ParseMeasurementValues");
+            var values = (double[])parser.Invoke(
+                null,
+                new object[] { "+3.25000000E+00,+8.20000000E-02,+2.50000000E+00", 3 });
+            Require(values.Length == 3 &&
+                    Math.Abs(values[0] - 3.25) < 0.000001 &&
+                    Math.Abs(values[1] - 0.082) < 0.000001 &&
+                    Math.Abs(values[2] - 2.5) < 0.000001,
+                "DAQ buffered response parser did not preserve all samples.");
         }
 
         private static void ValidateDaqStartToStartTiming()
@@ -580,6 +624,40 @@ namespace Mps250StructureTests
                     faultStepId + " was bypassed by engineering continuation.");
                 Require(grid.CleanupCompleted == 6,
                     faultStepId + " did not complete all cleanup rows.");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", oldMode);
+                Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", oldFault);
+            }
+        }
+
+        private static void RunGlobalResultFailureContinue(
+            string xmlPath,
+            string faultStepId,
+            string expectedLaterStepId)
+        {
+            string oldMode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
+            string oldFault = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_SK_MODE", "Simulation");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", faultStepId);
+            try
+            {
+                ResolvedTestPlan plan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal);
+                var grid = new RecordingGrid();
+                var context = new TestSequenceContext
+                {
+                    SN = "MPS250-GLOBAL-CONTINUE",
+                    TestPlan = plan,
+                    StopOnFail = false,
+                    ContinueAfterPowerCriticalFailure = false
+                };
+                bool passed = new SKMPS250Sequence(grid).RunAsync(context).GetAwaiter().GetResult();
+                Require(!passed, faultStepId + " injected result failure unexpectedly passed.");
+                Require(grid.FailedStepIds.Contains(faultStepId), faultStepId + " result failure was not reported.");
+                Require(grid.ObservedStepIds.Contains(expectedLaterStepId),
+                    faultStepId + " did not follow the global continue-after-failure setting.");
+                Require(grid.CleanupCompleted == 6, faultStepId + " did not complete all cleanup rows.");
             }
             finally
             {

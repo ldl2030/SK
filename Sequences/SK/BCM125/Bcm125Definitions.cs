@@ -2,6 +2,7 @@ namespace TestPlatform.TestSequences
 {
     public static class Bcm125Commands
     {
+        public const string FirmwareFile = "BCM_125_V8.hex";
         public const string Exit = "EXIT";
         public const string DiagnosticOn = "DIAG ON";
         public const string Remote1 = "REMOTE1";

@@ -558,6 +558,13 @@ namespace TestPlatform.TestSequences
                 },
                 new TestProfileDefinition
                 {
+                    ProfileId = TestProfileIds.SingleChapter,
+                    Name = "单章验证",
+                    AllowGroupOverride = true,
+                    AllowStepOverride = true
+                },
+                new TestProfileDefinition
+                {
                     ProfileId = TestProfileIds.Engineering,
                     Name = "工程",
                     AllowGroupOverride = true,

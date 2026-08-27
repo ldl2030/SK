@@ -410,10 +410,11 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>8. 2 闭合RL4后开启ANS/MPS板电源</Name>
+    <Name>8. 2 闭合RL4后开启ANS/MPS板电源并等待2000ms稳定</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
+    <DelayMs>2000</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH08.S003.B01</StepId>

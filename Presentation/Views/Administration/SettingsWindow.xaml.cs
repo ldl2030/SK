@@ -48,8 +48,8 @@ namespace TestPlatform
             chkPromptOnFail.IsChecked = CurrentSettings.PromptOnFail;
             chkContinueAfterPowerCriticalFailure.IsChecked =
                 CurrentSettings.ContinueAfterPowerCriticalFailure;
-            chkSkipFirmwareProgramming.IsChecked =
-                CurrentSettings.SkipFirmwareProgramming;
+            chkFirmwareProgrammingEnabled.IsChecked =
+                !CurrentSettings.SkipFirmwareProgramming;
             chkAllowEmptySN.IsChecked = CurrentSettings.AllowEmptySN;
             // 外观
             rbLightTheme.IsChecked = CurrentSettings.LightTheme;
@@ -173,7 +173,7 @@ namespace TestPlatform
             CurrentSettings.ContinueAfterPowerCriticalFailure =
                 chkContinueAfterPowerCriticalFailure.IsChecked ?? false;
             CurrentSettings.SkipFirmwareProgramming =
-                chkSkipFirmwareProgramming.IsChecked ?? false;
+                !(chkFirmwareProgrammingEnabled.IsChecked ?? false);
             CurrentSettings.AllowEmptySN = chkAllowEmptySN.IsChecked ?? false;
 
             // 外观

@@ -121,6 +121,36 @@ namespace TestPlatform.TestSequences
 
                 try
                 {
+                    if (!deviceManager.SkipComInit && deviceManager.IsTtlProgrammingRequired &&
+                        (string.Equals(ExpectedBoardType, "BCM-125", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(ExpectedBoardType, "BCM-250", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        string firmwarePath;
+                        string firmwareError;
+                        bool isBcm125 = string.Equals(
+                            ExpectedBoardType,
+                            "BCM-125",
+                            StringComparison.OrdinalIgnoreCase);
+                        bool firmwareResolved = isBcm125
+                            ? deviceManager.TryResolveBcm125FirmwarePath(
+                                Bcm125Commands.FirmwareFile,
+                                out firmwarePath,
+                                out firmwareError)
+                            : deviceManager.TryResolveBcm250FirmwarePath(
+                                Bcm250Commands.FirmwareFile,
+                                out firmwarePath,
+                                out firmwareError);
+                        if (!firmwareResolved)
+                        {
+                            LogError?.Invoke(
+                                "固件烧录已启用，但烧录前置配置无效：" + firmwareError);
+                            return false;
+                        }
+                        LogInfo?.Invoke(
+                            (isBcm125 ? "BCM125" : "BCM250") +
+                            "烧录固件已确认：" + firmwarePath);
+                    }
+
                     if (IsBcm250FixtureOnlyMode(deviceManager))
                     {
                         return await RunBcm250FixtureOnlyAsync(
@@ -164,7 +194,7 @@ namespace TestPlatform.TestSequences
                         }
                         else
                         {
-                            LogInfo?.Invoke("正在读取预设COM口；仅对未配置的必需设备自动扫描...");
+                            LogInfo?.Invoke("正在读取预设COM口并按设备身份扫描校验...");
                             SKSerialDeviceDiscoveryResult discovery =
                                 await SKSerialDeviceDiscovery.ResolveConfiguredOrDiscoverAsync(
                                     msg => LogInfo?.Invoke(msg),
@@ -629,7 +659,10 @@ namespace TestPlatform.TestSequences
             // Independent SK sequences run outside MainWindow's legacy step runner.
             // Cooperatively enter the UI pause gate before changing the row to
             // Running or issuing the next hardware command.
-            await WaitIfPausedAsync(context, token);
+            if (!step.AlwaysRun && context?.WaitBeforeStepAsync != null)
+                await context.WaitBeforeStepAsync(step.StepId, token);
+            else
+                await WaitIfPausedAsync(context, token);
 
             Stopwatch stopwatch = Stopwatch.StartNew();
             StepResult finalResult = new StepResult { IsPass = false, Value = "未执行" };
@@ -767,17 +800,19 @@ namespace TestPlatform.TestSequences
 
         private bool ShouldScrollToStep(TestStepItem step)
         {
-            DateTime now = DateTime.UtcNow;
             string stepId = step.StepId ?? string.Empty;
             int stepMarker = stepId.IndexOf(".S", StringComparison.OrdinalIgnoreCase);
             string group = stepMarker > 0 ? stepId.Substring(0, stepMarker) : step.ExpectedGroupId;
             bool isResultRow = !stepId.EndsWith(".ACTION", StringComparison.OrdinalIgnoreCase);
             bool chapterChanged = !string.Equals(group, _lastUiScrollGroup, StringComparison.OrdinalIgnoreCase);
-            bool throttleElapsed = (now - _lastUiScrollUtc).TotalMilliseconds >= 250.0;
-            if (!isResultRow && !chapterChanged && !throttleElapsed)
+            // Fast action rows can complete several times per second. Scrolling for
+            // each one forces WPF to regenerate grouped DataGrid containers and was
+            // the main source of visible homepage stutter. Keep automatic location
+            // for chapter transitions and meaningful result rows only.
+            if (!isResultRow && !chapterChanged)
                 return false;
 
-            _lastUiScrollUtc = now;
+            _lastUiScrollUtc = DateTime.UtcNow;
             _lastUiScrollGroup = group;
             return true;
         }

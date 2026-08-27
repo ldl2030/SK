@@ -24,6 +24,7 @@ namespace TestPlatform.TestSequences
         SetVbattAndWaitStable,
         SafeVbusRelay, SafeVbattConnect, SafeVbattDisconnect,
         DaqVoltage, DaqAverageVoltage, DaqAverageVoltageAfterVbattBaseline,
+        DaqTimedWindowAverageVoltage, DaqTimedWindowAverageVoltageAfterVbattBaseline,
         DaqShuntCurrent, DaqResistance,
         MbdNumeric, FirmwareVersion, IgnitionRamp, ComputedGain,
         DocumentedBoundary, Cleanup

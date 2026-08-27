@@ -37,6 +37,8 @@ namespace TestPlatform.TestSequences
         DaqVoltage,
         DaqAverageVoltage,
         DaqAverageVoltageAfterVbattBaseline,
+        DaqTimedWindowAverageVoltage,
+        DaqTimedWindowAverageVoltageAfterVbattBaseline,
         DaqShuntCurrent,
         DaqResistance,
         MbdNumeric,
