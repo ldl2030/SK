@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -82,6 +83,8 @@ namespace Bcm125StructureTests
                     "Code/XML StepId sets differ.");
 
                 ValidateXmlParameters(executableDefinitions);
+                ValidateDualFirmwareProgramming(executableDefinitions, repositoryRoot);
+                ValidateCustomerReport(repositoryRoot);
                 ValidateDependencies(plan.Definition);
                 ValidateInstrumentMapping();
                 ValidateMbdResponseCleaning();
@@ -170,6 +173,122 @@ namespace Bcm125StructureTests
 
             Require(delayCount == 140, $"Expected 140 XML delay rows, got {delayCount}.");
             Require(numericCount == 182, $"Expected 182 numeric XML rows, got {numericCount}.");
+        }
+
+        private static void ValidateDualFirmwareProgramming(
+            IReadOnlyCollection<TestPlanStepDefinition> definitions,
+            string repositoryRoot)
+        {
+            TestPlanStepDefinition bcm1Flash = definitions.SingleOrDefault(x => string.Equals(
+                x.StepId,
+                "BCM125.CH09.S013.C01",
+                StringComparison.OrdinalIgnoreCase));
+            TestPlanStepDefinition bcm2Flash = definitions.SingleOrDefault(x => string.Equals(
+                x.StepId,
+                "BCM125.CH09.S024.C02",
+                StringComparison.OrdinalIgnoreCase));
+
+            Require(bcm1Flash != null && bcm2Flash != null,
+                "BCM125 programming must contain independent BCM1 C01 and BCM2 C02 flash rows.");
+            Require(bcm1Flash.SequenceOrder < bcm2Flash.SequenceOrder,
+                "BCM1 firmware must be programmed before BCM2 firmware.");
+            Require((bcm1Flash.Name ?? string.Empty).IndexOf(Bcm125Commands.FirmwareFile,
+                        StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    (bcm2Flash.Name ?? string.Empty).IndexOf(Bcm125Commands.FirmwareFile,
+                        StringComparison.OrdinalIgnoreCase) >= 0,
+                "Both BCM125 programming rows must identify the configured V8 HEX file.");
+
+            string firmwarePath = Path.Combine(
+                repositoryRoot,
+                "ProjectConfig",
+                "SK",
+                "BCM-125",
+                "Firmware",
+                Bcm125Commands.FirmwareFile);
+            Require(File.Exists(firmwarePath),
+                "BCM125 V8 HEX firmware is missing from the source project configuration.");
+        }
+
+        private static void ValidateCustomerReport(string repositoryRoot)
+        {
+            string sourceDirectory = Path.Combine(
+                repositoryRoot,
+                "ProjectConfig",
+                "SK",
+                "BCM-125");
+            string requestedQaRoot = Environment.GetEnvironmentVariable(
+                "TESTPLATFORM_BCM125_REPORT_QA_ROOT");
+            bool keepQaReport = !string.IsNullOrWhiteSpace(requestedQaRoot);
+            string temporaryRoot = keepQaReport
+                ? Path.GetFullPath(requestedQaRoot)
+                : Path.Combine(
+                    Path.GetTempPath(),
+                    "TestPlatform_BCM125_Report_" + Guid.NewGuid().ToString("N"));
+            string targetDirectory = Path.Combine(
+                temporaryRoot,
+                "ProjectConfig",
+                "SK",
+                "BCM-125");
+            Directory.CreateDirectory(targetDirectory);
+            File.Copy(
+                Path.Combine(sourceDirectory, "BCM-125_report.psv"),
+                Path.Combine(targetDirectory, "BCM-125_report.psv"),
+                true);
+            File.Copy(
+                Path.Combine(sourceDirectory, "BCM-125_autoTest.xml"),
+                Path.Combine(targetDirectory, "BCM-125_autoTest.xml"),
+                true);
+
+            try
+            {
+                var table = new DataTable();
+                table.Columns.Add("StepId", typeof(string));
+                table.Columns.Add("Channel1Value", typeof(string));
+                table.Columns.Add("Channel1Result", typeof(string));
+                foreach (string line in File.ReadAllLines(
+                             Path.Combine(sourceDirectory, "BCM-125_report.psv"))
+                         .Where(value => !string.IsNullOrWhiteSpace(value) && !value.StartsWith("#")))
+                {
+                    string[] fields = line.Split('|');
+                    string value = fields[0].StartsWith("E", StringComparison.OrdinalIgnoreCase)
+                        ? "stcu_UP125_V8"
+                        : "1";
+                    table.Rows.Add(fields[1], value, "PASS");
+                }
+
+                Bcm125LegacyReportExporter.ExportResult result =
+                    Bcm125LegacyReportExporter.SaveAsync(
+                            table,
+                            0,
+                            "1105",
+                            "B1114700117",
+                            true,
+                            "BCM-125",
+                            new DateTime(2025, 5, 19, 17, 34, 0),
+                            temporaryRoot)
+                        .GetAwaiter()
+                        .GetResult();
+
+                Require(result.Success, "BCM125 TXT/PDF report generation failed: " + result.ErrorMessage);
+                Require(result.DutPassed, "BCM125 all-pass report was not marked PASSED.");
+                string reportText = File.ReadAllText(result.TextFilePath);
+                Require(reportText.Contains("C01") && reportText.Contains("Micro Programming BCM 1") &&
+                        reportText.Contains("E01") && reportText.Contains("stcu_UP125_V8"),
+                    "BCM125 report omits programming or firmware rows.");
+                Require(!reportText.Contains("BCM_125_V8.HEX"),
+                    "BCM125 report must not render the HEX filename as a numeric limit.");
+                string programmingLine = reportText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+                    .First(line => line.Contains("Micro Programming BCM 1"));
+                Require(!programmingLine.Contains("["),
+                    "BCM125 programming rows must not render XML logic criteria as report limits.");
+                Require(File.Exists(result.PdfFilePath) && new FileInfo(result.PdfFilePath).Length > 1000,
+                    "BCM125 PDF report is unexpectedly empty.");
+            }
+            finally
+            {
+                if (!keepQaReport && Directory.Exists(temporaryRoot))
+                    Directory.Delete(temporaryRoot, true);
+            }
         }
 
         private static void ValidateDependencies(TestPlanDefinition definition)

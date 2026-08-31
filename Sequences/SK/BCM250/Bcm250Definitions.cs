@@ -310,6 +310,9 @@ namespace TestPlatform.TestSequences
             int cleanupRow = 0;
             foreach (Bcm250ActionDefinition item in items)
             {
+                if (!string.IsNullOrWhiteSpace(item.StepId))
+                    continue;
+
                 if (item.AlwaysRun)
                 {
                     item.StepId = "BCM250.CLEANUP.S" + (++cleanupRow).ToString("000") + ".ACTION";

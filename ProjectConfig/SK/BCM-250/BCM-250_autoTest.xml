@@ -960,7 +960,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>D02 5.II 读取R15 SAFE内部CAN状态</Name>
+    <Name>D02 5.II 读取R15VERB确认SAFE内部CAN状态</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>0</UpperLimit>
     <LowerLimit>0</LowerLimit>
@@ -1726,7 +1726,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>16. 9 读取R51 adc1 vstr_pos PA1</Name>
+    <Name>16. 9 读取R51VERB确认adc1 vstr_pos PA1</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -1827,7 +1827,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>J04 15 平均读取5次R43 vstr_pos</Name>
+    <Name>J04 15 平均读取5次R43VERB vstr_pos</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>277500</UpperLimit>
     <LowerLimit>272500</LowerLimit>
@@ -1941,6 +1941,20 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>17. 4 发送DIAG ON到MBD</Name>
+    <UpperLimit></UpperLimit>
+    <LowerLimit></LowerLimit>
+    <Unit></Unit>
+  </TestItem>
+  <TestItem>
+    <StepId>BCM250.CH17.S004A.ACTION</StepId>
+    <GroupId>BCM250.CH17</GroupId>
+    <SequenceOrder>124</SequenceOrder>
+    <DefaultEnabled>true</DefaultEnabled>
+    <Mandatory>false</Mandatory>
+    <AlwaysRun>false</AlwaysRun>
+    <DependsOn></DependsOn>
+    <Enabled>true</Enabled>
+    <Name>17. 4.a 设置drv_main_sw PE14：W101=1</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -2653,7 +2667,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>L04 28 读取R68预充电后VsensPrec</Name>
+    <Name>L04 28 读取R68VERB确认预充电后VsensPrec</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>2855</UpperLimit>
     <LowerLimit>2770</LowerLimit>
@@ -3097,7 +3111,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>M01 19 平均读取8次R93 @125V</Name>
+    <Name>M01 19 平均读取8次R93VERB @125V</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>1850</UpperLimit>
     <LowerLimit>1750</LowerLimit>
@@ -3289,7 +3303,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn>BCM250.CH19.S029.M07,BCM250.CH19.S030.M08</DependsOn>
     <Enabled>true</Enabled>
-    <Name>M09 32-33 平均读取20次R92 vstr_mid1</Name>
+    <Name>M09 32-33 平均读取20次R92VERB vstr_mid1</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>125500</UpperLimit>
     <LowerLimit>124500</LowerLimit>
@@ -5429,7 +5443,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>Q01 21 平均读取4次R50 adc0 @0V/0A</Name>
+    <Name>Q01 21 平均读取4次R50VERB adc0 @0V/0A</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>30</UpperLimit>
     <LowerLimit>15</LowerLimit>
@@ -5444,7 +5458,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>Q02 22 平均读取4次R56 adc14 @0V/0A</Name>
+    <Name>Q02 22 平均读取4次R56VERB adc14 @0V/0A</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>1500</UpperLimit>
     <LowerLimit>1350</LowerLimit>
@@ -5606,7 +5620,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23. 34.b 打开CCB：W69=0</Name>
+    <Name>23. 34.b 不执行W69=0（避免打开CCB）</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6292,7 +6306,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>R01 20 读取R42 vstr_neg @0V/0A</Name>
+    <Name>R01 20 读取R42VERB确认vstr_neg @0V/0A</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>1100</UpperLimit>
     <LowerLimit>900</LowerLimit>
@@ -6307,7 +6321,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>R02 21 读取R44 iccb @0V/0A</Name>
+    <Name>R02 21 读取R44VERB确认iccb @0V/0A</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>30</UpperLimit>
     <LowerLimit>-30</LowerLimit>
@@ -6380,7 +6394,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24. 26.b 打开CCB：W69=0</Name>
+    <Name>24. 26.b 不执行W69=0（避免打开CCB）</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

@@ -329,14 +329,50 @@ namespace TestPlatform
                 if (!xmlSteps.TryGetValue(definition.StepId, out XElement xmlStep))
                     throw new InvalidDataException("报告StepId在自动测试XML中不存在：" + definition.StepId);
 
+                // The legacy report omits limits for command, firmware and
+                // other logic rows.  Their PSV definitions deliberately have
+                // no display unit; XML may still carry 0/1 pass criteria.
+                if (string.IsNullOrWhiteSpace(definition.Unit))
+                {
+                    definition.LowerLimit = string.Empty;
+                    definition.UpperLimit = string.Empty;
+                    continue;
+                }
+
                 string xmlLower = xmlStep.Element("LowerLimit")?.Value?.Trim() ?? "";
                 string xmlUpper = xmlStep.Element("UpperLimit")?.Value?.Trim() ?? "";
-                definition.LowerLimit = ScaleLimit(xmlLower, definition.ScaleFactor);
-                definition.UpperLimit = string.IsNullOrWhiteSpace(xmlUpper) &&
-                                        !string.IsNullOrWhiteSpace(xmlLower)
-                    ? "any"
-                    : ScaleLimit(xmlUpper, definition.ScaleFactor);
+                bool hasNumericLower = TryParseLimit(xmlLower, out _);
+                bool hasNumericUpper = TryParseLimit(xmlUpper, out _);
+
+                // Firmware names and other textual expected values are used by the
+                // sequence for pass/fail validation, but are not numeric report
+                // limits.  The customer report shows the measured text and PASS/FAIL
+                // state only, matching the legacy BCM-125 examples.
+                if (!hasNumericLower && !hasNumericUpper)
+                {
+                    definition.LowerLimit = string.Empty;
+                    definition.UpperLimit = string.Empty;
+                    continue;
+                }
+
+                definition.LowerLimit = hasNumericLower
+                    ? ScaleLimit(xmlLower, definition.ScaleFactor)
+                    : string.Empty;
+                definition.UpperLimit = hasNumericUpper
+                    ? ScaleLimit(xmlUpper, definition.ScaleFactor)
+                    : string.IsNullOrWhiteSpace(xmlUpper) && hasNumericLower
+                        ? "any"
+                        : string.Empty;
             }
+        }
+
+        private static bool TryParseLimit(string rawLimit, out double value)
+        {
+            return double.TryParse(
+                rawLimit?.Replace(',', '.'),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out value);
         }
 
         private static string ScaleLimit(string rawLimit, double scaleFactor)
@@ -375,7 +411,12 @@ namespace TestPlatform
 
             foreach (IGrouping<string, ReportRow> group in rows.GroupBy(row => row.Definition.ReportGroup))
             {
-                lines.Add(group.Key + ":");
+                lines.Add(string.Equals(
+                    group.Key,
+                    "RESET FROM FLAT CABLE",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? group.Key
+                    : group.Key + ":");
                 foreach (ReportRow row in group)
                     lines.Add(FormatReportRow(row, limitsBeforeUnit));
 

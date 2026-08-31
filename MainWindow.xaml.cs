@@ -2006,7 +2006,9 @@ namespace TestPlatform
         }
 
         /// <summary>
-        /// 保存 Activity Log 到文件（按天追加）
+        /// Exports one complete test run from the durable live log.  The UI log is
+        /// deliberately bounded for responsiveness, so it must not be used as the
+        /// source of an engineering trace.
         /// </summary>
         private void SaveActivityLogToFile()
         {
@@ -2014,25 +2016,56 @@ namespace TestPlatform
             {
                 string logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
                 Directory.CreateDirectory(logDir);
-                string today = DateTime.Now.ToString("yyyyMMdd");
-                string logFile = Path.Combine(logDir, $"ActivityLog_{today}.txt");
+                DateTime runStart = globalStartTime;
+                DateTime runEnd = DateTime.Now;
+                string liveLogFile = Path.Combine(logDir, $"Live_{runStart:yyyyMMdd}.log");
+                string logFile = Path.Combine(
+                    logDir,
+                    $"ActivityLog_{runStart:yyyyMMdd_HHmmss}_{runEnd:HHmmss}.txt");
 
-                // 获取 RichTextBox 中的纯文本内容
-                string logContent = new TextRange(rictxB_log.Document.ContentStart, rictxB_log.Document.ContentEnd).Text;
+                // A live entry is queued before it appears in the UI. Flush the
+                // queue first so the last cleanup/report messages are not omitted.
+                FlushLiveLogQueue();
+                if (!File.Exists(liveLogFile))
+                    throw new FileNotFoundException("实时日志文件不存在。", liveLogFile);
 
-                // 简单去重：如果内容与上次保存的相同，则跳过
-                string hash = logContent.GetHashCode().ToString();
-                if (hash == ProjectSettings.LastSavedLogHash) return;
-                ProjectSettings.LastSavedLogHash = hash;
+                string[] runLines = File.ReadLines(liveLogFile, Encoding.UTF8)
+                    .Where(line => IsLiveLogLineInWindow(line, runStart, runEnd))
+                    .ToArray();
+                if (runLines.Length == 0)
+                    throw new InvalidOperationException("未在实时日志中找到本次测试的记录。");
 
-                // 追加模式写入
-                File.AppendAllText(logFile, logContent + Environment.NewLine);
-                AppendLog($"日志已保存至: {logFile}", LogInfo);
+                var output = new List<string>
+                {
+                    "TestPlatform Activity Log",
+                    $"Run start: {runStart:yyyy-MM-dd HH:mm:ss.fff}",
+                    $"Run end:   {runEnd:yyyy-MM-dd HH:mm:ss.fff}",
+                    $"Entries:   {runLines.Length}",
+                    string.Empty
+                };
+                output.AddRange(runLines);
+                File.WriteAllLines(logFile, output, new UTF8Encoding(true));
+                AppendLog($"完整测试日志已保存至: {logFile}", LogInfo);
             }
             catch (Exception ex)
             {
                 AppendLog($"保存日志文件失败: {ex.Message}", LogError);
             }
+        }
+
+        private static bool IsLiveLogLineInWindow(string line, DateTime start, DateTime end)
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.Length < 23)
+                return false;
+
+            DateTime timestamp;
+            return DateTime.TryParseExact(
+                       line.Substring(0, 23),
+                       "yyyy-MM-dd HH:mm:ss.fff",
+                       CultureInfo.InvariantCulture,
+                       DateTimeStyles.None,
+                       out timestamp) &&
+                   timestamp >= start && timestamp <= end;
         }
         private string SanitizeRemotePathSegment(string value)
         {

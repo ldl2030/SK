@@ -262,7 +262,7 @@ namespace TestPlatform
             register = 0;
             Match match = Regex.Match(
                 command ?? string.Empty,
-                @"^\s*[Rr](?<register>\d+)\s*$",
+                @"^\s*[Rr](?<register>\d+)\s*(?:VERB)?\s*$",
                 RegexOptions.CultureInvariant);
             return match.Success &&
                    int.TryParse(
