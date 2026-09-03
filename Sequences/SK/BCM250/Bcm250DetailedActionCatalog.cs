@@ -333,8 +333,10 @@ namespace TestPlatform.TestSequences
             Wait(items, 19, "18 等待2000ms");
             Mbd(items, 19, "M01", "19 平均读取8次R93VERB @125V", "R93VERB");
             Daq(items, 19, "M02", "20 DAQ106平均测量8次VMID @125V", Bcm250StationMap.VmidReferenceDaqChannel);
-            Vbus(items, 19, "21 设置VMID低点5V/0.1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VmidLow, true);
-            Wait(items, 19, "22 等待12000ms");
+            Vbus(items, 19, "21 诊断：关闭VMID高点VBUS输出并设0V/0A/OVP300", 0, 0, 300, false);
+            Wait(items, 19, "21.a 诊断：等待VBUS/VMID被动放电12000ms");
+            Vbus(items, 19, "21.b 诊断：设置VMID低点5V/0.1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VmidLow, true);
+            Wait(items, 19, "22 诊断：等待VMID低点5V稳定12000ms");
             Mbd(items, 19, "M03", "23 平均读取8次R93 @5V", "R93");
             Daq(items, 19, "M04", "24 DAQ106平均测量8次VMID @5V", Bcm250StationMap.VmidReferenceDaqChannel);
             Result(items, 19, "M05", "25 计算Gain_VMID并写入W20",

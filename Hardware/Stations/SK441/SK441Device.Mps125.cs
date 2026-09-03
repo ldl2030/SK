@@ -25,8 +25,12 @@ namespace TestPlatform
 
         public async Task<bool> SetVbattGeneratorAsync(float voltage, float current, float ovp, bool outputOn)
         {
+            bool outputCommandSucceeded = false;
             try
             {
+                if (outputOn && !await EnsureMpsVbattPowerPathClosedAsync())
+                    return false;
+
                 string safetyError;
                 if (outputOn && !ValidatePowerSourceEnable("SECONDARY", voltage, out safetyError))
                 {
@@ -40,7 +44,8 @@ namespace TestPlatform
                     _mockSecondaryVoltage = voltage;
                     _mockSecondaryCurrentLimit = current;
                     LogInfo?.Invoke($"[Simulation] VBATT source B: {voltage}V/{current}A OVP={ovp}V, {(outputOn ? "ON" : "OFF")}");
-                    return true;
+                    outputCommandSucceeded = true;
+                    return outputOn || await OpenMpsVbattPowerPathAsync(true);
                 }
 
                 HengHuiPower2.SetVoltageCurrent(voltage, current);
@@ -48,12 +53,34 @@ namespace TestPlatform
                 HengHuiPower2.SetPower(outputOn);
                 RecordPowerOutput("SECONDARY", outputOn);
                 LogInfo?.Invoke($"VBATT source B: {voltage}V/{current}A OVP={ovp}V, {(outputOn ? "ON" : "OFF")}");
-                return true;
+                outputCommandSucceeded = true;
+                return outputOn || await OpenMpsVbattPowerPathAsync(true);
             }
             catch (Exception ex)
             {
                 LogError?.Invoke($"VBATT source B setting failed: {ex.Message}");
                 return false;
+            }
+            finally
+            {
+                if (!outputCommandSucceeded)
+                {
+                    if (outputOn)
+                    {
+                        try
+                        {
+                            if (!SkipComInit && HengHuiPower2 != null && HengHuiPower2.IsConnected)
+                                HengHuiPower2.SetPower(false);
+                            RecordPowerOutput("SECONDARY", false);
+                        }
+                        catch (Exception rollbackException)
+                        {
+                            LogError?.Invoke($"VBATT source B rollback failed: {rollbackException.Message}");
+                        }
+                    }
+
+                    await OpenMpsVbattPowerPathAsync(false);
+                }
             }
         }
 

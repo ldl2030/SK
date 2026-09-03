@@ -14,6 +14,13 @@ namespace TestPlatform
         private bool _vbusOutputOn;
         private bool _secondaryOutputOn;
         private bool _electronicLoadOn;
+        public const int MpsVbattSourcePowerRelay = 1;
+        public const int MpsVbattDutPowerRelay = 9;
+        private static readonly int[] MpsVbattPowerRelays =
+        {
+            MpsVbattSourcePowerRelay,
+            MpsVbattDutPowerRelay
+        };
 
         public string[] GetPowerSafetyTrace()
         {
@@ -130,6 +137,7 @@ namespace TestPlatform
                 {
                     if (relayId == 5 && _vbusOutputOn) blocked = true;
                     if (relayId == 6 && _secondaryOutputOn) blocked = true;
+                    if ((relayId == 1 || relayId == 9) && _secondaryOutputOn) blocked = true;
                 }
                 else if (close)
                 {
@@ -185,6 +193,14 @@ namespace TestPlatform
                 {
                     error = "禁止开启String输出：16路大功率继电器 Y1、Y3、Y6 尚未全部确认闭合";
                     _powerSafetyTrace.Add("BLOCK OUTPUT SECONDARY ON: RELAYS 1,3,6 REQUIRED");
+                    return false;
+                }
+
+                if (isMps && domain == "SECONDARY" &&
+                    !AreAllPowerRelaysClosedUnsafe(MpsVbattPowerRelays))
+                {
+                    error = "禁止开启MPS VBATT输出：站3大功率继电器Y1、Y9尚未全部确认闭合";
+                    _powerSafetyTrace.Add("BLOCK OUTPUT SECONDARY ON: RELAYS 1,9 REQUIRED");
                     return false;
                 }
 
@@ -437,7 +453,7 @@ namespace TestPlatform
             {
                 if (relayId == 5)
                     return VerifyPowerDomainsOffAsync("VBUS");
-                if (relayId == 6)
+                if (relayId == 1 || relayId == 6 || relayId == 9)
                     return VerifyPowerDomainsOffAsync("SECONDARY");
                 return Task.FromResult(true);
             }
@@ -530,6 +546,64 @@ namespace TestPlatform
                 passed = ok && passed;
             }
             return passed;
+        }
+
+        private bool IsMpsBoard()
+        {
+            return (SimulationBoardType ?? string.Empty).StartsWith(
+                "MPS",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<bool> EnsureMpsVbattPowerPathClosedAsync()
+        {
+            if (!IsMpsBoard())
+                return true;
+
+            lock (_powerSafetySync)
+            {
+                if (AreAllPowerRelaysClosedUnsafe(MpsVbattPowerRelays))
+                    return true;
+            }
+
+            if (!await VerifyPowerDomainsOffAsync("SECONDARY"))
+                return false;
+
+            foreach (int relayId in MpsVbattPowerRelays)
+            {
+                if (IsPowerRelayAlreadyInState(relayId, true))
+                    continue;
+
+                if (await ControlRelayAsync(relayId, true))
+                    continue;
+
+                await OpenMpsVbattPowerPathAsync(false);
+                return false;
+            }
+
+            LogInfo?.Invoke("MPS VBATT电源路径已闭合：站3大功率继电器Y1、Y9。");
+            return true;
+        }
+
+        private async Task<bool> OpenMpsVbattPowerPathAsync(bool verifyPowerOff)
+        {
+            if (!IsMpsBoard())
+                return true;
+
+            bool powerOffConfirmed = !verifyPowerOff ||
+                await VerifyPowerDomainsOffAsync("SECONDARY");
+            bool relaysOpened = true;
+            for (int index = MpsVbattPowerRelays.Length - 1; index >= 0; index--)
+            {
+                bool opened = await ControlRelayAsync(
+                    MpsVbattPowerRelays[index],
+                    false);
+                relaysOpened = opened && relaysOpened;
+            }
+
+            if (relaysOpened)
+                LogInfo?.Invoke("MPS VBATT电源路径已断开：站3大功率继电器Y9、Y1。");
+            return powerOffConfirmed && relaysOpened;
         }
 
         public async Task<bool> ConfigureAnsOutputOffAsync(float voltage, float current)

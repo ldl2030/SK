@@ -1319,7 +1319,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F08 11.19 读取R357 80V_PRESENCE高态（PDF F8）</Name>
+    <Name>F08 11.19 读取R357VERB 80V_PRESENCE高态（PDF F8）</Name>
     <LowerLimit>3900</LowerLimit>
     <UpperLimit>4096</UpperLimit>
     <Unit>Count</Unit>

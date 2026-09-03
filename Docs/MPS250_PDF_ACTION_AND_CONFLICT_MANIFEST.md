@@ -8,8 +8,10 @@ Executable procedure chapters are 6-17; threshold table 6 is on pages 20-21.
 - Voltage source A (`HengHuiPower1`) is the VBUS simulator (275 V operating point).
 - Voltage source B (`HengHuiPower2`) is the VBATT simulator (275/250 V operating points).
 - Ans/source C and the electronic load are not required by this MPS procedure.
-- MPS-250 uses no station-3 high-power relays. VBUS source A directly powers
-  the MPS board/DUT. Relay_3, Relay_4, Relay_5 and Relay_6 are DAQ relay
+- VBUS source A directly powers the MPS board/DUT. VBATT source B must pass
+  through station-3 high-power relays Y1 and Y9; both close before source-B
+  output is enabled and open after source-B output is off and discharged.
+  Relay_3, Relay_4, Relay_5 and Relay_6 are DAQ relay
   channels 301, 302, 303 and 304. Logical Relay_2 controls both Relay_2 and
   Relay_2BIS on DAQ305/DAQ306.
 - Table 9 physical CH01-CH20 maps one-to-one to DAQ101-DAQ120. The latest

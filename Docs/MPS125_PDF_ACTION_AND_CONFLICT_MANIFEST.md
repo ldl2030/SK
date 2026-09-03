@@ -9,8 +9,10 @@ procedure chapters 6-17 and threshold table 6 (pages 9-21).
 - Voltage source B (`HengHuiPower2`) is the VBATT simulator. It is not a BCM
   string generator in this sequence.
 - Ans/source C and the electronic load are not required by the MPS-125 PDF.
-- MPS-125 uses no station-3 high-power relays. VBUS source A directly powers
-  the MPS board/DUT. PDF Relay_2 through Relay_6 are 34903A/DAQ functional
+- VBUS source A directly powers the MPS board/DUT. VBATT source B must pass
+  through station-3 high-power relays Y1 and Y9; both close before source-B
+  output is enabled and open after source-B output is off and discharged.
+  PDF Relay_2 through Relay_6 are 34903A/DAQ functional
   relays: Relay_3=`@301`, Relay_4=`@302`, Relay_5=`@303`, Relay_6=`@304`, and
   Relay_2/2BIS=`@305,306`.
 - Chapter 6.1 checks only the three physical instruments used by MPS-125:

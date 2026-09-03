@@ -58,7 +58,7 @@ namespace Bcm250StructureTests
                 RunEndToEndSimulation(xmlPath);
 
                 Console.WriteLine(
-                    "PASS BCM250 structure/simulation: 597 steps, 91 results, " +
+                    "PASS BCM250 structure/simulation: 599 steps, 91 results, " +
                     "chapters 7-27, detailed PDF actions, explicit StepIds, XML authority, 6 cleanup steps, " +
                     "full simulation and Q16 fault injection.");
                 return 0;
@@ -493,7 +493,7 @@ namespace Bcm250StructureTests
                 .Where(x => !string.Equals(x.RunCondition, "OnChapterFailure", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(x => x.SequenceOrder)
                 .ToList();
-            Require(steps.Count == 597, "Expected 597 executable steps, got " + steps.Count + ".");
+            Require(steps.Count == 599, "Expected 599 executable steps, got " + steps.Count + ".");
             Require(steps.Count == definitions.Count, "Code/XML step counts differ.");
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

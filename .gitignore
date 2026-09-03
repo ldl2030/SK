@@ -13,6 +13,7 @@ Tests/**/output/
 # Local Codex / agent workspace state
 .codex/
 .agents/
+.codex_*/
 
 # Runtime data
 Logs/

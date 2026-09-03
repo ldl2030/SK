@@ -300,6 +300,16 @@ namespace TestPlatform
 
         private void LoadTestDataFromXml(string filePath)
         {
+            // Step overrides belong to one concrete XML plan.  Keeping them while
+            // switching projects can make the engineering profile retain a previous
+            // project's selected chapters when StepIds happen to overlap.
+            bool planChanged = !string.Equals(
+                currentTestPlanPath,
+                filePath,
+                StringComparison.OrdinalIgnoreCase);
+            if (planChanged)
+                TestPlanRuntimeState.SetStepOverrides(null);
+
             currentTestPlanPath = filePath;
             if (!File.Exists(filePath))
             {
@@ -631,6 +641,10 @@ namespace TestPlatform
                 return;
 
             ApplySelectedProfile();
+            // Applying the profile only updates the checkboxes.  Publish it in the
+            // same selection event so the next run cannot use the previous profile's
+            // chapter overrides.
+            PublishRuntimeSelectionFromUi();
         }
 
         private void ApplySelectedProfile()

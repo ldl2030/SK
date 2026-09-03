@@ -209,7 +209,12 @@ namespace TestPlatform.TestSequences
                     passed = true;
                     break;
                 case Mps125ActionKind.Cleanup:
-                    passed = await device.CloseTargetBoardCommunicationAsync();
+                    // This is the final cleanup row.  The preceding rows have already
+                    // disabled VBUS/VBATT and opened the functional relays, so release
+                    // the fixture even if the target-board serial close fails.
+                    bool communicationClosed = await device.CloseTargetBoardCommunicationAsync();
+                    bool fixtureReleased = await ReleaseFixtureAndVerifyAsync(device);
+                    passed = communicationClosed && fixtureReleased;
                     break;
                 default:
                     passed = true;

@@ -125,12 +125,16 @@ namespace Mps125StructureTests
             Require(Mps125StationMap.Vpwm == 114, "VPWM mapping must be DAQ114.");
             Require(Mps125StationMap.VbusShunt == 117, "VBUS shunt mapping must be DAQ117.");
             Require(Mps125StationMap.FiveVoltIsolated == 119 && Mps125StationMap.ThreeVoltThree == 120, "+5VI/3V3 mapping must be DAQ119/120.");
+            Require(Mps125StationMap.VbattSourcePowerRelay == 1 &&
+                Mps125StationMap.VbattDutPowerRelay == 9 &&
+                Mps125StationMap.VbattPowerRelays == "1,9",
+                "MPS-125 VBATT must use station-3 Y1/Y9.");
             Require(Mps125StationMap.AllControlledRelays == "2,3,4,5,6", "MPS-125 must not declare logical Relay_1.");
             Require(Mps125StationMap.WithdrawalDaqRelay == "@301", "Relay_3 must use DAQ301.");
             Require(Mps125StationMap.ExternalPowerDaqRelays == "@305,306", "Relay_2/2BIS must use DAQ305/306.");
             Require(!catalog.Where(x => x.Kind == Mps125ActionKind.DaqRelays)
                 .SelectMany(x => (x.Argument ?? "").Split(','))
-                .Any(x => x.Trim() == "1"), "MPS-125 catalog must not operate Relay_1/high-power Y1.");
+                .Any(x => x.Trim() == "1"), "MPS-125 DAQ functional-relay catalog must not treat power-path Y1 as a logical relay.");
 
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Mps125ActionDefinition item in catalog)
@@ -256,8 +260,20 @@ namespace Mps125StructureTests
         {
             var device = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-125" };
             Require(device.SetVbusGeneratorAsync(137.5f, 2, 300, true).GetAwaiter().GetResult(), "MPS VBUS must enable directly without a high-power relay.");
-            Require(device.SetVbattGeneratorAsync(125, 0.1f, 150, true).GetAwaiter().GetResult(), "MPS VBATT must enable directly without a high-power relay.");
-            Require(device.SetVbattGeneratorAsync(0, 0, 150, false).GetAwaiter().GetResult(), "Cannot turn off direct VBATT output.");
+            Require(device.SetVbattGeneratorAsync(125, 0.1f, 150, true).GetAwaiter().GetResult(), "MPS VBATT failed to close Y1/Y9 before output enable.");
+            string[] vbattOnTrace = device.GetPowerSafetyTrace();
+            int y1Closed = Array.IndexOf(vbattOnTrace, "RELAY 1 CLOSED");
+            int y9Closed = Array.IndexOf(vbattOnTrace, "RELAY 9 CLOSED");
+            int vbattOn = Array.IndexOf(vbattOnTrace, "OUTPUT SECONDARY ON");
+            Require(y1Closed >= 0 && y1Closed < y9Closed && y9Closed < vbattOn,
+                "MPS-125 VBATT order must be Y1 close, Y9 close, then output ON.");
+            Require(device.SetVbattGeneratorAsync(0, 0, 150, false).GetAwaiter().GetResult(), "Cannot turn off VBATT and open Y9/Y1.");
+            string[] vbattOffTrace = device.GetPowerSafetyTrace();
+            int vbattOff = Array.LastIndexOf(vbattOffTrace, "OUTPUT SECONDARY OFF");
+            int y9Opened = Array.LastIndexOf(vbattOffTrace, "RELAY 9 OPEN");
+            int y1Opened = Array.LastIndexOf(vbattOffTrace, "RELAY 1 OPEN");
+            Require(vbattOff >= 0 && vbattOff < y9Opened && y9Opened < y1Opened,
+                "MPS-125 VBATT order must be output OFF, Y9 open, then Y1 open.");
             Require(!device.StopFixturePressDownAsync("MPS-125").GetAwaiter().GetResult(), "Fixture released while VBUS was energized.");
             Require(!device.ControlMpsRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 closed while VBUS was energized.");
             Require(device.ControlMpsRelayAsync(3, Mps125StationMap.WithdrawalDaqRelay, true).GetAwaiter().GetResult(), "Relay_3/DAQ301 live functional switching was incorrectly blocked.");
@@ -267,7 +283,9 @@ namespace Mps125StructureTests
             Require(device.SafeDisconnectMpsVbattRelayAsync(6, Mps125StationMap.IsoBattDaqRelay, 150).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");
             Require(device.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(), "Cannot power off before fixture release.");
             Require(device.StopFixturePressDownAsync("MPS-125").GetAwaiter().GetResult(), "Fixture remained locked after safe power-off.");
-            Require(!device.GetPowerSafetyTrace().Any(x => x.Contains("RELAY 1 ")), "MPS-125 touched nonexistent high-power Relay_1.");
+            Require(device.GetPowerSafetyTrace().Any(x => x == "RELAY 1 CLOSED") &&
+                device.GetPowerSafetyTrace().Any(x => x == "RELAY 9 CLOSED"),
+                "MPS-125 never operated required VBATT power relays Y1/Y9.");
             Require(device.GetPowerSafetyTrace().Any(x => x.StartsWith("BLOCK", StringComparison.Ordinal)), "No unsafe VBUS action was recorded.");
 
             var emergency = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-125" };

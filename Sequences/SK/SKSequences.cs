@@ -511,13 +511,14 @@ namespace TestPlatform.TestSequences
                         }
                     }
 
-                    if (_grid == null || !steps.Any(x => x.IsFixtureReleaseStep))
-                    {
-                        await HandleFixtureStopAsync(
-                            deviceManager,
-                            allPassed ? "测试流程完成" : "测试流程结束，存在失败项",
-                            false);
-                    }
+                    // Always make a final release attempt.  A sequence-specific
+                    // cleanup may already have released the fixture; the shared
+                    // release task then only reuses its verified result.  This is
+                    // the final safety net for every board and every end path.
+                    await HandleFixtureStopAsync(
+                        deviceManager,
+                        allPassed ? "测试流程完成" : "测试流程结束，存在失败项",
+                        false);
 
                     if (allPassed)
                         LogSuccess?.Invoke("SK441 测试流程全部执行通过。");
@@ -1237,7 +1238,8 @@ namespace TestPlatform.TestSequences
 
             if (!outputsOff || !powerRelayOff)
             {
-                OnLogError("安全收尾未确认全部输出关闭和主功率继电器断开，治具保持锁定，请人工排查。");
+                OnLogError("安全收尾未确认全部输出关闭和主功率继电器断开；仍将尝试释放治具。若带电释放联锁阻止动作，请立即检查硬件安全回路。");
+                await HandleFixtureStopAsync(deviceManager, reason, urgent);
                 return;
             }
 

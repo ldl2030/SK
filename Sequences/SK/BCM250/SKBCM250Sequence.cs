@@ -311,7 +311,12 @@ namespace TestPlatform.TestSequences
                     passed = await device.SendMbdCommandAsync(Bcm250Commands.StoreToFlash, 0);
                     break;
                 case Bcm250ActionKind.Cleanup:
-                    passed = await device.CloseTargetBoardCommunicationAsync();
+                    // Keep the fixture pressed until every preceding cleanup action has
+                    // removed power and opened the test relays, then explicitly open
+                    // station-1's press-down relay and confirm the fixture has risen.
+                    bool communicationClosed = await device.CloseTargetBoardCommunicationAsync();
+                    bool fixtureReleased = await ReleaseFixtureAndVerifyAsync(device);
+                    passed = communicationClosed && fixtureReleased;
                     ResetMbdState();
                     break;
                 default:
@@ -1101,8 +1106,8 @@ namespace TestPlatform.TestSequences
             switch ((stepId ?? string.Empty).ToUpperInvariant())
             {
                 case "BCM250.CH19.S009.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
-                case "BCM250.CH19.S023.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 5f }; return true;
-                case "BCM250.CH19.S032.ACTION": minimumWaitMs = 2500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
+                case "BCM250.CH19.S025.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 5f }; return true;
+                case "BCM250.CH19.S034.ACTION": minimumWaitMs = 2500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
                 case "BCM250.CH23.S028.ACTION": minimumWaitMs = 750; domains = new[] { "VBUS" }; targets = new[] { 15f }; return true;
                 case "BCM250.CH23.S034.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 25f }; return true;
                 case "BCM250.CH24.S027.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 15f }; return true;

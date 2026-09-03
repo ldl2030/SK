@@ -65,6 +65,10 @@ namespace TestPlatform.TestSequences
                 step.StepId = definition.StepId;
                 step.ExpectedGroupId = groupId;
                 step.PlanDefinition = definition;
+                // BCM-125 creates its cleanup rows directly rather than from an
+                // action catalogue. Preserve the XML AlwaysRun contract so those
+                // rows still run after a failed or cancelled test step.
+                step.AlwaysRun = step.AlwaysRun || definition.AlwaysRun;
             }
         }
 

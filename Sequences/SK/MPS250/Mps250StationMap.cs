@@ -2,8 +2,11 @@ namespace TestPlatform.TestSequences
 {
     public static class Mps250StationMap
     {
-        // MPS boards do not use the station high-power relay bank. Logical
-        // Relay_2-Relay_6 are implemented by the DAQ960 34903A relay bank.
+        // VBATT/source B uses station-3 high-power relays Y1 and Y9. Logical
+        // Relay_2-Relay_6 remain on the DAQ960 34903A functional relay bank.
+        public const int VbattSourcePowerRelay = SK441Device.MpsVbattSourcePowerRelay;
+        public const int VbattDutPowerRelay = SK441Device.MpsVbattDutPowerRelay;
+        public const string VbattPowerRelays = "1,9";
         public const int ExternalPowerRelay = 2;
         public const int WithdrawalRelay = 3;
         public const int Contact80VRelay = 4;

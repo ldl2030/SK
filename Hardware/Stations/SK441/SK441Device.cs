@@ -1123,8 +1123,9 @@ namespace TestPlatform
                     RecordPowerOutput("VBUS", false);
                     RecordPowerOutput("SECONDARY", false);
                     RecordPowerOutput("LOAD", false);
+                    bool mpsVbattRelaysOff = await OpenMpsVbattPowerPathAsync(true);
                     LogInfo?.Invoke("[调试模式] 模拟关闭所有电源/负载输出。");
-                    return true;
+                    return mpsVbattRelaysOff;
                 }
 
                 bool allSuccess = true;
@@ -1151,6 +1152,12 @@ namespace TestPlatform
                 {
                     try { ElectronicLoad.SetInputState(false); RecordPowerOutput("LOAD", false); }
                     catch (Exception ex) { allSuccess = false; LogError?.Invoke($"电子负载关闭失败: {ex.Message}"); }
+                }
+
+                if (IsMpsBoard())
+                {
+                    bool mpsVbattRelaysOff = await OpenMpsVbattPowerPathAsync(true);
+                    allSuccess = mpsVbattRelaysOff && allSuccess;
                 }
 
                 LogInfo?.Invoke("已发送关闭所有仪器输出的指令");

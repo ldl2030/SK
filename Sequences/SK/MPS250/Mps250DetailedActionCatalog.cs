@@ -103,7 +103,7 @@ namespace TestPlatform.TestSequences
             Mbd(x, 11, "F07", "11.16 读取R357 80V_PRESENCE低态", "R357");
             Relay(x, 11, "11.17 断开Relay_4(DAQ302)强制CONTACT_80V=1", "4", false);
             Wait(x, 11, "11.18 等待500ms");
-            Mbd(x, 11, "F08", "11.19 读取R357 80V_PRESENCE高态（PDF F8）", "R357");
+            Mbd(x, 11, "F08", "11.19 读取R357VERB 80V_PRESENCE高态（PDF F8）", "R357VERB");
             Relay(x, 11, "11.20 恢复闭合Relay_3(DAQ301) withdrawal接点", "3", true);
         }
 
