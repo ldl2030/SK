@@ -156,7 +156,7 @@
       <SequenceOrder>19</SequenceOrder>
       <Mandatory>false</Mandatory>
       <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn>BCM250.CH23</DependsOn>
+      <DependsOn />
     </Group>
     <Group>
       <GroupId>BCM250.CH25</GroupId>
@@ -164,7 +164,7 @@
       <SequenceOrder>20</SequenceOrder>
       <Mandatory>false</Mandatory>
       <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn>BCM250.CH24</DependsOn>
+      <DependsOn />
     </Group>
     <Group>
       <GroupId>BCM250.CH26</GroupId>
@@ -172,7 +172,7 @@
       <SequenceOrder>21</SequenceOrder>
       <Mandatory>false</Mandatory>
       <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn>BCM250.CH25</DependsOn>
+      <DependsOn />
     </Group>
     <Group>
       <GroupId>BCM250.CH27</GroupId>
@@ -180,7 +180,7 @@
       <SequenceOrder>22</SequenceOrder>
       <Mandatory>false</Mandatory>
       <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn>BCM250.CH26</DependsOn>
+      <DependsOn />
     </Group>
     <Group>
       <GroupId>BCM250.CLEANUP</GroupId>
@@ -1669,7 +1669,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>16. 5 激活MPS RL2：W94=1</Name>
+    <Name>16. 5 激活MPS RL2：W91=1</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -1870,7 +1870,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>16. 19 关闭MPS RL2：W94=0</Name>
+    <Name>16. 19 关闭MPS RL2：W91=0</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5649,7 +5649,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23. 34.b 不执行W69=0（避免打开CCB）</Name>
+    <Name>23. 34.b 打开CCB：W69=0</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6423,7 +6423,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24. 26.b 不执行W69=0（避免打开CCB）</Name>
+    <Name>24. 26.b 打开CCB：W69=0</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6599,28 +6599,13 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24. 40 设置String发生器5V/6A/OVP300</Name>
+    <Name>24. 40 设置String发生器10V/6A/OVP300</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S041.ACTION</StepId>
-    <GroupId>BCM250.CH24</GroupId>
-    <SequenceOrder>446</SequenceOrder>
-    <DefaultEnabled>true</DefaultEnabled>
-    <Mandatory>false</Mandatory>
-    <AlwaysRun>false</AlwaysRun>
-    <DependsOn></DependsOn>
-    <Enabled>true</Enabled>
-    <Name>24. 41 重新打开CCB并等待2000ms：W69=0</Name>
-    <UpperLimit></UpperLimit>
-    <LowerLimit></LowerLimit>
-    <Unit></Unit>
-    <DelayMs>2000</DelayMs>
-  </TestItem>
-  <TestItem>
-    <StepId>BCM250.CH24.S042.R11</StepId>
+    <StepId>BCM250.CH24.S041.R11</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>447</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6635,7 +6620,7 @@
     <Unit>mV</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S043.R12</StepId>
+    <StepId>BCM250.CH24.S042.R12</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>448</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6650,7 +6635,7 @@
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S044.R13</StepId>
+    <StepId>BCM250.CH24.S043.R13</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>449</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6665,7 +6650,7 @@
     <Unit>mV</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S045.R14</StepId>
+    <StepId>BCM250.CH24.S044.R14</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>450</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6680,7 +6665,7 @@
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S046.ACTION</StepId>
+    <StepId>BCM250.CH24.S045.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>451</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6694,7 +6679,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S047.ACTION</StepId>
+    <StepId>BCM250.CH24.S046.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>452</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6708,7 +6693,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S048.ACTION</StepId>
+    <StepId>BCM250.CH24.S047.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>453</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6722,7 +6707,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S049.ACTION</StepId>
+    <StepId>BCM250.CH24.S048.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>454</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6736,7 +6721,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S050.ACTION</StepId>
+    <StepId>BCM250.CH24.S049.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>455</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6750,7 +6735,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S051.ACTION</StepId>
+    <StepId>BCM250.CH24.S050.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>456</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6764,7 +6749,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S052.ACTION</StepId>
+    <StepId>BCM250.CH24.S051.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>457</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6778,7 +6763,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S053.ACTION</StepId>
+    <StepId>BCM250.CH24.S052.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>458</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6792,7 +6777,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S054.ACTION</StepId>
+    <StepId>BCM250.CH24.S053.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>459</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6806,7 +6791,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S055.ACTION</StepId>
+    <StepId>BCM250.CH24.S054.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>460</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6820,7 +6805,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S056.ACTION</StepId>
+    <StepId>BCM250.CH24.S055.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>461</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6834,7 +6819,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S057.ACTION</StepId>
+    <StepId>BCM250.CH24.S056.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>462</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6848,7 +6833,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S058.ACTION</StepId>
+    <StepId>BCM250.CH24.S057.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>463</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6862,7 +6847,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S059.ACTION</StepId>
+    <StepId>BCM250.CH24.S058.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>464</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6877,7 +6862,7 @@
     <DelayMs>4000</DelayMs>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S060.ACTION</StepId>
+    <StepId>BCM250.CH24.S059.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>465</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6891,7 +6876,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S061.ACTION</StepId>
+    <StepId>BCM250.CH24.S060.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>466</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6906,7 +6891,7 @@
     <DelayMs>200</DelayMs>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S062.ACTION</StepId>
+    <StepId>BCM250.CH24.S061.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>467</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -6920,7 +6905,7 @@
     <Unit></Unit>
   </TestItem>
   <TestItem>
-    <StepId>BCM250.CH24.S063.ACTION</StepId>
+    <StepId>BCM250.CH24.S062.ACTION</StepId>
     <GroupId>BCM250.CH24</GroupId>
     <SequenceOrder>468</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
@@ -7395,7 +7380,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 32 设置CCB硬件测试目标电流：W12=1000</Name>
+    <Name>25. 32 设置CCB硬件测试目标电流：W12=6000</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7423,11 +7408,11 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25. 34 等待10000ms</Name>
+    <Name>25. 34 条件等待R44稳定在6A（最长20000ms）</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
-    <DelayMs>10000</DelayMs>
+    <DelayMs>20000</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH25.S036.S01</StepId>
@@ -7440,8 +7425,8 @@
     <Enabled>true</Enabled>
     <Name>S01 35 DAQ113测量CCB外部分流电流</Name>
     <ExpectedValue></ExpectedValue>
-    <UpperLimit>-700</UpperLimit>
-    <LowerLimit>-1300</LowerLimit>
+    <UpperLimit>-5700</UpperLimit>
+    <LowerLimit>-6300</LowerLimit>
     <Unit>mA</Unit>
   </TestItem>
   <TestItem>
@@ -8049,7 +8034,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T01 24 读取R44内部iccb（MOS打开）</Name>
+    <Name>T01 24 平均读取20次R44内部iccb（MOS打开）</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>-300</UpperLimit>
     <LowerLimit>-750</LowerLimit>
@@ -8064,7 +8049,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T02 25 DAQ113测量外部分流电流（MOS打开）</Name>
+    <Name>T02 25 DAQ113采样20次求平均外部分流电流（MOS打开）</Name>
     <ExpectedValue></ExpectedValue>
     <UpperLimit>750</UpperLimit>
     <LowerLimit>300</LowerLimit>

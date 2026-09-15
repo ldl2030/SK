@@ -80,8 +80,8 @@ namespace TestPlatform.TestSequences
                 new Sk250SourceSetpoint(0, 0, 300);
             public static readonly Sk250SourceSetpoint ChargeVerificationSixAmp =
                 new Sk250SourceSetpoint(15, 6, 300);
-            public static readonly Sk250SourceSetpoint ChargeVerificationFiveVolt =
-                new Sk250SourceSetpoint(5, 6, 300);
+            public static readonly Sk250SourceSetpoint ChargeVerificationTenVolt =
+                new Sk250SourceSetpoint(10, 6, 300);
             public static readonly Sk250SourceSetpoint CcbVbus =
                 new Sk250SourceSetpoint(275, 10, 300);
             public static readonly Sk250SourceSetpoint CcbString =
@@ -97,7 +97,7 @@ namespace TestPlatform.TestSequences
 
             // MBD register test targets. Change these values here, not in the catalogue.
             public const int CcbCalibrationCurrentMa = 6000;
-            public const int CcbHardwareTestCurrentMa = 1000;
+            public const int CcbHardwareTestCurrentMa = 6000;
             public const int CcbVoltageTargetMv = 267000;
         }
 

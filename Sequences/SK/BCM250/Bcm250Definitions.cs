@@ -51,6 +51,7 @@ namespace TestPlatform.TestSequences
         DocumentedBoundary,
         MbdCommand,
         Delay,
+        WaitForCcbCurrentStable,
         ProgramFirmware,
         SetMpsPower,
         SetVbus,

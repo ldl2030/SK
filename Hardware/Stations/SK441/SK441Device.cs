@@ -230,6 +230,7 @@ namespace TestPlatform
             // 缁戝畾鏃ュ織浜嬩欢锛屽皢搴曞眰浠櫒鐨勬棩蹇楀叏閮ㄥ線涓婃姏
             BindLogs(TargetBoard);
             BindLogs(Flasher);
+            BindLogs(ElectronicLoad);
         }
 
         private void BindLogs(IDeviceLogSource device)
@@ -410,6 +411,9 @@ namespace TestPlatform
 
             int ansAddress = GetIntAppSetting("SKAnsAddress", 1);
             int electronicLoadBaudRate = GetIntAppSetting("SKElectronicLoadBaudRate", 38400);
+            ElectronicLoad.CommandDelayMs = Math.Max(
+                0,
+                GetIntAppSetting("SKElectronicLoadCommandDelayMs", 50));
             _digitalInputPort = digitalInputPort;
             _targetBoardPortCandidate = targetBoardPort;
             if (!string.IsNullOrWhiteSpace(targetBoardPort))
@@ -1947,73 +1951,145 @@ namespace TestPlatform
                         $"避免{voltage:0.###}V×{current:0.###}A超过{power:0.###}W功率上限。");
                 }
 
-                if (inputOn && loadWasAlreadyOn)
-                {
-                    // Keep the load conducting while moving the CV operating point.
-                    // Toggling INP and rewriting protection values here can latch the
-                    // KUNKIN 7303 over-power alarm during the 250 V -> 255 V transition.
-                    ElectronicLoad.SetVoltage(voltage);
-                    LogInfo?.Invoke(
-                        $"电子负载保持输入ON，仅更新CV电压为{voltage:0.###}V；" +
-                        "不重新写入电流/功率保护，也不在运行中切断负载。");
-                }
-                else
-                {
-                    ElectronicLoad.SetInputState(false);
-                    RecordPowerOutput("LOAD", false);
-                    ElectronicLoad.ClearInputProtection();
-                    ElectronicLoad.SetCurrent(effectiveCurrent);
-                    if (effectiveCurrent > 0)
-                        ElectronicLoad.SetCurrentProtection(effectiveCurrent);
-                    if (power > 0)
-                        ElectronicLoad.SetPowerProtection(power);
-                    ElectronicLoad.SetMode("CV");
-                    ElectronicLoad.SetVoltage(voltage);
-                    if (inputOn)
-                        ElectronicLoad.ClearInputProtection();
-                    ElectronicLoad.SetInputState(inputOn);
-                    RecordPowerOutput("LOAD", inputOn);
-                }
-
+                int applyAttempts = inputOn && loadWasAlreadyOn
+                    ? 1
+                    : Math.Max(1, GetIntAppSetting("SKElectronicLoadCvApplyAttempts", 2));
+                int configureSettleMs = Math.Max(
+                    0,
+                    GetIntAppSetting("SKElectronicLoadCvConfigureSettleMs", 200));
+                int retryDelayMs = Math.Max(
+                    0,
+                    GetIntAppSetting("SKElectronicLoadCvRetryDelayMs", 300));
                 int readbackDelayMs = Math.Max(
                     0,
                     GetIntAppSetting("SKElectronicLoadReadbackDelayMs", 300));
-                if (readbackDelayMs > 0)
-                    await Task.Delay(readbackDelayMs);
 
-                string actualMode = ElectronicLoad.GetMode();
-                bool actualInputOn = ElectronicLoad.GetInputState();
-                RecordPowerOutput("LOAD", actualInputOn);
-                float measuredVoltage = ElectronicLoad.MeasureVoltage();
-                float measuredCurrent = ElectronicLoad.MeasureCurrent();
-                float measuredPower = ElectronicLoad.MeasurePower();
-                if (float.IsNaN(measuredVoltage) || float.IsInfinity(measuredVoltage) ||
-                    float.IsNaN(measuredCurrent) || float.IsInfinity(measuredCurrent) ||
-                    float.IsNaN(measuredPower) || float.IsInfinity(measuredPower))
+                for (int attempt = 1; attempt <= applyAttempts; attempt++)
                 {
-                    LogError?.Invoke("电子负载回读包含非有限值，设置结果无效。");
+                    if (inputOn && loadWasAlreadyOn)
+                    {
+                        // Keep the load conducting while moving the CV operating point.
+                        // Rewriting mode/protection values while ON can disturb the CCB loop.
+                        ElectronicLoad.SetVoltage(voltage);
+                        LogInfo?.Invoke(
+                            $"电子负载保持输入ON，仅更新CV电压为{voltage:0.###}V；" +
+                            "不重新写入模式或保护参数。");
+                    }
+                    else
+                    {
+                        ElectronicLoad.SetInputState(false);
+                        RecordPowerOutput("LOAD", false);
+                        ElectronicLoad.ClearInputProtection();
+                        ElectronicLoad.SetCurrent(effectiveCurrent);
+                        if (effectiveCurrent > 0)
+                            ElectronicLoad.SetCurrentProtection(effectiveCurrent);
+                        if (power > 0)
+                            ElectronicLoad.SetPowerProtection(power);
+                        ElectronicLoad.SetMode("CV");
+                        ElectronicLoad.SetVoltage(voltage);
+
+                        if (configureSettleMs > 0)
+                            await Task.Delay(configureSettleMs);
+
+                        string configuredMode = ElectronicLoad.GetMode();
+                        bool configuredInputOn = ElectronicLoad.GetInputState();
+                        if (!string.Equals(configuredMode, "CV", StringComparison.OrdinalIgnoreCase) ||
+                            configuredInputOn)
+                        {
+                            if (attempt < applyAttempts)
+                            {
+                                LogInfo?.Invoke(
+                                    $"警告：电子负载CV配置未就绪（尝试{attempt}/{applyAttempts}）：" +
+                                    $"模式={configuredMode}，输入={(configuredInputOn ? "ON" : "OFF")}；将在OFF状态重试。");
+                                if (retryDelayMs > 0)
+                                    await Task.Delay(retryDelayMs);
+                                continue;
+                            }
+
+                            LogError?.Invoke(
+                                $"电子负载CV配置失败：要求CV/OFF，" +
+                                $"设备实际为{configuredMode}/{(configuredInputOn ? "ON" : "OFF")}。");
+                            return false;
+                        }
+
+                        LogInfo?.Invoke(
+                            $"电子负载输入前CV确认通过（尝试{attempt}/{applyAttempts}）。");
+                        if (inputOn)
+                        {
+                            ElectronicLoad.SetInputState(true);
+                            RecordPowerOutput("LOAD", true);
+                        }
+                    }
+
+                    if (readbackDelayMs > 0)
+                        await Task.Delay(readbackDelayMs);
+
+                    string actualMode = ElectronicLoad.GetMode();
+                    bool actualInputOn = ElectronicLoad.GetInputState();
+                    RecordPowerOutput("LOAD", actualInputOn);
+                    float measuredVoltage = ElectronicLoad.MeasureVoltage();
+                    float measuredCurrent = ElectronicLoad.MeasureCurrent();
+                    float measuredPower = ElectronicLoad.MeasurePower();
+                    if (float.IsNaN(measuredVoltage) || float.IsInfinity(measuredVoltage) ||
+                        float.IsNaN(measuredCurrent) || float.IsInfinity(measuredCurrent) ||
+                        float.IsNaN(measuredPower) || float.IsInfinity(measuredPower))
+                    {
+                        LogError?.Invoke("电子负载回读包含非有限值，设置结果无效。");
+                        return false;
+                    }
+
+                    LogInfo?.Invoke(
+                        $"电子负载真实状态回读（尝试{attempt}/{applyAttempts}）：" +
+                        $"模式={actualMode}，输入={(actualInputOn ? "ON" : "OFF")}，" +
+                        $"设定={voltage:0.###}V/{effectiveCurrent:0.###}A，保护={power:0.###}W，" +
+                        $"实测={measuredVoltage:0.###}V/{measuredCurrent:0.###}A/{measuredPower:0.###}W");
+
+                    bool modeMatches = string.Equals(
+                        actualMode,
+                        "CV",
+                        StringComparison.OrdinalIgnoreCase);
+                    bool inputMatches = actualInputOn == inputOn;
+                    if (modeMatches && inputMatches)
+                        return true;
+
+                    if (attempt < applyAttempts)
+                    {
+                        LogInfo?.Invoke(
+                            $"警告：电子负载回读不符合CV/{(inputOn ? "ON" : "OFF")}，" +
+                            "将关闭输入并重新配置。");
+                        ElectronicLoad.SetInputState(false);
+                        RecordPowerOutput("LOAD", false);
+                        if (retryDelayMs > 0)
+                            await Task.Delay(retryDelayMs);
+                        continue;
+                    }
+
+                    if (!modeMatches)
+                        LogError?.Invoke($"电子负载模式回读失败：要求CV，设备实际为{actualMode}。");
+                    if (!inputMatches)
+                    {
+                        LogError?.Invoke(
+                            $"电子负载输入状态回读失败：要求{(inputOn ? "ON" : "OFF")}，" +
+                            $"设备实际为{(actualInputOn ? "ON" : "OFF")}。");
+                    }
+
+                    if (actualInputOn)
+                    {
+                        try
+                        {
+                            ElectronicLoad.SetInputState(false);
+                            RecordPowerOutput("LOAD", false);
+                            LogError?.Invoke("电子负载状态错误，已执行保护关闭。");
+                        }
+                        catch (Exception shutdownEx)
+                        {
+                            LogError?.Invoke("电子负载状态错误且保护关闭失败：" + shutdownEx.Message);
+                        }
+                    }
                     return false;
                 }
 
-                LogInfo?.Invoke(
-                    $"电子负载真实状态回读：模式={actualMode}，输入={(actualInputOn ? "ON" : "OFF")}，" +
-                    $"设定={voltage:0.###}V/{effectiveCurrent:0.###}A，保护={power:0.###}W，" +
-                    $"实测={measuredVoltage:0.###}V/{measuredCurrent:0.###}A/{measuredPower:0.###}W");
-
-                if (!string.Equals(actualMode, "CV", StringComparison.OrdinalIgnoreCase))
-                {
-                    LogError?.Invoke($"电子负载模式回读失败：要求CV，设备实际为{actualMode}。");
-                    return false;
-                }
-                if (actualInputOn != inputOn)
-                {
-                    LogError?.Invoke(
-                        $"电子负载输入状态回读失败：要求{(inputOn ? "ON" : "OFF")}，" +
-                        $"设备实际为{(actualInputOn ? "ON" : "OFF")}。");
-                    return false;
-                }
-
-                return true;
+                return false;
             }
             catch (Exception ex)
             {

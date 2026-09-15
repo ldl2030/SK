@@ -218,6 +218,24 @@
   </Project>
   <Project>
     <GroupName>SK</GroupName>
+    <ModelName>BCM-250 FAST</ModelName>
+    <DisplayName>SK BCM-250 FAST</DisplayName>
+    <FilePath>ProjectConfig\SK\BCM-250-FAST\BCM-250-FAST_autoTest.xml</FilePath>
+    <UpdateUrl></UpdateUrl>
+    <Runner>Legacy</Runner>
+    <SequenceKey>SK_BCM250_Sequence</SequenceKey>
+    <ComInitKey>SK441Device</ComInitKey>
+    <RequiredComPorts>
+      <ComPort>ansPowerComName</ComPort>
+      <ComPort>daqComName</ComPort>
+      <ComPort>digitalInputComName</ComPort>
+      <ComPort>fixtureRelayComName</ComPort>
+      <ComPort>relay16ComName</ComPort>
+    </RequiredComPorts>
+    <FtpBasePath>/SK/BCM-250-FAST</FtpBasePath>
+  </Project>
+  <Project>
+    <GroupName>SK</GroupName>
     <ModelName>BCM-125 测试</ModelName>
     <DisplayName>SK BCM-125 自动测试</DisplayName>
     <FilePath>ProjectConfig\SK\BCM-125\BCM-125_autoTest.xml</FilePath>

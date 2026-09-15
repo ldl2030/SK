@@ -213,7 +213,7 @@ namespace TestPlatform.TestSequences
             Action(items, 16, "2 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 16, "3 发送EXIT进入MBD终端", "EXIT");
             Command(items, 16, "4 发送DIAG ON到MBD", "DIAG ON");
-            Command(items, 16, "5 激活MPS RL2：W94=1", "W94=1");
+            Command(items, 16, "5 激活MPS RL2：W91=1", "W91=1");
             Wait(items, 16, "6 等待5000ms");
             Command(items, 16, "7 发送REMOTE2进入BCM250终端", "REMOTE2");
             Command(items, 16, "8 发送DIAG ON到BCM250", "DIAG ON");
@@ -228,7 +228,7 @@ namespace TestPlatform.TestSequences
             Mbd(items, 16, "J04", "15 平均读取5次R43VERB vstr_pos", "R43VERB");
             Command(items, 16, "17 发送EXIT返回MBD终端", "EXIT");
             Command(items, 16, "18 发送DIAG ON到MBD", "DIAG ON");
-            Command(items, 16, "19 关闭MPS RL2：W94=0", "W94=0");
+            Command(items, 16, "19 关闭MPS RL2：W91=0", "W91=0");
             Action(items, 16, "20 结束本章串口会话", Bcm250ActionKind.DocumentedBoundary);
         }
 
@@ -538,7 +538,7 @@ namespace TestPlatform.TestSequences
             Vbus(items, 23, "32 设置VSTR_NEG 1V/1A/OVP300并输出", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
             String(items, 23, "33 设置String发生器25V/6A/OVP300并输出", Sk250TestSetpoints.Bcm250.ChargeCalibration, true);
             Wait(items, 23, "34.a 等待7000ms");
-            Action(items, 23, "34.b 不执行W69=0（避免打开CCB）", Bcm250ActionKind.DocumentedBoundary);
+            Command(items, 23, "34.b 打开CCB：W69=0", "W69=0");
             Mbd(items, 23, "Q08", "35 平均读取4次R50 adc0 @0V/6A", "R50");
             Mbd(items, 23, "Q09", "36 平均读取4次R56 adc14 @0V/6A", "R56");
             Shunt(items, 23, "Q10", "37 DAQ113测量外部分流电流 @0V/6A",
@@ -606,7 +606,7 @@ namespace TestPlatform.TestSequences
             Vbus(items, 24, "24 设置VSTR_NEG 1V/1A/OVP300", Sk250TestSetpoints.Bcm250.VstrNegLow, true);
             String(items, 24, "25 设置String发生器15V/6A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationSixAmp, true);
             Wait(items, 24, "26.a 等待5000ms");
-            Action(items, 24, "26.b 不执行W69=0（避免打开CCB）", Bcm250ActionKind.DocumentedBoundary);
+            Command(items, 24, "26.b 打开CCB：W69=0", "W69=0");
             Mbd(items, 24, "R04", "27 读取R42 vstr_neg @0V/6A", "R42");
             Mbd(items, 24, "R05", "28 读取R44 iccb @0V/6A", "R44");
             Shunt(items, 24, "R06", "29 DAQ113测量外部分流电流 @0V/6A",
@@ -619,8 +619,7 @@ namespace TestPlatform.TestSequences
             Mbd(items, 24, "R08", "36 读取R42 vstr_neg @15V/0A", "R42");
             Mbd(items, 24, "R09", "37 读取R44 iccb @15V/0A", "R44");
             Daq(items, 24, "R10", "38-39 DAQ109测量V2 @15V/0A", Bcm250StationMap.V2DaqChannel);
-            String(items, 24, "40 设置String发生器5V/6A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationFiveVolt, true);
-            Command(items, 24, "41 重新打开CCB并等待2000ms：W69=0", "W69=0");
+            String(items, 24, "40 设置String发生器10V/6A/OVP300", Sk250TestSetpoints.Bcm250.ChargeVerificationTenVolt, true);
             Mbd(items, 24, "R11", "42 读取R42 vstr_neg @15V/6A", "R42");
             Mbd(items, 24, "R12", "43 读取R44 iccb @15V/6A", "R44");
             Daq(items, 24, "R13", "44-45 DAQ109测量V2 @15V/6A", Bcm250StationMap.V2DaqChannel);
@@ -688,7 +687,8 @@ namespace TestPlatform.TestSequences
                 "32 设置CCB硬件测试目标电流：W12=" + Sk250TestSetpoints.Bcm250.CcbHardwareTestCurrentMa,
                 "W12=" + Sk250TestSetpoints.Bcm250.CcbHardwareTestCurrentMa);
             Command(items, 25, "33 打开CCB：W69=0", "W69=0");
-            Wait(items, 25, "34 等待10000ms");
+            Action(items, 25, "34 条件等待R44稳定在6A（最长20000ms）",
+                Bcm250ActionKind.WaitForCcbCurrentStable);
             Shunt(items, 25, "S01", "35 DAQ113测量CCB外部分流电流",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
             Load(items, 25, "36 负载保持ON并将CV更新为255V", Sk250TestSetpoints.Bcm250.CcbLoadHold, true);
@@ -739,8 +739,8 @@ namespace TestPlatform.TestSequences
             Command(items, 26, "21 设置CCB目标0mA：W12=0", "W12=0");
             Command(items, 26, "22 打开MOSFET Q11：W71=1", "W71=1");
             Wait(items, 26, "23 等待7000ms");
-            Mbd(items, 26, "T01", "24 读取R44内部iccb（MOS打开）", "R44");
-            Shunt(items, 26, "T02", "25 DAQ113测量外部分流电流（MOS打开）",
+            Mbd(items, 26, "T01", "24 平均读取20次R44内部iccb（MOS打开）", "R44");
+            Shunt(items, 26, "T02", "25 DAQ113采样20次求平均外部分流电流（MOS打开）",
                 Bcm250StationMap.StringShuntDaqChannel, Bcm250StationMap.StringShuntOhms);
             Command(items, 26, "26 关闭MOSFET Q11：W71=0", "W71=0");
             Wait(items, 26, "27 等待6000ms");

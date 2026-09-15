@@ -646,6 +646,15 @@
     <Content Include="ProjectConfig\SK\BCM-250\BCM-250_profiles.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="ProjectConfig\SK\BCM-250-FAST\BCM-250-FAST_autoTest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\BCM-250-FAST\BCM-250-FAST_profiles.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\BCM-250-FAST\BCM-250-FAST_report.psv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="ProjectConfig\SK\MPS-125\MPS-125_autoTest.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

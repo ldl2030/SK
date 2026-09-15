@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO.Ports;
 using System.Threading;
 using System.Globalization;
@@ -8,10 +9,15 @@ namespace TestPlatform
     /// <summary>
     /// 恒惠(HengHui) 电子负载 SCPI 控制驱动 (如 300V 12A 3600W 型号)
     /// </summary>
-    public class HengHuiElectronicLoad : IDisposable
+    public class HengHuiElectronicLoad : IDisposable, IDeviceLogSource
     {
         private SerialPort _serialPort;
         private readonly object _lock = new object();
+
+        public event Action<string> LogInfo;
+        public event Action<string> LogError;
+
+        public int CommandDelayMs { get; set; } = 50;
 
         public void Connect(string portName, int baudRate = 9600)
         {
@@ -43,9 +49,19 @@ namespace TestPlatform
             lock (_lock)
             {
                 if (!IsConnected) throw new InvalidOperationException("HengHui 电子负载未连接。");
-                _serialPort.DiscardInBuffer();
-                _serialPort.WriteLine(cmd);
-                Thread.Sleep(20); // 稍微延时防止设备处理不过来
+                string portName = _serialPort.PortName;
+                try
+                {
+                    _serialPort.DiscardInBuffer();
+                    LogInfo?.Invoke($"电子负载 TX [{portName}] {cmd}");
+                    _serialPort.WriteLine(cmd);
+                    Thread.Sleep(Math.Max(0, CommandDelayMs));
+                }
+                catch (Exception ex)
+                {
+                    LogError?.Invoke($"电子负载 TX ERROR [{portName}] {cmd}: {ex.Message}");
+                    throw;
+                }
             }
         }
 
@@ -54,9 +70,27 @@ namespace TestPlatform
             lock (_lock)
             {
                 if (!IsConnected) throw new InvalidOperationException("HengHui 电子负载未连接。");
-                _serialPort.DiscardInBuffer();
-                _serialPort.WriteLine(queryCmd);
-                return _serialPort.ReadLine().Trim();
+                string portName = _serialPort.PortName;
+                var timer = Stopwatch.StartNew();
+                try
+                {
+                    _serialPort.DiscardInBuffer();
+                    LogInfo?.Invoke($"电子负载 TX [{portName}] {queryCmd}");
+                    _serialPort.WriteLine(queryCmd);
+                    string response = _serialPort.ReadLine().Trim();
+                    timer.Stop();
+                    LogInfo?.Invoke(
+                        $"电子负载 RX [{portName}] {queryCmd} ({timer.ElapsedMilliseconds} ms): {response}");
+                    return response;
+                }
+                catch (Exception ex)
+                {
+                    timer.Stop();
+                    LogError?.Invoke(
+                        $"电子负载 QUERY ERROR [{portName}] {queryCmd} " +
+                        $"({timer.ElapsedMilliseconds} ms): {ex.Message}");
+                    throw;
+                }
             }
         }
 
@@ -77,7 +111,11 @@ namespace TestPlatform
                 {
                     lastError = ex;
                     if (attempt < attempts)
+                    {
+                        LogInfo?.Invoke(
+                            $"电子负载查询重试 {queryCmd}: {attempt}/{attempts}，原因={ex.Message}");
                         Thread.Sleep(100);
+                    }
                 }
             }
 

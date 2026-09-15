@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -160,6 +161,9 @@ namespace TestPlatform.TestSequences
                 }
                 return Result(true, delayMs + " ms", action);
             }
+
+            if (action.Kind == Bcm250ActionKind.WaitForCcbCurrentStable)
+                return await WaitForCcbCurrentStableAsync(step, device, action, token);
 
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
@@ -723,6 +727,7 @@ namespace TestPlatform.TestSequences
                 case Bcm250ActionKind.DaqVoltage:
                 case Bcm250ActionKind.DaqShuntResistance:
                 case Bcm250ActionKind.DaqShuntCurrent:
+                case Bcm250ActionKind.WaitForCcbCurrentStable:
                 case Bcm250ActionKind.ProgramFirmware:
                 case Bcm250ActionKind.ShortSimulator:
                     return true;
@@ -833,6 +838,8 @@ namespace TestPlatform.TestSequences
                 case "N04":
                     return 8;
                 case "M09":
+                case "T01":
+                case "T02":
                     return 20;
                 case "N01":
                 case "N03":
@@ -1038,6 +1045,112 @@ namespace TestPlatform.TestSequences
                 Value = value,
                 StoreKey = action.IsResult ? Bcm250ResultKeys.For(action.ResultId) : null
             };
+        }
+
+        private async Task<StepResult> WaitForCcbCurrentStableAsync(
+            TestStepItem step,
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            CancellationToken token)
+        {
+            int timeoutMs = GetPlanDelayMs(new[] { step }, 0, 20000);
+            const int pollIntervalMs = 500;
+            const int requiredConsecutiveSamples = 2;
+
+            TestStepItem s01Step;
+            if (!_stepsByResultId.TryGetValue("S01", out s01Step) ||
+                s01Step.PlanDefinition == null ||
+                !s01Step.PlanDefinition.LowerLimit.HasValue ||
+                !s01Step.PlanDefinition.UpperLimit.HasValue)
+            {
+                throw new TestPlanConfigurationException(
+                    "BCM250 S01 limits are required for the CCB current readiness check.");
+            }
+
+            double readyLowerMa = Math.Min(
+                Math.Abs(s01Step.PlanDefinition.LowerLimit.Value),
+                Math.Abs(s01Step.PlanDefinition.UpperLimit.Value));
+            double readyUpperMa = Math.Max(
+                Math.Abs(s01Step.PlanDefinition.LowerLimit.Value),
+                Math.Abs(s01Step.PlanDefinition.UpperLimit.Value));
+
+            if (device.SkipComInit)
+            {
+                await Task.Delay(Math.Min(timeoutMs, 1), token);
+                return Result(
+                    true,
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        "R44={0:0} mA (simulation)",
+                        Sk250TestSetpoints.Bcm250.CcbHardwareTestCurrentMa),
+                    action);
+            }
+
+            var timer = Stopwatch.StartNew();
+            int consecutiveSamples = 0;
+            int sampleNumber = 0;
+            double lastCurrentMa = double.NaN;
+            while (timer.ElapsedMilliseconds <= timeoutMs)
+            {
+                token.ThrowIfCancellationRequested();
+                sampleNumber++;
+                try
+                {
+                    string response = await device.QueryMbdCommandAsync("R44", 0);
+                    lastCurrentMa = MbdResponseParser.ParseScalar("R44", response);
+                    bool inRange = lastCurrentMa >= readyLowerMa && lastCurrentMa <= readyUpperMa;
+                    consecutiveSamples = inRange ? consecutiveSamples + 1 : 0;
+                    OnLogInfo(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "BCM250 CCB电流就绪轮询 #{0}：R44={1:0.###}mA，范围={2:0.###}~{3:0.###}mA，连续稳定={4}/{5}。",
+                        sampleNumber,
+                        lastCurrentMa,
+                        readyLowerMa,
+                        readyUpperMa,
+                        consecutiveSamples,
+                        requiredConsecutiveSamples));
+
+                    if (consecutiveSamples >= requiredConsecutiveSamples)
+                    {
+                        timer.Stop();
+                        return Result(
+                            true,
+                            string.Format(
+                                CultureInfo.InvariantCulture,
+                                "R44={0:0.###} mA, stable in {1} ms",
+                                lastCurrentMa,
+                                timer.ElapsedMilliseconds),
+                            action);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    consecutiveSamples = 0;
+                    OnLogWarning(
+                        "BCM250 CCB电流就绪轮询读取失败 #" + sampleNumber + "：" + ex.Message);
+                }
+
+                int remainingMs = timeoutMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs <= 0)
+                    break;
+                await Task.Delay(Math.Min(pollIntervalMs, remainingMs), token);
+            }
+
+            timer.Stop();
+            OnLogWarning(string.Format(
+                CultureInfo.InvariantCulture,
+                "BCM250 CCB电流在{0}ms内未连续稳定到{1:0.###}~{2:0.###}mA，最后R44={3}。",
+                timeoutMs,
+                readyLowerMa,
+                readyUpperMa,
+                double.IsNaN(lastCurrentMa)
+                    ? "N/A"
+                    : lastCurrentMa.ToString("0.###", CultureInfo.InvariantCulture) + "mA"));
+            return Result(false, "R44 stabilization timeout", action);
         }
 
         private async Task ExecuteOptimizedDelayAsync(

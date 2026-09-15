@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Profiles BoardType="BCM-250">
+  <Profile Id="NORMAL">
+    <Name>BCM250完整流程</Name>
+    <UseBaselineDefaults>true</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>true</AllowStepOverride>
+    <ResetFromBaselineEveryRun>true</ResetFromBaselineEveryRun>
+  </Profile>
+  <Profile Id="LOW_VOLTAGE">
+    <Name>BCM250实机连接和零输出验证</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>false</AllowStepOverride>
+    <ResetFromBaselineEveryRun>true</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM250.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM250.CH07"><Enabled>true</Enabled></Group>
+      <Group Id="BCM250.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
+  <Profile Id="SINGLE_CHAPTER">
+    <Name>BCM250实机单章节验证</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>true</AllowStepOverride>
+    <ResetFromBaselineEveryRun>false</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM250.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM250.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
+  <Profile Id="ENGINEERING">
+    <Name>BCM250工程调试</Name>
+    <UseBaselineDefaults>false</UseBaselineDefaults>
+    <AllowGroupOverride>true</AllowGroupOverride>
+    <AllowStepOverride>true</AllowStepOverride>
+    <ResetFromBaselineEveryRun>false</ResetFromBaselineEveryRun>
+    <Groups>
+      <Group Id="BCM250.PRECHECK"><Enabled>true</Enabled></Group>
+      <Group Id="BCM250.CH07"><Enabled>true</Enabled></Group>
+      <Group Id="BCM250.CLEANUP"><Enabled>true</Enabled></Group>
+    </Groups>
+  </Profile>
+</Profiles>

@@ -46,6 +46,7 @@ namespace Bcm250StructureTests
                 ValidateDeferredMbdDiscovery();
                 ValidateRuntimePlanResolutionGate();
                 ValidateSingleChapterProfile(xmlPath);
+                ValidateIndependentPowerChapters(xmlPath);
                 ValidateDigitalInputChannelPolarity();
                 ValidateStructure(plan, steps);
                 ValidateVariableDependencies();
@@ -58,7 +59,7 @@ namespace Bcm250StructureTests
                 RunEndToEndSimulation(xmlPath);
 
                 Console.WriteLine(
-                    "PASS BCM250 structure/simulation: 599 steps, 91 results, " +
+                    "PASS BCM250 structure/simulation: 598 steps, 91 results, " +
                     "chapters 7-27, detailed PDF actions, explicit StepIds, XML authority, 6 cleanup steps, " +
                     "full simulation and Q16 fault injection.");
                 return 0;
@@ -444,6 +445,52 @@ namespace Bcm250StructureTests
                 "Single-chapter profile must retain PRECHECK and CLEANUP.");
         }
 
+        private static void ValidateIndependentPowerChapters(string xmlPath)
+        {
+            TestPlanDefinition definition = TestPlanService.LoadDefinition(xmlPath);
+            string[] independentGroups =
+            {
+                "BCM250.CH23",
+                "BCM250.CH24",
+                "BCM250.CH25",
+                "BCM250.CH26"
+            };
+
+            Require(definition.Groups
+                    .Where(group => independentGroups.Contains(
+                        group.GroupId,
+                        StringComparer.OrdinalIgnoreCase))
+                    .All(group => group.DependsOn.Count == 0),
+                "BCM250 CH23-CH26 must not declare forced group prerequisites.");
+            Require(definition.Groups.All(group => !group.DependsOn.Any(dependency =>
+                    independentGroups.Contains(dependency, StringComparer.OrdinalIgnoreCase))),
+                "No BCM250 chapter may force-enable CH23-CH26 as a group prerequisite.");
+
+            foreach (string selectedGroup in independentGroups)
+            {
+                var overrides = definition.Steps.ToDictionary(
+                    step => step.StepId,
+                    step => string.Equals(step.GroupId, selectedGroup, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(step.GroupId, "BCM250.PRECHECK", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(step.GroupId, "BCM250.CLEANUP", StringComparison.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase);
+                ResolvedTestPlan plan = TestPlanService.Resolve(
+                    xmlPath,
+                    TestProfileIds.SingleChapter,
+                    overrides);
+
+                Require(definition.Steps
+                        .Where(step => independentGroups.Contains(
+                            step.GroupId,
+                            StringComparer.OrdinalIgnoreCase))
+                        .All(step => plan.ShouldRun(step.StepId) == string.Equals(
+                            step.GroupId,
+                            selectedGroup,
+                            StringComparison.OrdinalIgnoreCase)),
+                    selectedGroup + " single-chapter selection forced another CH23-CH26 chapter.");
+            }
+        }
+
         private static void ValidateDigitalInputChannelPolarity()
         {
             // Actual station response 02 04 02 00 97 ... => DI word 0x0097.
@@ -493,7 +540,7 @@ namespace Bcm250StructureTests
                 .Where(x => !string.Equals(x.RunCondition, "OnChapterFailure", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(x => x.SequenceOrder)
                 .ToList();
-            Require(steps.Count == 599, "Expected 599 executable steps, got " + steps.Count + ".");
+            Require(steps.Count == 598, "Expected 598 executable steps, got " + steps.Count + ".");
             Require(steps.Count == definitions.Count, "Code/XML step counts differ.");
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -554,10 +601,19 @@ namespace Bcm250StructureTests
             ValidateLimit(plan, "O01", 200, 1100, "mA");
             ValidateLimit(plan, "O02", 1, 1, "Logic (0/1)");
             ValidateLimit(plan, "Q16", -6600, -5400, "mA");
-            ValidateLimit(plan, "S01", -1300, -700, "mA");
+            ValidateLimit(plan, "S01", -6300, -5700, "mA");
             ValidateLimit(plan, "S02", 259000, 263000, "mV");
             ValidateLimit(plan, "T02", 300, 750, "mA");
             ValidateLimit(plan, "T03", -20, 20, "mA");
+
+            MethodInfo sampleCountMethod = typeof(SKBCM250Sequence).GetMethod(
+                "SampleCountForResult",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Require(sampleCountMethod != null, "BCM250 sample-count resolver is missing.");
+            Require((int)sampleCountMethod.Invoke(null, new object[] { "T01" }) == 20,
+                "BCM250 T01 must average 20 R44 samples.");
+            Require((int)sampleCountMethod.Invoke(null, new object[] { "T02" }) == 20,
+                "BCM250 T02 must average 20 DAQ113 samples.");
 
             Require(Bcm250StationMap.VbusReferenceDaqChannel == 105, "VBUS reference mapping changed.");
             Require(Bcm250StationMap.VmidReferenceDaqChannel == 106, "VMID mapping changed.");
@@ -603,16 +659,29 @@ namespace Bcm250StructureTests
                 string.Equals(catalogue[w95OffIndex + 3].ResultId, "K02", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(catalogue[w95OffIndex + 3].Argument, "R61", StringComparison.OrdinalIgnoreCase),
                 "BCM250 CH17 must execute DIAG ON before W95=0 and again after REMOTE2 before K02/R61.");
+            Bcm250ActionDefinition[] chapter16Rl2Commands = catalogue
+                .Where(x => x.Chapter == 16 &&
+                    x.Kind == Bcm250ActionKind.MbdCommand &&
+                    (string.Equals(x.Argument, "W91=1", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(x.Argument, "W91=0", StringComparison.OrdinalIgnoreCase)))
+                .ToArray();
             Require(
-                !catalogue.Any(x => x.Chapter == 23 &&
+                chapter16Rl2Commands.Length == 2 &&
+                chapter16Rl2Commands.Any(x => string.Equals(x.Argument, "W91=1", StringComparison.OrdinalIgnoreCase)) &&
+                chapter16Rl2Commands.Any(x => string.Equals(x.Argument, "W91=0", StringComparison.OrdinalIgnoreCase)) &&
+                !catalogue.Any(x => x.Chapter == 16 &&
+                    (x.Argument ?? string.Empty).StartsWith("W94=", StringComparison.OrdinalIgnoreCase)),
+                "BCM250 CH16 MPS RL2 commands must use W91=1/0 and must not use W94.");
+            Require(
+                catalogue.Any(x => x.Chapter == 23 &&
                     string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase) &&
                     x.Name.IndexOf("34.b", StringComparison.Ordinal) >= 0),
-                "BCM250 CH23 must not enable CCB at step 34.");
+                "BCM250 CH23 must enable CCB at step 34.");
             Require(
-                !catalogue.Any(x => x.Chapter == 24 &&
+                catalogue.Any(x => x.Chapter == 24 &&
                     string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase) &&
                     x.Name.IndexOf("26.b", StringComparison.Ordinal) >= 0),
-                "BCM250 CH24 must not enable CCB at step 26.");
+                "BCM250 CH24 must enable CCB at step 26.");
             Bcm250ActionDefinition ccbVoltageTarget = catalogue.Single(x =>
                 x.Chapter == 25 &&
                 x.Kind == Bcm250ActionKind.MbdCommand &&
@@ -620,12 +689,20 @@ namespace Bcm250StructureTests
             Require(
                 string.Equals(ccbVoltageTarget.Argument, "W13=267000", StringComparison.OrdinalIgnoreCase),
                 "BCM250 CH25 step 30 must use W13=267000.");
-            Bcm250ActionDefinition temporaryS01Target = catalogue.Single(x =>
+            Bcm250ActionDefinition s01Target = catalogue.Single(x =>
                 string.Equals(x.StepId, "BCM250.CH25.S033.ACTION", StringComparison.OrdinalIgnoreCase));
             Require(
-                temporaryS01Target.Kind == Bcm250ActionKind.MbdCommand &&
-                string.Equals(temporaryS01Target.Argument, "W12=1000", StringComparison.OrdinalIgnoreCase),
-                "BCM250 S01 temporary low-current target must remain W12=1000.");
+                s01Target.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(s01Target.Argument, "W12=6000", StringComparison.OrdinalIgnoreCase),
+                "BCM250 S01 target must remain W12=6000.");
+            Bcm250ActionDefinition ccbReadyWait = catalogue.Single(x =>
+                string.Equals(x.StepId, "BCM250.CH25.S035.ACTION", StringComparison.OrdinalIgnoreCase));
+            Require(
+                ccbReadyWait.Kind == Bcm250ActionKind.WaitForCcbCurrentStable,
+                "BCM250 CH25 step 34 must wait conditionally for stable R44 current.");
+            Require(
+                plan.GetStep(ccbReadyWait.StepId).DelayMs == 20000,
+                "BCM250 CCB current readiness timeout must be 20000 ms in XML.");
             int[] measuredShuntChannels = catalogue
                 .Where(x => x.Kind == Bcm250ActionKind.DaqShuntResistance)
                 .Select(x => x.Channel)
@@ -651,6 +728,9 @@ namespace Bcm250StructureTests
             Bcm250ActionDefinition[] chapter24 = catalogue
                 .Where(x => x.Chapter == 24)
                 .ToArray();
+            int ccbOnIndex = Array.FindIndex(chapter24, x =>
+                x.Kind == Bcm250ActionKind.MbdCommand &&
+                string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase));
             int ccbOffBefore15VIndex = Array.FindIndex(chapter24, x =>
                 x.Kind == Bcm250ActionKind.MbdCommand &&
                 string.Equals(x.Argument, "W69=1", StringComparison.OrdinalIgnoreCase) &&
@@ -659,27 +739,24 @@ namespace Bcm250StructureTests
                 x.Kind == Bcm250ActionKind.SetVbus &&
                 x.Name.IndexOf("34 设置VSTR_NEG 15V", StringComparison.Ordinal) >= 0);
             Require(
-                ccbOffBefore15VIndex >= 0 &&
-                fifteenVoltIndex > ccbOffBefore15VIndex &&
-                !chapter24.Take(fifteenVoltIndex).Any(x =>
-                    x.Kind == Bcm250ActionKind.MbdCommand &&
-                    string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase)),
-                "BCM250 CH24 must keep CCB disabled before entering the 15V/0A verification point.");
+                ccbOnIndex >= 0 &&
+                ccbOffBefore15VIndex > ccbOnIndex &&
+                fifteenVoltIndex > ccbOffBefore15VIndex,
+                "BCM250 CH24 must close CCB before entering the 15V/0A verification point.");
 
             int stringSixAmpIndex = Array.FindIndex(chapter24, x =>
                 x.Kind == Bcm250ActionKind.SetString &&
-                x.Name.IndexOf("40 设置String发生器5V/6A", StringComparison.Ordinal) >= 0);
-            int ccbOnBeforeSixAmpIndex = Array.FindIndex(chapter24, x =>
-                x.Kind == Bcm250ActionKind.MbdCommand &&
-                string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase) &&
-                x.Name.IndexOf("41 重新打开CCB", StringComparison.Ordinal) >= 0);
+                x.Name.IndexOf("40 设置String发生器10V/6A", StringComparison.Ordinal) >= 0 &&
+                string.Equals(x.Argument, "10,6,300", StringComparison.Ordinal));
             int r11Index = Array.FindIndex(chapter24, x =>
                 string.Equals(x.ResultId, "R11", StringComparison.OrdinalIgnoreCase));
             Require(
                 stringSixAmpIndex >= 0 &&
-                ccbOnBeforeSixAmpIndex > stringSixAmpIndex &&
-                r11Index > ccbOnBeforeSixAmpIndex,
-                "BCM250 CH24 must reopen CCB and settle before R11-R14.");
+                r11Index == stringSixAmpIndex + 1 &&
+                !chapter24.Skip(stringSixAmpIndex + 1).Take(r11Index - stringSixAmpIndex - 1).Any(x =>
+                    x.Kind == Bcm250ActionKind.MbdCommand &&
+                    string.Equals(x.Argument, "W69=0", StringComparison.OrdinalIgnoreCase)),
+                "BCM250 CH24 must set String to 10V/6A and proceed directly to R11 without reopening CCB.");
         }
 
         private static void ValidateLimit(
