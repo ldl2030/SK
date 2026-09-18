@@ -51,6 +51,7 @@ namespace Bcm250StructureTests
                 ValidateStructure(plan, steps);
                 ValidateVariableDependencies();
                 ValidateProgrammingSkipOption();
+                ValidateConditionalProgrammingStructure(steps);
                 ValidateProgrammingGuards(root, steps);
                 ValidatePowerSafety();
                 ValidateCustomerReport(root, plan);
@@ -595,7 +596,7 @@ namespace Bcm250StructureTests
             Require(definitions.Count(x => x.GroupId == Bcm250GroupIds.Chapter(23)) == 61,
                 "Chapter 23 must expose all 61 PDF operations.");
             for (int chapter = 7; chapter <= 27; chapter++)
-                Require(definitions.Any(x => x.GroupId == Bcm250GroupIds.Chapter(chapter)),
+                Require(definitions.Any(x => x.GroupId == Bcm250GroupIds.PlanGroupForChapter(chapter)),
                     "Missing chapter " + chapter + ".");
 
             ValidateLimit(plan, "O01", 200, 1100, "mA");
@@ -623,6 +624,19 @@ namespace Bcm250StructureTests
             Require(Bcm250StationMap.VoltageSelectorDaqRelay == "304", "Voltage selector must use DAQ 304.");
             Require(Bcm250StationMap.StringGeneratorPowerRelays == "1,3,6",
                 "BCM250 String supply must use power relays Y1/Y3/Y6.");
+            Require(Bcm250StationMap.DutPowerRelay == 7 &&
+                    Bcm250StationMap.Rl2B == 8 &&
+                    Bcm250StationMap.Rl1aB == 9 &&
+                    Bcm250StationMap.Rl2A == 10 &&
+                    Bcm250StationMap.Rl1bA == 11 &&
+                    Bcm250StationMap.Rl1bB == 13 &&
+                    Bcm250StationMap.Rl1aA == 15,
+                "BCM250 named high-power relay mapping changed.");
+            Require(Bcm250StationMap.PrechargePowerPathRelays == "9,8" &&
+                    Bcm250StationMap.DischargeStringPowerPathRelays == "1,3,6,9,13,10" &&
+                    Bcm250StationMap.ChargeStringPowerPathRelays == "1,3,6,15,11,8" &&
+                    Bcm250StationMap.CcbStringPowerPathRelays == "1,3,6,9,13,8",
+                "BCM250 power-path relay mapping changed.");
             Require(Bcm250StationMap.ProgrammingBootDaqRelay == "305", "BOOT0 relay must use DAQ 305.");
             Require(Bcm250StationMap.PlacementDetectionDaqRelays == "318,319", "Placement relays must use DAQ 318/319.");
             Require(Math.Abs(Bcm250StationMap.StringShuntOhms - 0.0203111) < 1e-9,
@@ -1070,6 +1084,94 @@ namespace Bcm250StructureTests
             };
             Require(!device.IsTtlProgrammingRequired,
                 "BCM250 programming skip option did not remove the TTL requirement.");
+        }
+
+        private static void ValidateConditionalProgrammingStructure(IList steps)
+        {
+            object readinessStep = steps.Cast<object>().Single(step => string.Equals(
+                Read<string>(step.GetType(), step, "StepId"),
+                "BCM250.CH09.S015.ACTION",
+                StringComparison.OrdinalIgnoreCase));
+            object readinessAction = Read<object>(
+                readinessStep.GetType(),
+                readinessStep,
+                "PlanDefinition");
+            Require(readinessAction != null,
+                "BCM250 firmware-readiness step is not bound to the XML plan.");
+
+            string[] programmingOnlyStepIds =
+            {
+                "BCM250.CH09.S016.ACTION",
+                "BCM250.CH09.S017.ACTION",
+                "BCM250.CH09.S018.ACTION",
+                "BCM250.CH09.S019.ACTION",
+                "BCM250.CH09.S021.ACTION",
+                "BCM250.CH09.S022.ACTION",
+                "BCM250.CH09.S023.ACTION"
+            };
+            IReadOnlyList<Bcm250ActionDefinition> catalog = Bcm250ActionCatalog.Create();
+            Require(programmingOnlyStepIds.All(stepId => catalog.Single(
+                    action => string.Equals(action.StepId, stepId, StringComparison.OrdinalIgnoreCase))
+                .OnlyWhenFirmwareProgrammingRequired),
+                "BCM250 BOOT0/RESET programming actions are not all guarded by the readiness decision.");
+
+            string[] postProgrammingPowerCycleStepIds =
+            {
+                "BCM250.CH10.S001.ACTION",
+                "BCM250.CH10.S002.ACTION",
+                "BCM250.CH10.S003.ACTION"
+            };
+            Require(postProgrammingPowerCycleStepIds.All(stepId => catalog.Single(
+                    action => string.Equals(action.StepId, stepId, StringComparison.OrdinalIgnoreCase))
+                .OnlyAfterFirmwareProgramming),
+                "BCM250 CH10 power cycle must run only after an actual firmware write.");
+
+            Bcm250ActionDefinition readinessDefinition = catalog.Single(action => string.Equals(
+                action.StepId,
+                "BCM250.CH09.S015.ACTION",
+                StringComparison.OrdinalIgnoreCase));
+            Require(readinessDefinition.Kind == Bcm250ActionKind.FirmwareReadinessCheck,
+                "BCM250 must evaluate CAN and R0 before entering Bootloader mode.");
+
+            Require(steps.Cast<object>()
+                    .Where(step =>
+                    {
+                        string stepId = Read<string>(step.GetType(), step, "StepId");
+                        return stepId.StartsWith("BCM250.CH10.", StringComparison.OrdinalIgnoreCase) ||
+                               stepId.StartsWith("BCM250.CH11.", StringComparison.OrdinalIgnoreCase) ||
+                               stepId.StartsWith("BCM250.CH12.", StringComparison.OrdinalIgnoreCase) ||
+                               stepId.StartsWith("BCM250.CH13.", StringComparison.OrdinalIgnoreCase) ||
+                               stepId.StartsWith("BCM250.CH14.", StringComparison.OrdinalIgnoreCase) ||
+                               stepId.StartsWith("BCM250.CH15.", StringComparison.OrdinalIgnoreCase);
+                    })
+                    .All(step => string.Equals(
+                        Read<string>(step.GetType(), step, "ExpectedGroupId"),
+                        Bcm250GroupIds.StartupAndCommunication,
+                        StringComparison.OrdinalIgnoreCase)),
+                "BCM250 CH10-CH15 must be presented and selected as one combined test group.");
+
+            Require(catalog.Single(action => string.Equals(
+                    action.StepId,
+                    "BCM250.CH12.S002.ACTION",
+                    StringComparison.OrdinalIgnoreCase)).Kind ==
+                Bcm250ActionKind.WaitForBcmRunningTime,
+                "BCM250 must poll R10 until it has run for at least three seconds before reset.");
+            Require(catalog.Single(action => string.Equals(
+                    action.StepId,
+                    "BCM250.CH12.S011.ACTION",
+                    StringComparison.OrdinalIgnoreCase)).Kind ==
+                Bcm250ActionKind.WaitForBcmApplication,
+                "BCM250 must poll REMOTE2/R10 after W86 reset instead of using a blind delay.");
+
+            string[] serialBatchBoundaryStepIds =
+            {
+                "BCM250.CH13.S006.ACTION",
+                "BCM250.CH14.S007.ACTION"
+            };
+            Require(serialBatchBoundaryStepIds.All(stepId => catalog.Single(
+                    action => string.Equals(action.StepId, stepId, StringComparison.OrdinalIgnoreCase))
+                .Kind == Bcm250ActionKind.BcmSerialBatchBoundary),
+                "BCM250 CH13-CH15 serial reads must share the REMOTE2 session when the next chapter runs.");
         }
 
         private static void ValidateProgrammingGuards(string root, IList steps)

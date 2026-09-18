@@ -3210,7 +3210,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>18.7 发送DIAG ON到MBD</Name>
+    <Name>18.7 发送EXIT后DIAG ON到MBD</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -3705,7 +3705,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>18.39 ST2发送DIAG ON到MBD</Name>
+    <Name>18.39 ST2发送EXIT并发送DIAG ON到MBD</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -3847,7 +3847,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>18.39 ST2打开预充W75=1</Name>
+    <Name>18.39 ST2发送EXIT/REMOTE2/DIAG ON后打开预充W75=1</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -4046,7 +4046,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.7 闭合RL6中点路径</Name>
+    <Name>19.7 闭合RL6中点路径DAQ301</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5025,7 +5025,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.47 打开RL1/RL2/RL6功率继电器</Name>
+    <Name>19.47 打开RL6中点路径DAQ301</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5238,7 +5238,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.11 ST1 发送REMOTE1 进入BCM终端</Name>
+    <Name>20.11 ST1 发送EXIT后REMOTE1进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5393,7 +5393,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.27 ST1 发送REMOTE1 进入BCM终端</Name>
+    <Name>20.27 ST1 发送EXIT后REMOTE1进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5678,7 +5678,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.11 ST2 发送REMOTE2 进入BCM终端</Name>
+    <Name>20.11 ST2 发送EXIT后REMOTE2进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5833,7 +5833,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.27 ST2 发送REMOTE2 进入BCM终端</Name>
+    <Name>20.27 ST2 发送EXIT后REMOTE2进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6245,7 +6245,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>21.12 ST1 发送REMOTE1进入BCM终端</Name>
+    <Name>21.12 ST1 发送EXIT后REMOTE1进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6444,7 +6444,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>21.12 ST2 发送REMOTE2进入BCM终端</Name>
+    <Name>21.12 ST2 发送EXIT后REMOTE2进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -6799,7 +6799,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>22.13 ST1 发送REMOTE1进入BCM终端</Name>
+    <Name>22.13 ST1 发送EXIT后REMOTE1进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7170,7 +7170,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>22.13 ST2 发送REMOTE2进入BCM终端</Name>
+    <Name>22.13 ST2 发送EXIT后REMOTE2进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -13308,7 +13308,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>27.8/9 ST1 发送REMOTE1进入BCM终端</Name>
+    <Name>27.8/9 ST1 发送EXIT后REMOTE1进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -13507,7 +13507,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>27.8/9 ST2 发送REMOTE2进入BCM终端</Name>
+    <Name>27.8/9 ST2 发送EXIT后REMOTE2进入BCM终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

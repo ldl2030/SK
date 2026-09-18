@@ -101,8 +101,8 @@ namespace TestPlatform.TestSequences
             Vbus(items, 9, "1.b 复位VBUS发生器0V/0A/OVP300", 0, 0, 300, false);
             String(items, 9, "1.c 复位String发生器0V/0A/OVP300", 0, 0, 300, false);
             Load(items, 9, "1.d 复位电子负载CV 0V/0A/0W", 0, 0, 0, false);
-            Fixture(items, 9, "2 闭合TTL TX/RX/GND编程继电器",
-                Bcm250StationMap.ProgrammingFixtureRelays, true);
+            Action(items, 9, "2 保持TTL编程路径断开，先检查现有固件",
+                Bcm250ActionKind.DocumentedBoundary);
             Wait(items, 9, "3 等待300ms");
             Power(items, 9, "4 闭合RL4给DUT供电", true);
             Wait(items, 9, "5 等待6000ms");
@@ -113,18 +113,26 @@ namespace TestPlatform.TestSequences
             Wait(items, 9, "9 等待50ms");
             Command(items, 9, "10 发送DIAG ON到MBD", "DIAG ON");
             Wait(items, 9, "11 等待50ms");
-            Command(items, 9, "12 RESET置位W86=1", "W86=1");
+            Action(items, 9, "12 检查BCM/SAFE通讯及BCM固件版本，按需准备烧录",
+                Bcm250ActionKind.FirmwareReadinessCheck);
             Wait(items, 9, "13 等待50ms");
+            OnlyWhenFirmwareProgrammingRequired(items);
             DaqRelay(items, 9, "14 闭合BOOT0 DAQ305继电器",
                 Bcm250StationMap.ProgrammingBootDaqRelay, true);
+            OnlyWhenFirmwareProgrammingRequired(items);
             Wait(items, 9, "15 等待50ms");
+            OnlyWhenFirmwareProgrammingRequired(items);
             Command(items, 9, "16 RESET释放W86=0", "W86=0");
+            OnlyWhenFirmwareProgrammingRequired(items);
             Result(items, 9, "C01", "17 TTL烧录BCM_250_V5.HEX（实机工具/端口门禁）",
                 Bcm250ActionKind.ProgramFirmware, Bcm250Commands.FirmwareFile);
             Command(items, 9, "19 烧录后RESET置位W86=1", "W86=1");
+            OnlyWhenFirmwareProgrammingRequired(items);
             DaqRelay(items, 9, "20 断开BOOT0 DAQ305继电器",
                 Bcm250StationMap.ProgrammingBootDaqRelay, false);
+            OnlyWhenFirmwareProgrammingRequired(items);
             Command(items, 9, "21 RESET释放W86=0", "W86=0");
+            OnlyWhenFirmwareProgrammingRequired(items);
             Fixture(items, 9, "22 断开TTL编程继电器",
                 Bcm250StationMap.ProgrammingFixtureRelays, false);
         }
@@ -132,8 +140,11 @@ namespace TestPlatform.TestSequences
         private static void AddChapter10(List<Bcm250ActionDefinition> items)
         {
             Action(items, 10, "1 先关闭ANS输出再断开RL4", Bcm250ActionKind.SafeAnsPowerOff, Bcm250StationMap.DutPowerRelay.ToString(), false);
+            OnlyAfterFirmwareProgramming(items);
             Wait(items, 10, "2 等待6500ms");
+            OnlyAfterFirmwareProgramming(items);
             Action(items, 10, "3 闭合RL4后重新开启ANS给DUT供电", Bcm250ActionKind.SafeAnsPowerOn, "7,275,1", true);
+            OnlyAfterFirmwareProgramming(items);
             Action(items, 10, "4 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 10, "5.I 发送EXIT进入MBD终端", "EXIT");
             Mbd(items, 10, "D01", "5.II 读取R14 BCM内部CAN状态", "R14");
@@ -155,16 +166,20 @@ namespace TestPlatform.TestSequences
         private static void AddChapter12(List<Bcm250ActionDefinition> items)
         {
             Power(items, 12, "1 确认RL4闭合给DUT供电", true);
-            Wait(items, 12, "2 等待3000ms");
+            Action(items, 12, "2 轮询REMOTE2/R10直到复位前运行时间达到3秒",
+                Bcm250ActionKind.WaitForBcmRunningTime);
             Action(items, 12, "3 检查USB-B/MBD串口", Bcm250ActionKind.CheckMbdCommunication);
             Command(items, 12, "4 发送EXIT进入MBD终端", "EXIT");
             Command(items, 12, "5 发送DIAG ON到MBD", "DIAG ON");
-            Command(items, 12, "6 发送REMOTE2进入BCM250终端", "REMOTE2");
-            Command(items, 12, "7 读取复位前R10 running_time", "R10");
+            Action(items, 12, "6 已由就绪轮询确认BCM250终端",
+                Bcm250ActionKind.DocumentedBoundary);
+            Action(items, 12, "7 使用轮询取得的复位前R10 running_time",
+                Bcm250ActionKind.DocumentedBoundary);
             Command(items, 12, "8 发送EXIT返回MBD终端", "EXIT");
             Command(items, 12, "9 RESET置位W86=1", "W86=1");
             Command(items, 12, "10 RESET释放W86=0", "W86=0");
-            Wait(items, 12, "11 等待1000ms");
+            Action(items, 12, "11 轮询REMOTE2/R10等待BCM应用恢复",
+                Bcm250ActionKind.WaitForBcmApplication);
             Command(items, 12, "12 重新发送REMOTE2进入BCM250终端", "REMOTE2");
             Result(items, 12, "F01", "13 读取复位后R10并判定平线复位",
                 Bcm250ActionKind.LogicResult, "R10");
@@ -180,7 +195,9 @@ namespace TestPlatform.TestSequences
             Command(items, 13, "3 发送EXIT进入MBD终端", "EXIT");
             Command(items, 13, "5 发送REMOTE2进入BCM250终端", "REMOTE2");
             Mbd(items, 13, "G01", "6 读取R55 adc13 vref PC3", "R55");
-            Command(items, 13, "8 发送EXIT返回MBD终端", "EXIT");
+            Action(items, 13, "8 保持REMOTE2供CH14/CH15连续读取",
+                Bcm250ActionKind.BcmSerialBatchBoundary,
+                "BCM250.CH14.S001.ACTION;BCM250.CH15.S001.ACTION");
             Action(items, 13, "10 结束本章串口会话", Bcm250ActionKind.DocumentedBoundary);
         }
 
@@ -192,7 +209,9 @@ namespace TestPlatform.TestSequences
             Command(items, 14, "4 发送REMOTE2进入BCM250终端", "REMOTE2");
             Mbd(items, 14, "H01", "5 读取R53 adc11 vcc PC1", "R53");
             Mbd(items, 14, "H02", "6 读取R54 adc12 vee PC2", "R54");
-            Command(items, 14, "7 发送EXIT返回MBD终端", "EXIT");
+            Action(items, 14, "7 保持REMOTE2供CH15连续读取",
+                Bcm250ActionKind.BcmSerialBatchBoundary,
+                "BCM250.CH15.S001.ACTION");
             Action(items, 14, "10 结束本章串口会话", Bcm250ActionKind.DocumentedBoundary);
         }
 
@@ -278,7 +297,8 @@ namespace TestPlatform.TestSequences
             Command(items, 18, "9 发送REMOTE2进入BCM250终端", "REMOTE2");
             Command(items, 18, "10 发送DIAG ON到BCM250", "DIAG ON");
             Command(items, 18, "11 预充电继电器关闭W75=0", "W75=0");
-            Fixture(items, 18, "12 闭合RL1a_B/RL2B预充电路径", "9,8", true);
+            Fixture(items, 18, "12 闭合RL1a_B/RL2B预充电路径",
+                Bcm250StationMap.PrechargePowerPathRelays, true);
             Wait(items, 18, "13 等待500ms");
             Vbus(items, 18, "14 设置VBUS发生器275V/0.1A/OVP300", Sk250TestSetpoints.Bcm250.VbusCalibration, false);
             Vbus(items, 18, "15 打开VBUS发生器输出", Sk250TestSetpoints.Bcm250.VbusCalibration, true);
@@ -816,6 +836,18 @@ namespace TestPlatform.TestSequences
             bool state = true)
         {
             AddAction(items, chapter, name, kind, argument, state);
+        }
+
+        private static void OnlyWhenFirmwareProgrammingRequired(
+            List<Bcm250ActionDefinition> items)
+        {
+            items[items.Count - 1].OnlyWhenFirmwareProgrammingRequired = true;
+        }
+
+        private static void OnlyAfterFirmwareProgramming(
+            List<Bcm250ActionDefinition> items)
+        {
+            items[items.Count - 1].OnlyAfterFirmwareProgramming = true;
         }
 
         private static void Power(List<Bcm250ActionDefinition> items, int chapter, string name, bool state)

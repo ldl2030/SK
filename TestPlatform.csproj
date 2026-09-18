@@ -301,6 +301,9 @@
     <Compile Include="Presentation\Views\Dialogs\FixtureDownWindow.xaml.cs">
       <DependentUpon>FixtureDownWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Presentation\Views\Dialogs\FirmwareProgrammingWindow.xaml.cs">
+      <DependentUpon>FirmwareProgrammingWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Presentation\Views\Monitoring\FrequencyMonitorWindow.xaml.cs">
       <DependentUpon>FrequencyMonitorWindow.xaml</DependentUpon>
     </Compile>
@@ -405,6 +408,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Presentation\Views\Dialogs\FirmwareProgrammingWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Presentation\Views\Monitoring\FrequencyMonitorWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -432,6 +439,8 @@
     <Compile Include="Hardware\Communication\IDeviceLogSource.cs" />
     <Compile Include="Hardware\Communication\LegacyCommunicationState.cs" />
     <Compile Include="Hardware\Instruments\Loads\HengHuiElectronicLoad.cs" />
+    <Compile Include="Hardware\Instruments\PowerSupplies\IProgrammablePowerSupply.cs" />
+    <Compile Include="Hardware\Instruments\PowerSupplies\AinuoAn50PowerSupply.cs" />
     <Compile Include="Hardware\Instruments\PowerSupplies\HengHuiPowerSupply.cs" />
     <Compile Include="Hardware\Communication\MbdResponseParser.cs" />
     <Compile Include="Hardware\Communication\TargetBoardComm.cs" />

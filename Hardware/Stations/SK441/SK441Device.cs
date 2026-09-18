@@ -26,6 +26,7 @@ namespace TestPlatform
         // 2 & 3. 鎭掓儬鐢垫簮 (2鍙?
         public HengHuiPowerSupply HengHuiPower1 { get; private set; }
         public HengHuiPowerSupply HengHuiPower2 { get; private set; }
+        public AinuoAn50PowerSupply BackupPowerB { get; private set; }
 
         // 4. 鎭掓儬鐢靛瓙璐熻浇
         public HengHuiElectronicLoad ElectronicLoad { get; private set; }
@@ -222,6 +223,7 @@ namespace TestPlatform
             AnsPower = new AnsPowerSupply();
             HengHuiPower1 = new HengHuiPowerSupply();
             HengHuiPower2 = new HengHuiPowerSupply();
+            BackupPowerB = new AinuoAn50PowerSupply();
             ElectronicLoad = new HengHuiElectronicLoad();
             Daq = new DaqMultimeter();
             TargetBoard = new TargetBoardComm();
@@ -439,6 +441,42 @@ namespace TestPlatform
             if (isRequired("hengHuiPowerBComName") || !string.IsNullOrWhiteSpace(henghui2Port))
                 connect("恒辉8602电源B (SCPI 9600 8N1)", isRequired("hengHuiPowerBComName"),
                     () => HengHuiPower2.Connect(henghui2Port));
+            string backupPowerBPort = GetAppSetting("BackupPowerBPort");
+            if (!string.IsNullOrWhiteSpace(backupPowerBPort))
+            {
+                string[] occupiedPorts =
+                {
+                    ansPort,
+                    henghui1Port,
+                    henghui2Port,
+                    loadPort,
+                    daqPort,
+                    digitalInputPort,
+                    fixtureRelayPort,
+                    relay16Port,
+                    targetBoardPort,
+                    ttlPort
+                };
+                if (occupiedPorts.Any(port =>
+                    string.Equals(port, backupPowerBPort, StringComparison.OrdinalIgnoreCase)))
+                {
+                    LogError?.Invoke(
+                        $"备用B串口配置冲突：{backupPowerBPort} 已分配给现有设备，备用B保持断开。");
+                }
+                else
+                {
+                    BackupPowerB.ConfigureProtectionCommands(
+                        GetAppSetting("BackupPowerBOvpSetCommand"),
+                        GetAppSetting("BackupPowerBOvpQueryCommand"),
+                        GetAppSetting("BackupPowerBOcpSetCommand"),
+                        GetAppSetting("BackupPowerBOcpQueryCommand"));
+                    int backupPowerBBaudRate = GetIntAppSetting("BackupPowerBBaudRate", 38400);
+                    connect(
+                        $"艾诺AN50备用B (SCPI {backupPowerBBaudRate} 8N1)",
+                        false,
+                        () => BackupPowerB.Connect(backupPowerBPort, backupPowerBBaudRate));
+                }
+            }
             if (isRequired("electronicLoadComName") || !string.IsNullOrWhiteSpace(loadPort))
                 connect(
                     "KUNKIN 7303电子负载",
@@ -1832,6 +1870,7 @@ namespace TestPlatform
                 {
                     await Task.Delay(50);
                     RecordPowerOutput("VBUS", outputOn);
+                    RecordVbusSetpoint(voltage);
                     _mockVbusVoltage = voltage;
                     _mockVbusCurrentLimit = current;
                     if (Math.Abs(voltage) < 0.001 && !outputOn)
@@ -1844,6 +1883,7 @@ namespace TestPlatform
                 HengHuiPower1.SetOvp(ovp);
                 HengHuiPower1.SetPower(outputOn);
                 RecordPowerOutput("VBUS", outputOn);
+                RecordVbusSetpoint(voltage);
                 LogInfo?.Invoke($"已设置 VBUS 发生器: {voltage}V/{current}A, OVP={ovp}V, 输出{(outputOn ? "ON" : "OFF")}");
                 return true;
             }
@@ -2138,39 +2178,39 @@ namespace TestPlatform
         private static string GetMockMbdResponse(string command)
         {
             if (string.Equals(command, "R14", StringComparison.OrdinalIgnoreCase))
-                return "O14 = 99,00,00,99,99,99,99,99,99,99,99,99,99,99,99,99;slaves timeout1";
+                return CreateMockMbdRegisterResponse(command, "99,00,00,99,99,99,99,99,99,99,99,99,99,99,99,99;slaves timeout1");
 
             if (string.Equals(command, "R15", StringComparison.OrdinalIgnoreCase))
-                return "O15 = 99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,00;slaves timeout2";
+                return CreateMockMbdRegisterResponse(command, "99,99,99,99,99,99,99,99,99,99,99,99,99,99,99,00;slaves timeout2");
 
             if (string.Equals(command, "R0", StringComparison.OrdinalIgnoreCase))
-                return "fw_version = BCM_125_V8.HEX";
+                return CreateMockMbdRegisterResponse(command, "BCM_125_V8.HEX");
 
             if (string.Equals(command, "R55", StringComparison.OrdinalIgnoreCase))
-                return "adc13 vref PC3 = 1550";
+                return CreateMockMbdRegisterResponse(command, "1550");
 
             if (string.Equals(command, "R53", StringComparison.OrdinalIgnoreCase))
-                return "adc11 vcc PC1 = 3900";
+                return CreateMockMbdRegisterResponse(command, "3900");
 
             if (string.Equals(command, "R54", StringComparison.OrdinalIgnoreCase))
-                return "adc12 vee PC2 = 1350";
+                return CreateMockMbdRegisterResponse(command, "1350");
 
             if (string.Equals(command, "R52", StringComparison.OrdinalIgnoreCase))
-                return "adc10 hs_temp PC0 = 2200";
+                return CreateMockMbdRegisterResponse(command, "2200");
 
             if (string.Equals(command, "R51", StringComparison.OrdinalIgnoreCase))
-                return "adc1 vstr_pos PA1 = 4096";
+                return CreateMockMbdRegisterResponse(command, "4096");
 
             if (string.Equals(command, "R18", StringComparison.OrdinalIgnoreCase))
-                return "gain_vstr_pos = 140000";
+                return CreateMockMbdRegisterResponse(command, "140000");
 
             if (string.Equals(command, "R19", StringComparison.OrdinalIgnoreCase))
-                return "offset_vstr_pos = 0";
+                return CreateMockMbdRegisterResponse(command, "0");
 
             if (string.Equals(command, "R43", StringComparison.OrdinalIgnoreCase))
-                return "vstr_pos = 140000";
+                return CreateMockMbdRegisterResponse(command, "140000");
 
-            return "OK";
+            return "OK\r\nReady.\r\n";
         }
 
         private string GetMockMbdResponseInstance(string command)
@@ -2179,62 +2219,62 @@ namespace TestPlatform
             {
                 _mockR10ReadCount++;
                 return _mockR10ReadCount % 2 == 1
-                    ? "010 = 5.264\r\nReady.\r\n"
-                    : "010 = 0.953\r\nReady.\r\n";
+                    ? CreateMockMbdRegisterResponse(command, "5.264")
+                    : CreateMockMbdRegisterResponse(command, "0.953");
             }
 
             if (string.Equals(command, "R61", StringComparison.OrdinalIgnoreCase))
-                return "st_emerg PC8 = " + ((_mockShortProtectionVoltage >= 3.2 || _mockMbdWestCmdActive || _mockDutWestCmdActive) ? "0" : "1");
+                return CreateMockMbdRegisterResponse(command, (_mockShortProtectionVoltage >= 3.2 || _mockMbdWestCmdActive || _mockDutWestCmdActive) ? "0" : "1");
 
             if (string.Equals(command, "R60", StringComparison.OrdinalIgnoreCase))
-                return "st_prot_short PB15 = " + (_mockShortProtectionVoltage >= 3.2 ? "0" : "1");
+                return CreateMockMbdRegisterResponse(command, _mockShortProtectionVoltage >= 3.2 ? "0" : "1");
 
             if (string.Equals(command, "R81", StringComparison.OrdinalIgnoreCase))
-                return "st_westngh PD3 = " + (_mockDutWestCmdActive ? "0" : "1");
+                return CreateMockMbdRegisterResponse(command, _mockDutWestCmdActive ? "0" : "1");
 
             if (string.Equals(command, "R68", StringComparison.OrdinalIgnoreCase))
             {
                 _mockR68ReadCount++;
-                return _mockR68ReadCount == 1 ? "adc14 mcu_vs_prec PC1 = 0" : "adc14 mcu_vs_prec PC1 = 2750";
+                return CreateMockMbdRegisterResponse(command, _mockR68ReadCount == 1 ? "0" : "2750");
             }
 
             if (string.Equals(command, "R69", StringComparison.OrdinalIgnoreCase))
-                return "adc3 mcu_vbus PA3 = 2750";
+                return CreateMockMbdRegisterResponse(command, "2750");
 
             if (string.Equals(command, "R93", StringComparison.OrdinalIgnoreCase))
             {
                 double mockVmidAdc = _mockVbusVoltage >= 60.0 ? 1800.0 : 159.0;
-                return "adc2 Vmid1 PA2 = " + mockVmidAdc.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, mockVmidAdc.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (string.Equals(command, "R92", StringComparison.OrdinalIgnoreCase))
-                return "vstr_mid1 = " + Math.Round(_mockVbusVoltage * 1000).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(_mockVbusVoltage * 1000).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
 
             if (string.Equals(command, "R20", StringComparison.OrdinalIgnoreCase))
-                return "gain_vstr_mid = " + Math.Round(_mockGainVmid).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(_mockGainVmid).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
 
             if (string.Equals(command, "R21", StringComparison.OrdinalIgnoreCase))
-                return "offset_vstr_mid = " + Math.Round(_mockOffsetVmid).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(_mockOffsetVmid).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
 
             if (string.Equals(command, "R57", StringComparison.OrdinalIgnoreCase))
-                return "adc15 idch PC5 = " + Math.Round(_mockStringCurrent <= 1.5 ? 45.0 : 270.0).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(_mockStringCurrent <= 1.5 ? 45.0 : 270.0).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
 
             if (string.Equals(command, "R45", StringComparison.OrdinalIgnoreCase))
-                return "idch = " + Math.Round(_mockStringCurrent <= 0.001 ? 0.0 : _mockStringCurrent * 1000).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(_mockStringCurrent <= 0.001 ? 0.0 : _mockStringCurrent * 1000).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
 
             if (string.Equals(command, "R59", StringComparison.OrdinalIgnoreCase))
-                return "st_gm_sc PB13 = " + (_mockStringCurrent >= 0.8 ? "1" : "0");
+                return CreateMockMbdRegisterResponse(command, _mockStringCurrent >= 0.8 ? "1" : "0");
 
             if (string.Equals(command, "R50", StringComparison.OrdinalIgnoreCase))
             {
                 double adc = _mockStringCurrent >= 5.5 && _mockCcbEnabled ? 32.0 : (_mockVbusVoltage >= 10 ? 675.0 : 45.0);
-                return "adc0 vstr_neg PA0 = " + Math.Round(adc).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(adc).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (string.Equals(command, "R56", StringComparison.OrdinalIgnoreCase))
             {
                 double adc = _mockStringCurrent >= 5.5 && _mockCcbEnabled ? 2800.0 : 1425.0;
-                return "adc14iccb PC4 = " + Math.Round(adc).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(adc).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (string.Equals(command, "R42", StringComparison.OrdinalIgnoreCase))
@@ -2244,25 +2284,40 @@ namespace TestPlatform
                     mv = 700.0;
                 else if (_mockStringCurrent >= 5.5 && _mockCcbEnabled && _mockVbusVoltage >= 10.0)
                     mv = 14500.0;
-                return "vstr_neg = " + Math.Round(mv).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(mv).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (string.Equals(command, "R44", StringComparison.OrdinalIgnoreCase))
             {
                 double ma = _mockMosTestOn ? -650.0 : (_mockStringCurrent >= 5.5 && _mockCcbEnabled ? 6000.0 : 0.0);
-                return "iccb = " + Math.Round(ma).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+                return CreateMockMbdRegisterResponse(command, Math.Round(ma).ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             }
 
             if (string.Equals(command, "ACT->FLASH", StringComparison.OrdinalIgnoreCase))
                 return "ACT values copied to FLASH\r\n000027 chars answered. Ready.";
 
             if (string.Equals(command, "R40", StringComparison.OrdinalIgnoreCase))
-                return "data_calibrazione = " + _mockCalibrationDate;
+                return CreateMockMbdRegisterResponse(command, _mockCalibrationDate);
 
             if (string.Equals(command, "R41", StringComparison.OrdinalIgnoreCase))
-                return "bcm_serial = " + _mockBcmSerial;
+                return CreateMockMbdRegisterResponse(command, _mockBcmSerial);
 
             return GetMockMbdResponse(command);
+        }
+
+        private static string CreateMockMbdRegisterResponse(string command, string payload)
+        {
+            int register;
+            string normalized = (command ?? string.Empty).Trim();
+            if (normalized.Length < 2 ||
+                (normalized[0] != 'R' && normalized[0] != 'r') ||
+                !int.TryParse(normalized.Substring(1), out register))
+            {
+                return (payload ?? string.Empty) + "\r\nReady.\r\n";
+            }
+
+            return register.ToString("000", System.Globalization.CultureInfo.InvariantCulture) +
+                " = " + (payload ?? string.Empty) + "\r\nReady.\r\n";
         }
 
         private void ApplyMockMbdCommandState(string command)
@@ -2458,6 +2513,7 @@ namespace TestPlatform
             AnsPower?.Disconnect();
             HengHuiPower1?.Disconnect();
             HengHuiPower2?.Disconnect();
+            BackupPowerB?.Disconnect();
             ElectronicLoad?.Disconnect();
             Daq?.Disconnect();
             TargetBoard?.Disconnect();

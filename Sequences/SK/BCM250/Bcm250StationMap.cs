@@ -42,6 +42,7 @@ namespace TestPlatform.TestSequences
         public const int Rl1aA = 15;
 
         public const string ProgrammingFixtureRelays = "2,3,4";
+        public const string PrechargePowerPathRelays = "9,8";
         public const string StringGeneratorPowerRelays = "1,3,6";
         public const string DischargeStringPowerPathRelays = "1,3,6,9,13,10";
         public const string ChargeStringPowerPathRelays = "1,3,6,15,11,8";

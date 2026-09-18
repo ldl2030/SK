@@ -100,10 +100,10 @@ namespace TestPlatform.TestSequences
             Cmd(x, 11, "11.13 关闭主开关 W101=0", "W101=0");
             Relay(x, 11, "11.14 闭合Relay_4(DAQ302)强制CONTACT_80V=0", "4", true);
             Wait(x, 11, "11.15 等待500ms");
-            Mbd(x, 11, "F07", "11.16 读取R357 80V_PRESENCE低态", "R357");
+            Mbd(x, 11, "F07", "11.16 读取R357 contatto_80V PC2低态", "R357");
             Relay(x, 11, "11.17 断开Relay_4(DAQ302)强制CONTACT_80V=1", "4", false);
             Wait(x, 11, "11.18 等待500ms");
-            Mbd(x, 11, "F08", "11.19 读取R357VERB 80V_PRESENCE高态（PDF F8）", "R357VERB");
+            Mbd(x, 11, "F08", "11.19 读取R357 contatto_80V PC2高态（PDF F8）", "R357");
             Relay(x, 11, "11.20 恢复闭合Relay_3(DAQ301) withdrawal接点", "3", true);
         }
 
@@ -155,7 +155,18 @@ namespace TestPlatform.TestSequences
         {
             Cmd(x, 15, "15.1 发送EXIT", "EXIT"); Cmd(x, 15, "15.2 发送DIAG ON", "DIAG ON");
             Mbd(x, 15, "J01", "15.3 读取R69VERB adc3 vbus+ PA3", "R69VERB");
-            SafeVbusRelay(x, 15, "15.4 关闭VBUS、闭合Relay_5(DAQ303)后恢复275V输出", "5", Sk250TestSetpoints.Mps250.VbusNominal, true); Wait(x, 15, "15.5 等待500ms");
+            Explicit(x, "MPS250.CH15.P001.ACTION", 15, "15.4.1 关闭VBUS输出", Mps250ActionKind.SetVbus, Sk250TestSetpoints.Common.OutputOffOvp300.ToArgument(), false);
+            Relay(x, 15, "15.4.2 闭合Relay_5(DAQ303)", "5", true);
+            VbusRamp(x, "MPS250.CH15.P002.ACTION", 15, "15.4.3 打开VBUS输出至50V并等待200ms", 50, true);
+            VbusRamp(x, "MPS250.CH15.P009.ACTION", 15, "15.4.4 VBUS缓升至100V并等待200ms", 100, false);
+            VbusRamp(x, "MPS250.CH15.P010.ACTION", 15, "15.4.5 VBUS缓升至150V并等待200ms", 150, false);
+            VbusRamp(x, "MPS250.CH15.P011.ACTION", 15, "15.4.6 VBUS缓升至200V并等待200ms", 200, false);
+            VbusRamp(x, "MPS250.CH15.P012.ACTION", 15, "15.4.7 VBUS缓升至250V并等待200ms", 250, false);
+            VbusRamp(x, "MPS250.CH15.P013.ACTION", 15, "15.4.8 VBUS缓升至275V并等待200ms", 275, false);
+            Explicit(x, "MPS250.CH15.P019.ACTION", 15, "15.4.9 等待VBUS恢复后的MBD重新就绪", Mps250ActionKind.WaitForMbdReadyAfterPowerCycle);
+            Explicit(x, "MPS250.CH15.P007.ACTION", 15, "15.4.10 VBUS恢复后发送EXIT", Mps250ActionKind.MbdCommand, "EXIT");
+            Explicit(x, "MPS250.CH15.P008.ACTION", 15, "15.4.11 VBUS恢复后发送DIAG ON", Mps250ActionKind.MbdCommand, "DIAG ON");
+            Wait(x, 15, "15.5 等待500ms");
             Mbd(x, 15, "J02", "15.6 读取R68 VSensPrec PC1", "R68");
             Vbatt(x, 15, "15.7 设置VBATT 275V/0.1A OVP300", Sk250TestSetpoints.Mps250.VbattCalibration, false);
             Vbatt(x, 15, "15.7 打开VBATT输出", Sk250TestSetpoints.Mps250.VbattCalibration, true); Wait(x, 15, "15.8 等待5000ms");
@@ -165,7 +176,16 @@ namespace TestPlatform.TestSequences
             Result(x, 15, "J04", "15.13 计算Gain_VBUS=4096*VBUS/J01", Mps250ActionKind.ComputedGain, "J01", Mps250StationMap.VbusReference);
             Result(x, 15, "J05", "15.14 计算Gain_VPREC=4096*VBUS/J02", Mps250ActionKind.ComputedGain, "J02", Mps250StationMap.VbusReference);
             Result(x, 15, "J06", "15.15-16 计算单路Gain_VSTRING2=4096*VBUS/J03", Mps250ActionKind.ComputedGain, "J03", Mps250StationMap.VbusReference);
-            Cmd(x, 15, "15.17 断开内部RL1 W91=0", "W91=0"); SafeVbusRelay(x, 15, "15.18 关闭VBUS、断开Relay_5(DAQ303)后恢复275V输出", "5", Sk250TestSetpoints.Mps250.VbusNominal, false);
+            Cmd(x, 15, "15.17 断开内部RL1 W91=0", "W91=0");
+            Explicit(x, "MPS250.CH15.P003.ACTION", 15, "15.18.1 关闭VBUS输出", Mps250ActionKind.SetVbus, Sk250TestSetpoints.Common.OutputOffOvp300.ToArgument(), false);
+            Relay(x, 15, "15.18.2 断开Relay_5(DAQ303)", "5", false);
+            VbusRamp(x, "MPS250.CH15.P004.ACTION", 15, "15.18.3 打开VBUS输出至50V并等待200ms", 50, true);
+            VbusRamp(x, "MPS250.CH15.P014.ACTION", 15, "15.18.4 VBUS缓升至100V并等待200ms", 100, false);
+            VbusRamp(x, "MPS250.CH15.P015.ACTION", 15, "15.18.5 VBUS缓升至150V并等待200ms", 150, false);
+            VbusRamp(x, "MPS250.CH15.P016.ACTION", 15, "15.18.6 VBUS缓升至200V并等待200ms", 200, false);
+            VbusRamp(x, "MPS250.CH15.P017.ACTION", 15, "15.18.7 VBUS缓升至250V并等待200ms", 250, false);
+            VbusRamp(x, "MPS250.CH15.P018.ACTION", 15, "15.18.8 VBUS缓升至275V并等待200ms", 275, false);
+            Explicit(x, "MPS250.CH15.P020.ACTION", 15, "15.18.9 等待VBUS恢复后的MBD重新就绪", Mps250ActionKind.WaitForMbdReadyAfterPowerCycle);
             Vbatt(x, 15, "15.19 关闭VBATT输出", Sk250TestSetpoints.Common.OutputOffOvp300, false);
         }
 
@@ -227,6 +247,7 @@ namespace TestPlatform.TestSequences
         }
 
         private static void A(List<Mps250ActionDefinition> x, int ch, string name, Mps250ActionKind kind, string arg = null, bool state = true) => x.Add(new Mps250ActionDefinition { Chapter = ch, Name = name, Kind = kind, Argument = arg, State = state });
+        private static void Explicit(List<Mps250ActionDefinition> x, string stepId, int ch, string name, Mps250ActionKind kind, string arg = null, bool state = true) => x.Add(new Mps250ActionDefinition { StepId = stepId, Chapter = ch, Name = name, Kind = kind, Argument = arg, State = state });
         private static void Result(List<Mps250ActionDefinition> x, int ch, string id, string name, Mps250ActionKind kind, string arg = null, int channel = 0, double scale = 0, int samples = 1, int interval = 0) => x.Add(new Mps250ActionDefinition { Chapter = ch, Name = id + " " + name, Kind = kind, Argument = arg, ResultId = id, Channel = channel, Scale = scale, SampleCount = samples, SampleIntervalMs = interval, State = true });
         private static void Relay(List<Mps250ActionDefinition> x, int ch, string name, string relays, bool state) => A(x, ch, name, Mps250ActionKind.DaqRelays, relays, state);
         private static void Cmd(List<Mps250ActionDefinition> x, int ch, string name, string command) => A(x, ch, name, Mps250ActionKind.MbdCommand, command);
@@ -235,6 +256,16 @@ namespace TestPlatform.TestSequences
         private static void VbusStable(List<Mps250ActionDefinition> x, int ch, string name, Sk250SourceSetpoint setpoint) => A(x, ch, name, Mps250ActionKind.SetVbusAndWaitStable, setpoint.ToArgument(), true);
         private static void Vbatt(List<Mps250ActionDefinition> x, int ch, string name, Sk250SourceSetpoint setpoint, bool state) => A(x, ch, name, Mps250ActionKind.SetVbatt, setpoint.ToArgument(), state);
         private static void Vbus(List<Mps250ActionDefinition> x, int ch, string name, double v, double a, double ovp, bool state) => A(x, ch, name, Mps250ActionKind.SetVbus, Numbers(v, a, ovp), state);
+        private static void VbusRamp(List<Mps250ActionDefinition> x, string stepId, int ch, string name, double voltage, bool startOutput) =>
+            x.Add(new Mps250ActionDefinition
+            {
+                StepId = stepId,
+                Chapter = ch,
+                Name = name,
+                Kind = Mps250ActionKind.SetVbusRampStep,
+                Argument = Numbers(voltage, 2, 300),
+                State = startOutput
+            });
         private static void Vbatt(List<Mps250ActionDefinition> x, int ch, string name, double v, double a, double ovp, bool state) => A(x, ch, name, Mps250ActionKind.SetVbatt, Numbers(v, a, ovp), state);
         private static void SafeVbusRelay(List<Mps250ActionDefinition> x, int ch, string name, string relay, Sk250SourceSetpoint setpoint, bool state) => A(x, ch, name, Mps250ActionKind.SafeVbusRelay, relay + "," + setpoint.ToArgument() + ",1", state);
         private static void Mbd(List<Mps250ActionDefinition> x, int ch, string id, string name, string command) => Result(x, ch, id, name, Mps250ActionKind.MbdNumeric, command);

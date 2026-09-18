@@ -29,6 +29,8 @@ namespace TestPlatform.TestSequences
         Delay,
         SetVbus,
         SetVbusAndWaitStable,
+        SetVbusRampStep,
+        WaitForMbdReadyAfterPowerCycle,
         SetVbatt,
         SetVbattAndWaitStable,
         SafeVbusRelay,
@@ -75,6 +77,9 @@ namespace TestPlatform.TestSequences
             int cleanupRow = 0;
             foreach (Mps125ActionDefinition item in items)
             {
+                if (!string.IsNullOrWhiteSpace(item.StepId))
+                    continue;
+
                 if (item.AlwaysRun)
                 {
                     item.StepId = "MPS125.CLEANUP.S" + (++cleanupRow).ToString("000") + ".ACTION";

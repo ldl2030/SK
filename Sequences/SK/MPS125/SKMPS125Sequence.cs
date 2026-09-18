@@ -75,6 +75,7 @@ namespace TestPlatform.TestSequences
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
                 AlwaysRun = action.AlwaysRun,
+                MaxRetries = action.Kind == Mps125ActionKind.SetVbusRampStep ? 0 : -1,
                 SafetyCritical = IsSafetyCritical(action) && !IsFinalChapterResult(action),
                 PowerCritical = IsPowerCritical(action) && !IsFinalChapterResult(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps125ActionKind.Cleanup
@@ -100,6 +101,7 @@ namespace TestPlatform.TestSequences
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
 
+            string actionArgument = ResolveActionArgument(step, action);
             bool passed;
             switch (action.Kind)
             {
@@ -143,13 +145,13 @@ namespace TestPlatform.TestSequences
                         action.Argument);
                     break;
                 case Mps125ActionKind.SetVbus:
-                    passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
+                    passed = await SetGeneratorAsync(device, actionArgument, true, action.State);
                     break;
                 case Mps125ActionKind.SetVbusAndWaitStable:
                     {
-                        double[] values = ParseNumbers(action.Argument);
+                        double[] values = ParseNumbers(actionArgument);
                         passed = values.Length >= 1 &&
-                            await SetGeneratorAsync(device, action.Argument, true, true);
+                            await SetGeneratorAsync(device, actionArgument, true, true);
                         if (passed)
                         {
                             passed = await device.WaitForMps125VbusStableAsync(
@@ -158,6 +160,27 @@ namespace TestPlatform.TestSequences
                         }
                         break;
                     }
+                case Mps125ActionKind.SetVbusRampStep:
+                    {
+                        double[] values = ParseNumbers(actionArgument);
+                        passed = values.Length >= 3 &&
+                            await device.SetMps125VbusRampStepAsync(
+                                (float)values[0],
+                                (float)values[1],
+                                (float)values[2],
+                                action.State);
+                        if (passed)
+                        {
+                            int delayMs = GetPlanDelayMs(new[] { step }, 0, 200);
+                            await Task.Delay(
+                                device.SkipComInit ? Math.Min(delayMs, 1) : delayMs,
+                                token);
+                        }
+                        break;
+                    }
+                case Mps125ActionKind.WaitForMbdReadyAfterPowerCycle:
+                    passed = await device.WaitForMbdReadyAfterPowerCycleAsync(25000, token);
+                    break;
                 case Mps125ActionKind.SetVbatt:
                     passed = await SetGeneratorAsync(device, action.Argument, false, action.State);
                     break;
@@ -340,6 +363,8 @@ namespace TestPlatform.TestSequences
             {
                 case Mps125ActionKind.SetVbus:
                 case Mps125ActionKind.SetVbusAndWaitStable:
+                case Mps125ActionKind.SetVbusRampStep:
+                case Mps125ActionKind.WaitForMbdReadyAfterPowerCycle:
                 case Mps125ActionKind.SetVbatt:
                 case Mps125ActionKind.SetVbattAndWaitStable:
                 case Mps125ActionKind.SafeVbusRelay:
@@ -357,7 +382,8 @@ namespace TestPlatform.TestSequences
             if (action.AlwaysRun)
                 return false;
 
-            if (action.Kind == Mps125ActionKind.SafeVbattConnect ||
+            if (action.Kind == Mps125ActionKind.SetVbusRampStep ||
+                action.Kind == Mps125ActionKind.SafeVbattConnect ||
                 action.Kind == Mps125ActionKind.SetVbattAndWaitStable)
             {
                 return true;
@@ -552,6 +578,19 @@ namespace TestPlatform.TestSequences
                 (float)values[1],
                 (float)values[2],
                 state);
+        }
+
+        private static string ResolveActionArgument(TestStepItem step, Mps125ActionDefinition action)
+        {
+            if (step.PlanDefinition != null &&
+                !string.IsNullOrWhiteSpace(step.PlanDefinition.ExpectedValue) &&
+                (action.Kind == Mps125ActionKind.SetVbusRampStep ||
+                 action.Kind == Mps125ActionKind.SetVbus))
+            {
+                return step.PlanDefinition.ExpectedValue;
+            }
+
+            return action.Argument;
         }
 
         private static int[] ParseRelayList(string value) => (value ?? string.Empty)

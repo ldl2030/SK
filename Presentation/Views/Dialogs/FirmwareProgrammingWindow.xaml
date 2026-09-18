@@ -1,0 +1,84 @@
+<Window x:Class="TestPlatform.FirmwareProgrammingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BCM250 固件烧录" Height="410" Width="580"
+        MinHeight="360" MinWidth="460"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        FontFamily="Microsoft YaHei UI, Segoe UI"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowInTaskbar="False">
+    <Window.Resources>
+        <Storyboard x:Key="RotateAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                             From="0" To="360" Duration="0:0:2" RepeatBehavior="Forever"/>
+        </Storyboard>
+        <Storyboard x:Key="PulseAnimation">
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.Opacity)"
+                             From="0.45" To="1" Duration="0:0:0.8"
+                             AutoReverse="True" RepeatBehavior="Forever"/>
+        </Storyboard>
+    </Window.Resources>
+
+    <Border Background="White" CornerRadius="20" BorderBrush="#E0E0E0"
+            BorderThickness="1" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25"/>
+        </Border.Effect>
+        <Grid Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,15">
+                <Ellipse x:Name="statusRing" Width="64" Height="64" Stroke="#0B5CAD"
+                         StrokeThickness="4" StrokeDashArray="3,2"
+                         RenderTransformOrigin="0.5,0.5">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform Angle="0"/>
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard x:Name="rotateStoryboard" Storyboard="{StaticResource RotateAnimation}"/>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <Ellipse Width="44" Height="44" Fill="#0B5CAD" Opacity="0.12"/>
+                <TextBlock x:Name="statusIcon" Text="&#xE895;" FontFamily="Segoe MDL2 Assets"
+                           FontSize="28" Foreground="#0B5CAD"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+
+            <TextBlock Grid.Row="1" Text="BCM250 固件烧录" FontSize="21" FontWeight="Bold"
+                       Foreground="#172033" HorizontalAlignment="Center" Margin="0,0,0,10">
+                <TextBlock.Triggers>
+                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                        <BeginStoryboard Storyboard="{StaticResource PulseAnimation}"/>
+                    </EventTrigger>
+                </TextBlock.Triggers>
+            </TextBlock>
+
+            <TextBlock x:Name="firmwareNameText" Grid.Row="2" FontSize="14"
+                       Foreground="#40516B" TextAlignment="Center" TextWrapping="Wrap"
+                       Margin="0,0,0,18"/>
+
+            <ProgressBar x:Name="progressBar" Grid.Row="3" Height="12" Minimum="0"
+                         Maximum="100" Value="0" Foreground="#0B5CAD"
+                         Background="#E8EEF5" Margin="0,0,0,14"/>
+
+            <TextBlock x:Name="phaseText" Grid.Row="4" Text="准备烧录..." FontSize="17"
+                       FontWeight="Bold" Foreground="#0B5CAD" HorizontalAlignment="Center"
+                       TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+            <TextBlock x:Name="detailText" Grid.Row="5"
+                       Text="请勿断电、拔出 USB-B 或移动测试板。"
+                       FontSize="14" Foreground="#713800" HorizontalAlignment="Center"
+                       TextAlignment="Center" TextWrapping="Wrap"/>
+        </Grid>
+    </Border>
+</Window>

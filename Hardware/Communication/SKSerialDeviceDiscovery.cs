@@ -659,7 +659,7 @@ namespace TestPlatform
         {
             return !string.IsNullOrWhiteSpace(response) &&
                    MbdCommandErrorRegex.IsMatch(response) &&
-                   TargetBoardComm.HasTerminalPrompt(response);
+                   TargetBoardComm.ContainsReadyPrompt(response);
         }
 
         private static bool ProbeMbd(

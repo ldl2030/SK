@@ -67,7 +67,7 @@ namespace TestPlatform.TestSequences
 
             AddProgrammingActionStep(steps, row++, "9.1 检查编程电源、负载及TTL连接（MBD上电后识别）", token => deviceManager.CheckBcm125ProgrammingInstrumentsAsync(), "Ready", "Check Fail");
             AddProgrammingActionStep(steps, row++, "9.1 关闭仪器输出并复位设定值为0", token => deviceManager.TurnOffAllInstrumentsAsync(), "Off/Reset", "Off Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "9.2 BCM1 闭合RLP1/RLP2/RLP3连接J4", "SKBCM125Rlp1To3Relays", "3,4,5", true, "RLP1-3 ON");
+            AddFixtureRelayStep(steps, row++, deviceManager, "9.2 BCM1 闭合RLP1/RLP2/RLP3连接J4", "SKBCM125Rlp1To3Relays", Bcm125StationMap.ProgrammingBcm1FixtureRelays, true, "RLP1-3 ON");
             AddDelayStep(steps, row++, "9.3 BCM1 等待300ms", 300);
             AddProgrammingActionStep(steps, row++, "9.4 BCM1 闭合RL4后开启ANS给DUT供电", token => deviceManager.CloseRl4ThenEnableAnsAsync(7, 140, 1), "RL4/ANS ON", "Safe Power-On Fail");
             AddDelayStep(steps, row++, "9.5 BCM1 等待6000ms", 6000);
@@ -81,9 +81,9 @@ namespace TestPlatform.TestSequences
             AddMbdCommandStep(steps, row++, deviceManager, "9.13 BCM1 烧录后RESET置位 W86=1", "W86=1 ", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.14 BCM1 断开RLP4=DAQ CH5", "SKBCM125Rlp4DaqRelays", Bcm125StationMap.ProgrammingBcm1DaqRelay, false, "RLP4 OFF");
             AddMbdCommandStep(steps, row++, deviceManager, "9.15 BCM1 RESET释放 W86=0", "W86=0 ", 50);
-            AddFixtureRelayStep(steps, row++, deviceManager, "9.16 BCM1 断开RLP1/RLP2/RLP3", "SKBCM125Rlp1To3Relays", "3,4,5", false, "RLP1-3 OFF");
+            AddFixtureRelayStep(steps, row++, deviceManager, "9.16 BCM1 断开RLP1/RLP2/RLP3", "SKBCM125Rlp1To3Relays", Bcm125StationMap.ProgrammingBcm1FixtureRelays, false, "RLP1-3 OFF");
 
-            AddFixtureRelayStep(steps, row++, deviceManager, "9.17 BCM2 闭合RLP5/RLP6/RLP7连接J8", "SKBCM125Rlp5To7Relays", "6,7,8", true, "RLP5-7 ON");
+            AddFixtureRelayStep(steps, row++, deviceManager, "9.17 BCM2 闭合RLP5/RLP6/RLP7连接J8", "SKBCM125Rlp5To7Relays", Bcm125StationMap.ProgrammingBcm2FixtureRelays, true, "RLP5-7 ON");
             AddDelayStep(steps, row++, "9.18 BCM2 等待300ms", 300);
             AddMbdCommandStep(steps, row++, deviceManager, "9.19 BCM2 RESET置位 W86=1", "W86=1", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.20 BCM2 闭合RLP8=DAQ CH6引入BOOT0 3.3V", "SKBCM125Rlp8DaqRelays", Bcm125StationMap.ProgrammingBcm2DaqRelay, true, "RLP8 ON");
@@ -93,7 +93,7 @@ namespace TestPlatform.TestSequences
             AddMbdCommandStep(steps, row++, deviceManager, "9.24 BCM2 烧录后RESET置位 W86=1", "W86=1", 50);
             AddDaqRelayStep(steps, row++, deviceManager, "9.25 BCM2 断开RLP8=DAQ CH6", "SKBCM125Rlp8DaqRelays", Bcm125StationMap.ProgrammingBcm2DaqRelay, false, "RLP8 OFF");
             AddMbdCommandStep(steps, row++, deviceManager, "9.26 BCM2 RESET释放 W86=0", "W86=0", 50);
-            AddFixtureRelayStep(steps, row++, deviceManager, "9.27 BCM2 断开RLP5/RLP6/RLP7", "SKBCM125Rlp5To7Relays", "6,7,8", false, "RLP5-7 OFF");
+            AddFixtureRelayStep(steps, row++, deviceManager, "9.27 BCM2 断开RLP5/RLP6/RLP7", "SKBCM125Rlp5To7Relays", Bcm125StationMap.ProgrammingBcm2FixtureRelays, false, "RLP5-7 OFF");
             AddProgrammingActionStep(steps, row++, "9.28 关闭USB-B/MBD串口通信", token => Task.FromResult(true), "Close OK", "Close Fail");
         }
 
@@ -183,10 +183,30 @@ namespace TestPlatform.TestSequences
                 return true;
             }
 
-            bool connected = await deviceManager.CheckMbdCommunicationAsync();
-            if (!connected)
+            if (!deviceManager.IsTargetBoardCommunicationConnected)
+            {
+                bool connected = await deviceManager.CheckMbdCommunicationAsync();
+                if (!connected)
+                {
+                    _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                    return false;
+                }
+            }
+
+            if (_mbdTerminalState == Bcm125MbdTerminalState.Mbd)
+                return true;
+
+            OnLogInfo(
+                "BCM-125终端状态未知或连接刚恢复；发送EXIT同步到MBD根终端。");
+            bool synchronized = await deviceManager.SendMbdCommandAsync("EXIT", 0);
+            if (!synchronized)
+            {
                 _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
-            return connected;
+                return false;
+            }
+
+            _mbdTerminalState = Bcm125MbdTerminalState.Mbd;
+            return true;
         }
 
         private async Task<bool> SendBcm125MbdCommandAsync(
@@ -195,6 +215,52 @@ namespace TestPlatform.TestSequences
             int waitAfterMs)
         {
             string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            bool enteringRemote = normalized == "REMOTE1" || normalized == "REMOTE2";
+            bool rootOnlyCommand = IsBcm125MbdRootOnlyCommand(normalized);
+            bool remoteOnlyCommand = IsBcm125RemoteOnlyCommand(normalized);
+
+            if (rootOnlyCommand && _mbdTerminalState != Bcm125MbdTerminalState.Mbd)
+            {
+                OnLogInfo(
+                    $"BCM-125根终端指令{normalized}执行前先发送EXIT同步MBD。");
+                if (!await deviceManager.SendMbdCommandAsync("EXIT", 0))
+                {
+                    _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                    return false;
+                }
+
+                _mbdTerminalState = Bcm125MbdTerminalState.Mbd;
+            }
+
+            if (enteringRemote && _mbdTerminalState != Bcm125MbdTerminalState.Mbd)
+            {
+                OnLogInfo(
+                    $"BCM-125进入{normalized}前先发送EXIT，同步到MBD根终端。");
+                if (!await deviceManager.SendMbdCommandAsync("EXIT", 0))
+                {
+                    _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                    return false;
+                }
+
+                _mbdTerminalState = Bcm125MbdTerminalState.Mbd;
+            }
+
+            if (remoteOnlyCommand && !IsBcm125RemoteTerminal)
+            {
+                OnLogWarning(
+                    $"BCM-125拒绝在{_mbdTerminalState}终端执行SLAVE专用指令{normalized}；" +
+                    "必须先由REMOTE1或REMOTE2确认目标MCU。");
+                return false;
+            }
+
+            if (normalized == "DIAG ON" &&
+                _mbdTerminalState == Bcm125MbdTerminalState.Unknown)
+            {
+                OnLogWarning(
+                    "BCM-125拒绝在未知终端执行DIAG ON；必须先发送EXIT或确认REMOTE1/2。");
+                return false;
+            }
+
             bool keepCurrentConnection = IsBcm125RemoteTerminal;
             Bcm125MbdTerminalState remoteState = _mbdTerminalState;
             bool sent = keepCurrentConnection
@@ -225,9 +291,35 @@ namespace TestPlatform.TestSequences
             else if (normalized == "REMOTE2")
                 _mbdTerminalState = Bcm125MbdTerminalState.Bcm2;
             else if (normalized.StartsWith("W86=", StringComparison.Ordinal))
-                _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
+                _mbdTerminalState = Bcm125MbdTerminalState.Mbd;
 
             return true;
+        }
+
+        private static bool IsBcm125MbdRootOnlyCommand(string normalizedCommand)
+        {
+            return normalizedCommand.StartsWith("W86=", StringComparison.Ordinal) ||
+                   normalizedCommand.StartsWith("W91=", StringComparison.Ordinal) ||
+                   normalizedCommand.StartsWith("W94=", StringComparison.Ordinal) ||
+                   normalizedCommand.StartsWith("W95=", StringComparison.Ordinal);
+        }
+
+        private static bool IsBcm125RemoteOnlyCommand(string normalizedCommand)
+        {
+            if (string.Equals(normalizedCommand, "ACT->FLASH", StringComparison.Ordinal))
+                return true;
+
+            return normalizedCommand.StartsWith("W", StringComparison.Ordinal) &&
+                   !IsBcm125MbdRootOnlyCommand(normalizedCommand);
+        }
+
+        private static bool IsBcm125MbdRootOnlyQuery(string normalizedCommand)
+        {
+            return normalizedCommand == "R14" ||
+                   normalizedCommand == "R15" ||
+                   normalizedCommand == "R68" ||
+                   normalizedCommand == "R69" ||
+                   normalizedCommand == "R81";
         }
 
         private async Task<string> QueryBcm125MbdCommandAsync(
@@ -235,15 +327,39 @@ namespace TestPlatform.TestSequences
             string command,
             int waitAfterMs)
         {
+            string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
+            bool rootOnlyQuery = IsBcm125MbdRootOnlyQuery(normalized);
+            if (rootOnlyQuery && _mbdTerminalState != Bcm125MbdTerminalState.Mbd)
+            {
+                if (!await SendBcm125MbdCommandAsync(deviceManager, "EXIT", 0))
+                {
+                    throw new InvalidOperationException(
+                        "BCM-125无法在查询" + normalized + "前同步到MBD根终端。");
+                }
+            }
+
+            if (rootOnlyQuery)
+            {
+                string rootResponse = await deviceManager.QueryMbdCommandAsync(
+                    command,
+                    waitAfterMs);
+                return RequireValidBcm125QueryResponse(command, rootResponse);
+            }
+
             if (!IsBcm125RemoteTerminal)
-                return await deviceManager.QueryMbdCommandAsync(command, waitAfterMs);
+            {
+                throw new InvalidOperationException(
+                    "BCM-125拒绝在" + _mbdTerminalState + "终端查询SLAVE寄存器" +
+                    normalized + "；必须先确认REMOTE1或REMOTE2。");
+            }
 
             Bcm125MbdTerminalState remoteState = _mbdTerminalState;
             try
             {
-                return await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
+                string response = await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
                     command,
                     waitAfterMs);
+                return RequireValidBcm125QueryResponse(command, response);
             }
             catch (Exception ex)
             {
@@ -253,10 +369,26 @@ namespace TestPlatform.TestSequences
                 if (!await RestoreBcm125RemoteTerminalAsync(deviceManager, remoteState))
                     throw;
 
-                return await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
+                string retryResponse = await deviceManager.QueryMbdCommandOnCurrentConnectionAsync(
                     command,
                     waitAfterMs);
+                return RequireValidBcm125QueryResponse(command, retryResponse);
             }
+        }
+
+        private static string RequireValidBcm125QueryResponse(
+            string command,
+            string response)
+        {
+            string error;
+            if (!MbdResponseParser.IsSuccessfulQueryResponse(command, response, out error))
+            {
+                throw new InvalidOperationException(
+                    "BCM-125查询响应无效：" + command + "，" + error +
+                    " 原始响应=" + (response ?? "<null>"));
+            }
+
+            return response;
         }
 
         private async Task<bool> RestoreBcm125RemoteTerminalAsync(
@@ -300,6 +432,23 @@ namespace TestPlatform.TestSequences
                 token => isProgrammingRelay
                     ? deviceManager.SetFixtureRelaysAsync(deviceManager.GetConfiguredRelayList(configKey, defaultRelays), close, name)
                     : deviceManager.SetBcm125PowerPathRelaysAsync(deviceManager.GetConfiguredRelayList(configKey, defaultRelays), close, name),
+                passValue,
+                "Relay Fail");
+        }
+
+        private void AddStringPowerPathRelayStep(System.Collections.Generic.List<TestStepItem> steps, int rowIndex, SK441Device deviceManager, string name, string configKey, string defaultRelays, bool close, string passValue)
+        {
+            AddProgrammingActionStep(
+                steps,
+                rowIndex,
+                name,
+                token => deviceManager.SetBcm125PowerPathRelaysAsync(
+                    Bcm125StationMap.GetStringGeneratorPowerRelayIds()
+                        .Concat(deviceManager.GetConfiguredRelayList(configKey, defaultRelays))
+                        .Distinct()
+                        .ToArray(),
+                    close,
+                    name),
                 passValue,
                 "Relay Fail");
         }
@@ -943,12 +1092,19 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "18.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "18.2 Open power relays RL1/RL2/RL9", "SKBCM125PrechargeOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddFixtureRelayStep(steps, row++, deviceManager, "18.2 Open power relays RL1/RL2/RL9", "SKBCM125PrechargeOpenRelays", Bcm125StationMap.AllSwitchingPowerRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "18.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "18.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "18.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "18.6 Check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
-            AddMbdCommandStep(steps, row++, deviceManager, "18.7 Send DIAG ON to MBD", "DIAG ON", 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "18.7 Send EXIT and DIAG ON to MBD",
+                "EXIT",
+                "DIAG ON",
+                0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "18.8 Read R68 verify C21 discharged", "R68", "BCM125.PRECHARGE.C21_DISCHARGED", 0, 49, "count");
             AddMbdCommandStep(steps, row++, deviceManager, "18.9 Send REMOTE1", "REMOTE1", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "18.10 ST1 send DIAG ON", "DIAG ON", 0);
@@ -957,7 +1113,7 @@ namespace TestPlatform.TestSequences
             AddMbdCommandStep(steps, row++, deviceManager, "18.13 Send REMOTE2", "REMOTE2", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "18.14 ST2 send DIAG ON", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "18.15 ST2 deactivate precharge W75=0", "W75=0", 0);
-            AddFixtureRelayStep(steps, row++, deviceManager, "18.16 Close RL1a_B/RL2B", "SKBCM125PrechargeCloseRelays", "8,9", true, "Relays Closed");
+            AddFixtureRelayStep(steps, row++, deviceManager, "18.16 Close RL1a_B/RL2B", "SKBCM125PrechargeCloseRelays", Bcm125StationMap.PrechargePowerRelays, true, "Relays Closed");
             AddDelayStep(steps, row++, "18.17 Wait 500ms", 500);
             AddProgrammingActionStep(steps, row++, "18.18 Set VBUS generator 140V/1A OVP150", token => deviceManager.SetVbusGeneratorAsync(140, 1, 150, false), "VBUS Set", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "18.19 Turn on VBUS generator", token => deviceManager.SetVbusGeneratorAsync(140, 1, 150, true), "VBUS ON", "VBUS Fail");
@@ -985,7 +1141,7 @@ namespace TestPlatform.TestSequences
 
             AddPrechargeRepeatSteps(steps, deviceManager, ref row, "ST2", "REMOTE2", "L05", "L06", "L07", "L08");
 
-            AddFixtureRelayStep(steps, row++, deviceManager, "18.40 Open power relays RL1/RL2/RL9", "SKBCM125PrechargeOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddFixtureRelayStep(steps, row++, deviceManager, "18.40 Open power relays RL1/RL2/RL9", "SKBCM125PrechargeOpenRelays", Bcm125StationMap.AllSwitchingPowerRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "18.41 Wait 200ms", 200);
             AddProgrammingActionStep(steps, row++, "18.43 Close COM with instruments", token => Task.FromResult(true), "Close OK", "Close Fail");
         }
@@ -993,7 +1149,14 @@ namespace TestPlatform.TestSequences
         private void AddPrechargeRepeatSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager, ref int row, string suffix, string remoteCommand, string l01, string l02, string l03, string l04)
         {
             AddProgrammingActionStep(steps, row++, "18.39 " + suffix + " reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
-            AddMbdCommandStep(steps, row++, deviceManager, "18.39 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "18.39 " + suffix + " send EXIT and DIAG ON to MBD",
+                "EXIT",
+                "DIAG ON",
+                0);
             AddMbdNumericQueryStep(steps, row++, deviceManager, "18.39 " + suffix + " read R68 verify C21 discharged", "R68", "BCM125.PRECHARGE.C21_DISCHARGED_" + suffix, 0, 49, "count");
             AddMbdCommandStep(steps, row++, deviceManager, "18.39 " + suffix + " send " + remoteCommand, remoteCommand, 0);
             AddMbdCommandStep(steps, row++, deviceManager, "18.39 " + suffix + " send DIAG ON", "DIAG ON", 0);
@@ -1009,6 +1172,8 @@ namespace TestPlatform.TestSequences
                 "18.39 " + suffix + " activate precharge W75=1",
                 async token =>
                 {
+                    if (!await SendBcm125MbdCommandAsync(deviceManager, "EXIT", 0))
+                        return false;
                     if (!await SendBcm125MbdCommandAsync(deviceManager, remoteCommand, 0))
                         return false;
                     if (!await SendBcm125MbdCommandAsync(deviceManager, "DIAG ON", 0))
@@ -1055,12 +1220,12 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "19.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "19.2 Open RL1/RL2/RL9 relays", "SKBCM125MidpointOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddFixtureRelayStep(steps, row++, deviceManager, "19.2 Open RL1/RL2/RL9 relays", "SKBCM125MidpointOpenRelays", Bcm125StationMap.AllSwitchingPowerRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "19.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "19.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "19.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
             AddDelayStep(steps, row++, "19.6 Wait 20ms", 20);
-            AddFixtureRelayStep(steps, row++, deviceManager, "19.7 Close RL6 midpoint path", "SKBCM125Rl6Relay", "6", true, "RL6 Closed");
+            AddDaqRelayStep(steps, row++, deviceManager, "19.7 Close RL6 midpoint path DAQ301", "SKBCM125Rl6DaqRelay", Bcm125StationMap.MidpointDaqRelay, true, "RL6 Closed");
 
             AddMidpointStringSteps(steps, context, deviceManager, ref row, "ST1", "REMOTE1", "W94=1", "W94=0", "M01", "M02", "M03", "M04", "M05", "M06", "M07", "M08", "M09");
             AddMidpointStringSteps(steps, context, deviceManager, ref row, "ST2", "REMOTE2", "W91=1", "W91=0", "M10", "M11", "M12", "M13", "M14", "M15", "M16", "M17", "M18");
@@ -1069,7 +1234,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "19.43 Make sure generators are off", token => deviceManager.SetVbusGeneratorAsync(0, 0, 300, false), "Generators OFF", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "19.45 Reset electronic load", token => deviceManager.TurnOffAllInstrumentsAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "19.46 Wait 1000ms", 1000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "19.47 Open RL1/RL2/RL6 relays", "SKBCM125MidpointOpenRelays", "6,8,9,10,11,13,15", false, "Relays Open");
+            AddDaqRelayStep(steps, row++, deviceManager, "19.47 Open RL6 midpoint path DAQ301", "SKBCM125Rl6DaqRelay", Bcm125StationMap.MidpointDaqRelay, false, "RL6 Open");
             AddDelayStep(steps, row++, "19.48 Wait 200ms", 200);
             AddProgrammingActionStep(steps, row++, "19.50 Close COM with instruments", token => Task.FromResult(true), "Close OK", "Close Fail");
         }
@@ -1116,7 +1281,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "20.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "20.2 Open discharge relays", "SKBCM125DischargeOpenRelays", "8,9,10,11,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "20.2 Open String power path Y1/Y4/Y6 and discharge relays", "SKBCM125DischargeOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "20.2 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "20.3 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "20.4 Reset VBUS generator", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
@@ -1141,12 +1306,19 @@ namespace TestPlatform.TestSequences
             string n05 = channel.ResultIds[4], n06 = channel.ResultIds[5];
             string n07 = channel.ResultIds[6], n08 = channel.ResultIds[7];
             string prefix = "BCM125.DISCHARGE." + suffix + ".";
-            AddFixtureRelayStep(steps, row++, deviceManager, "20.6 " + suffix + " close discharge relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "20.6 " + suffix + " close String power path Y1/Y4/Y6 and discharge relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "20.7 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "20.8 " + suffix + " set string generator 12V/1A OVP16", token => deviceManager.SetStringGeneratorAsync(12, 1, 16, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "20.9 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(12, 1, 16, true), "String ON", "String Fail");
             AddProgrammingActionStep(steps, row++, "20.10 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
-            AddMbdCommandStep(steps, row++, deviceManager, "20.11 " + suffix + " send " + remoteCommand, remoteCommand, 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "20.11 " + suffix + " send EXIT then " + remoteCommand,
+                "EXIT",
+                remoteCommand,
+                0);
             AddMbdAverageQueryStep(steps, row++, deviceManager, n01 + " " + suffix + " average R57 at 1A", "R57", prefix + n01 + "_ADC15_1A", 40, 50, "count", 16, 20);
             AddDaqShuntCurrentStep(steps, row++, deviceManager, n02 + " " + suffix + " DAQ CH" + (shuntChannel - 100) + " shunt current 1000mA", shuntChannel, shuntOhm, prefix + n02 + "_1000MA", 950, 1050);
             AddProgrammingActionStep(steps, row++, "20.15 " + suffix + " set string generator 12V/6A OVP16", token => deviceManager.SetStringGeneratorAsync(12, 6, 16, true), "String ON", "String Fail");
@@ -1157,7 +1329,14 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "20.22 " + suffix + " reset string generator 0V/0A OVP10", token => deviceManager.SetStringGeneratorAsync(0, 0, 10, false), "String Reset", "String Fail");
             AddIdchGainOffsetStep(steps, row, context, n05, n06, suffix, prefix + n02 + "_1000MA", prefix + n04 + "_6000MA", prefix + n01 + "_ADC15_1A", prefix + n03 + "_ADC15_6A", prefix + n05 + "_GAIN_IDCH", prefix + n06 + "_OFFSET_IDCH");
             row += 2;
-            AddMbdCommandStep(steps, row++, deviceManager, "20.27 " + suffix + " send " + remoteCommand, remoteCommand, 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "20.27 " + suffix + " send EXIT then " + remoteCommand,
+                "EXIT",
+                remoteCommand,
+                0);
             AddWriteStoredNumericStep(steps, row++, context, deviceManager, "20.28 " + suffix + " write W26 gain_idch", "W26=", prefix + n05 + "_GAIN_IDCH");
             AddWriteStoredNumericStep(steps, row++, context, deviceManager, "20.29 " + suffix + " write W27 offset_idch", "W27=", prefix + n06 + "_OFFSET_IDCH");
             AddMbdCommandStep(steps, row++, deviceManager, "20.30 " + suffix + " store ACT->FLASH", "ACT->FLASH", 0);
@@ -1170,7 +1349,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "20.45 " + suffix + " reset generators", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "20.46 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "20.47 " + suffix + " wait 1000ms", 1000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "20.48 " + suffix + " open discharge relays", "SKBCM125DischargeOpenRelays", "8,9,10,11,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "20.48 " + suffix + " open String power path Y1/Y4/Y6 and discharge relays", "SKBCM125DischargeOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "20.49 " + suffix + " wait 200ms", 200);
         }
 
@@ -1179,33 +1358,40 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "21.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "21.2 Open RL1/RL2 relays", "SKBCM125DischargeMosfetOpenRelays", "8,9,10,11,13,15", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "21.2 Open String power path Y1/Y4/Y6 and RL1/RL2 relays", "SKBCM125DischargeMosfetOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "21.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "21.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "21.5 Reset VBUS generator", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "21.5 Reset string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, false), "String Reset", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.6 Reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
-            AddDischargeMosfetStringSteps(steps, deviceManager, ref row, "ST1", "REMOTE1", "O01", "SKBCM125DischargeSt1CloseRelays", "8,11,10");
-            AddDischargeMosfetStringSteps(steps, deviceManager, ref row, "ST2", "REMOTE2", "O02", "SKBCM125DischargeSt2CloseRelays", "8,16,10");
+            AddDischargeMosfetStringSteps(steps, deviceManager, ref row, "ST1", "REMOTE1", "O01", "SKBCM125DischargeSt1CloseRelays", Bcm125StationMap.DischargeString1PowerRelays);
+            AddDischargeMosfetStringSteps(steps, deviceManager, ref row, "ST2", "REMOTE2", "O02", "SKBCM125DischargeSt2CloseRelays", Bcm125StationMap.DischargeString2PowerRelays);
             AddMbdCommandStep(steps, row++, deviceManager, "21.24 Send EXIT to MBD terminal", "EXIT", 0);
             AddProgrammingActionStep(steps, row++, "21.25 Close COM with instruments", token => Task.FromResult(true), "Close OK", "Close Fail");
         }
 
         private void AddDischargeMosfetStringSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager, ref int row, string suffix, string remoteCommand, string stepName, string relayConfigKey, string relayDefaults)
         {
-            AddFixtureRelayStep(steps, row++, deviceManager, "21.7 " + suffix + " close discharge relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "21.7 " + suffix + " close String power path Y1/Y4/Y6 and discharge relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "21.8 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "21.9 " + suffix + " set string generator 5V/0.3A OVP10", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.10 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, true), "String ON", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.11 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
-            AddMbdCommandStep(steps, row++, deviceManager, "21.12 " + suffix + " send " + remoteCommand, remoteCommand, 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "21.12 " + suffix + " send EXIT then " + remoteCommand,
+                "EXIT",
+                remoteCommand,
+                0);
             AddDischargeMosfetRampStep(steps, row++, deviceManager, stepName + " " + suffix + " ramp R45/R59 trigger", "BCM125.DISCHARGE_MOSFET." + stepName + "_" + suffix);
             AddProgrammingActionStep(steps, row++, "21.14 " + suffix + " turn off string generator", token => deviceManager.SetStringGeneratorAsync(5, 0.3f, 10, false), "String OFF", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.15 " + suffix + " reset string generator 0V/0A OVP10", token => deviceManager.SetStringGeneratorAsync(0, 0, 10, false), "String Reset", "String Fail");
             AddProgrammingActionStep(steps, row++, "21.17 " + suffix + " reset generators 0V/0A OVP300", token => deviceManager.SetStringGeneratorAsync(0, 0, 300, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "21.18 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "21.19 " + suffix + " wait 1000ms", 1000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "21.20 " + suffix + " open discharge relays", "SKBCM125DischargeOpenRelays", "8,9,10,11,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "21.20 " + suffix + " open String power path Y1/Y4/Y6 and discharge relays", "SKBCM125DischargeOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "21.21 " + suffix + " wait 200ms", 200);
         }
 
@@ -1255,15 +1441,15 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "22.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "22.2 Open RL1/RL2/RL9 relays", "SKBCM125ShortProtectionOpenRelays", "8,9,10,11,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "22.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125ShortProtectionOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "22.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "22.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "22.5 Reset VBUS generator", token => deviceManager.SetVbusGeneratorAsync(0, 0, 300, false), "VBUS Reset", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "22.5 Reset string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 300, false), "String Reset", "String Fail");
             AddProgrammingActionStep(steps, row++, "22.6 Reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
 
-            AddShortProtectionStringSteps(steps, deviceManager, ref row, "ST1", "REMOTE1", "U1.2", Bcm125StationMap.String1SimulatorDaqRelay, "SKBCM125ShortProtectionSt1CloseRelays", "8,11,10", "P01", "P02", "P03", "P04");
-            AddShortProtectionStringSteps(steps, deviceManager, ref row, "ST2", "REMOTE2", "U33.2", Bcm125StationMap.String2SimulatorDaqRelay, "SKBCM125ShortProtectionSt2CloseRelays", "8,16,10", "P05", "P06", "P07", "P08");
+            AddShortProtectionStringSteps(steps, deviceManager, ref row, "ST1", "REMOTE1", "U1.2", Bcm125StationMap.String1SimulatorDaqRelay, "SKBCM125ShortProtectionSt1CloseRelays", Bcm125StationMap.DischargeString1PowerRelays, "P01", "P02", "P03", "P04");
+            AddShortProtectionStringSteps(steps, deviceManager, ref row, "ST2", "REMOTE2", "U33.2", Bcm125StationMap.String2SimulatorDaqRelay, "SKBCM125ShortProtectionSt2CloseRelays", Bcm125StationMap.DischargeString2PowerRelays, "P05", "P06", "P07", "P08");
 
             AddMbdCommandStep(steps, row++, deviceManager, "22.34 Send EXIT to MBD terminal", "EXIT", 0);
             AddProgrammingActionStep(steps, row++, "22.35 Close COM with instruments", token => Task.FromResult(true), "Close OK", "Close Fail");
@@ -1271,14 +1457,21 @@ namespace TestPlatform.TestSequences
 
         private void AddShortProtectionStringSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager, ref int row, string suffix, string remoteCommand, string pointName, string daqRelay, string relayConfigKey, string relayDefaults, string p01, string p02, string p03, string p04)
         {
-            AddFixtureRelayStep(steps, row++, deviceManager, "22.7 " + suffix + " close power relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "22.7 " + suffix + " close String power path Y1/Y4/Y6 and test relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDaqRelayStep(steps, row++, deviceManager, "22.7 " + suffix + " close " + pointName + " simulator relay", "SKBCM125ShortProtection" + suffix + "DaqRelay", daqRelay, true, "Relay Closed");
             AddDelayStep(steps, row++, "22.8 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "22.9 " + suffix + " set string generator 137.5V/1A OVP10", token => deviceManager.SetStringGeneratorAsync(137.5f, 1, 10, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "22.10 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(137.5f, 1, 10, true), "String ON", "String Fail");
             AddDelayStep(steps, row++, "22.11 " + suffix + " wait 1000ms", 1000);
             AddProgrammingActionStep(steps, row++, "22.12 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
-            AddMbdCommandStep(steps, row++, deviceManager, "22.13 " + suffix + " send " + remoteCommand, remoteCommand, 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "22.13 " + suffix + " send EXIT then " + remoteCommand,
+                "EXIT",
+                remoteCommand,
+                0);
             AddMbdCommandStep(steps, row++, deviceManager, "22.14 " + suffix + " send DIAG ON", "DIAG ON", 0);
             AddProgrammingActionStep(steps, row++, "22.15 " + suffix + " open RL CORTO CH4, " + pointName + " = NC 2.9V", token => deviceManager.SetShortProtectionSimulatorAsync(pointName, 2.9), "NC 2.9V", "Signal Fail");
             AddDelayStep(steps, row++, "22.16 " + suffix + " wait 500ms", 500);
@@ -1294,7 +1487,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "22.26 " + suffix + " reset generators", token => deviceManager.SetStringGeneratorAsync(0, 0, 300, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "22.27 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "22.28 " + suffix + " wait 1000ms", 1000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "22.29 " + suffix + " open power relays", "SKBCM125ShortProtectionOpenRelays", "8,9,10,11,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "22.29 " + suffix + " open String power path Y1/Y4/Y6 and test relays", "SKBCM125ShortProtectionOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "22.30 " + suffix + " wait 200ms", 200);
             AddDaqRelayStep(steps, row++, deviceManager, "22.31 " + suffix + " open " + pointName + " simulator relay", "SKBCM125ShortProtection" + suffix + "DaqRelay", daqRelay, false, "Relay Open");
         }
@@ -1304,7 +1497,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "23.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "23.2 Open RL1/RL2/RL9 power relays", "SKBCM125ChargingOpenRelays", "8,9,10,11,12,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "23.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125ChargingOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "23.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "23.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "23.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
@@ -1341,7 +1534,7 @@ namespace TestPlatform.TestSequences
             string offsetIccbWrite = channel.CalibrationWriteCommands[4];
             string mbdRelayCommandPrefix = channel.MbdRelayCommandPrefix;
             string prefix = "BCM125.CHARGING." + suffix + ".";
-            AddFixtureRelayStep(steps, row++, deviceManager, "23.7 " + suffix + " close charging calibration relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "23.7 " + suffix + " close String power path Y1/Y4/Y6 and charging relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "23.8 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "23.9 " + suffix + " set string generator 0V/0A OVP150", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, false), "String Set", "String Fail");
             AddDelayStep(steps, row++, "23.10 " + suffix + " wait 1000ms", 1000);
@@ -1405,7 +1598,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "23.55 " + suffix + " reset generators 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "23.56 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "23.57 " + suffix + " wait 1000ms", 1000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "23.58 " + suffix + " open charging calibration relays", "SKBCM125ChargingOpenRelays", "8,9,10,11,12,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "23.58 " + suffix + " open String power path Y1/Y4/Y6 and charging relays", "SKBCM125ChargingOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "23.59 " + suffix + " wait 200ms", 200);
             AddMbdCommandPairStep(
                 steps,
@@ -1673,7 +1866,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "24.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "24.2 Open RL1/RL2/RL9 power relays", "SKBCM125VerificationOpenRelays", "8,9,10,11,12,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "24.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125VerificationOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "24.3 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "24.4 Reset VBUS generator 0V/0A OVP300", token => deviceManager.SetVbusGeneratorAsync(0, 0, 300, false), "VBUS Reset", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "24.4 Reset string generator 0V/0A OVP300", token => deviceManager.SetStringGeneratorAsync(0, 0, 300, false), "String Reset", "String Fail");
@@ -1704,7 +1897,7 @@ namespace TestPlatform.TestSequences
             string r11 = channel.ResultIds[10], r12 = channel.ResultIds[11];
             string r13 = channel.ResultIds[12], r14 = channel.ResultIds[13];
             string prefix = "BCM125.VERIFY_CHARGING." + suffix + ".";
-            AddFixtureRelayStep(steps, row++, deviceManager, "24.6 " + suffix + " close verification relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "24.6 " + suffix + " close String power path Y1/Y4/Y6 and verification relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "24.7 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "24.8 " + suffix + " set string generator 0V/0A OVP150", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, false), "String Set", "String Fail");
             AddProgrammingActionStep(steps, row++, "24.9 " + suffix + " turn on string generator", token => deviceManager.SetStringGeneratorAsync(0, 0, 150, true), "String ON", "String Fail");
@@ -1753,7 +1946,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "24.54 " + suffix + " reset generators 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "24.55 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "24.56 " + suffix + " wait 4000ms", 4000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "24.57 " + suffix + " open verification relays", "SKBCM125VerificationOpenRelays", "8,9,10,11,12,13,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "24.57 " + suffix + " open String power path Y1/Y4/Y6 and verification relays", "SKBCM125VerificationOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
         }
 
         protected void AddBcm125CcbFunctionalCheckSteps(System.Collections.Generic.List<TestStepItem> steps, SK441Device deviceManager)
@@ -1761,7 +1954,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "25.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "25.2 Open RL1/RL2/RL9 power relays", "SKBCM125CcbOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "25.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125CcbOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "25.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "25.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "25.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
@@ -1787,7 +1980,7 @@ namespace TestPlatform.TestSequences
             string sCurrent = channel.ResultIds[0];
             string sVoltage = channel.ResultIds[1];
             string prefix = "BCM125.CCB." + suffix + ".";
-            AddFixtureRelayStep(steps, row++, deviceManager, "25.7 " + suffix + " close CCB relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "25.7 " + suffix + " close String power path Y1/Y4/Y6 and CCB relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "25.8 " + suffix + " wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "25.9 " + suffix + " check serial communication", token => CheckBcm125MbdCommunicationAsync(deviceManager), "Open", "COM Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "25.10 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
@@ -1828,7 +2021,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "25.45 " + suffix + " turn off BUS generator", token => deviceManager.SetVbusGeneratorAsync(140, 10, 300, false), "VBUS OFF", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "25.46 " + suffix + " reset BUS generator 0V/0A OVP300", token => deviceManager.SetVbusGeneratorAsync(0, 0, 300, false), "VBUS Reset", "VBUS Fail");
             AddMbdCommandStep(steps, row++, deviceManager, "25.48 " + suffix + " set W75=0 precharge off", "W75=0", 0);
-            AddFixtureRelayStep(steps, row++, deviceManager, "25.49 " + suffix + " open CCB relays", "SKBCM125CcbOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "25.49 " + suffix + " open String power path Y1/Y4/Y6 and CCB relays", "SKBCM125CcbOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "25.50 " + suffix + " wait 200ms", 200);
             AddMbdCommandStep(steps, row++, deviceManager, "25.54 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "25.55 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
@@ -1840,7 +2033,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "26.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "26.2 Open RL1/RL2/RL9 power relays", "SKBCM125StringTestOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "26.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125StringTestOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "26.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "26.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "26.5 Reset VBUS generator 0V/0A OVP150", token => deviceManager.SetVbusGeneratorAsync(0, 0, 150, false), "VBUS Reset", "VBUS Fail");
@@ -1866,7 +2059,7 @@ namespace TestPlatform.TestSequences
             string t02 = channel.ResultIds[1];
             string t03 = channel.ResultIds[2];
             string prefix = "BCM125.STRING_TEST." + suffix + ".";
-            AddFixtureRelayStep(steps, row++, deviceManager, "26.7 " + suffix + " close string test relays", relayConfigKey, relayDefaults, true, "Relays Closed");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "26.7 " + suffix + " close String power path Y1/Y4/Y6 and string test relays", relayConfigKey, relayDefaults, true, "Relays Closed");
             AddDelayStep(steps, row++, "26.8 " + suffix + " wait 20ms", 20);
             AddProgrammingActionStep(steps, row++, "26.9 " + suffix + " set BUS generator 50V/0.5A OVP150", token => deviceManager.SetVbusGeneratorAsync(50, 0.5f, 150, false), "VBUS Set", "VBUS Fail");
             AddProgrammingActionStep(steps, row++, "26.10 " + suffix + " turn on BUS generator", token => deviceManager.SetVbusGeneratorAsync(50, 0.5f, 150, true), "VBUS ON", "VBUS Fail");
@@ -1895,7 +2088,7 @@ namespace TestPlatform.TestSequences
             AddProgrammingActionStep(steps, row++, "26.34 " + suffix + " reset generators 0V/0A OVP300", token => deviceManager.SetVbusGeneratorAsync(0, 0, 300, false), "Generators Reset", "Generator Fail");
             AddProgrammingActionStep(steps, row++, "26.35 " + suffix + " reset electronic load", token => deviceManager.ResetElectronicLoadAsync(), "Load Reset", "Load Fail");
             AddDelayStep(steps, row++, "26.36 " + suffix + " wait 4000ms", 4000);
-            AddFixtureRelayStep(steps, row++, deviceManager, "26.37 " + suffix + " open string test relays", "SKBCM125StringTestOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "26.37 " + suffix + " open String power path Y1/Y4/Y6 and string test relays", "SKBCM125StringTestOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDelayStep(steps, row++, "26.38 " + suffix + " wait 200ms", 200);
             AddMbdCommandStep(steps, row++, deviceManager, "26.38 " + suffix + " send EXIT to MBD terminal", "EXIT", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "26.39 " + suffix + " send DIAG ON to MBD", "DIAG ON", 0);
@@ -1907,7 +2100,7 @@ namespace TestPlatform.TestSequences
             int row = steps.Count;
 
             AddProgrammingActionStep(steps, row++, "27.1 Close RL4 to power DUT", token => deviceManager.ControlRelayAsync(7, true), "RL4 ON", "RL4 Fail");
-            AddFixtureRelayStep(steps, row++, deviceManager, "27.2 Open RL1/RL2/RL9 power relays", "SKBCM125WritingInfoOpenRelays", "8,9,10,11,12,13,14,15,16", false, "Relays Open");
+            AddStringPowerPathRelayStep(steps, row++, deviceManager, "27.2 Open String power path Y1/Y4/Y6 and RL1/RL2/RL9 relays", "SKBCM125WritingInfoOpenRelays", Bcm125StationMap.AllStringPowerPathRelays, false, "Relays Open");
             AddDaqRelayStep(steps, row++, deviceManager, "27.3 Open RL5.12/RL10.12", "SKBCM125Rl5Rl10DaqRelays", Bcm125StationMap.StringSimulatorDaqRelays, false, "RL5/RL10 Open");
             AddDelayStep(steps, row++, "27.4 Wait 50ms", 50);
             AddProgrammingActionStep(steps, row++, "27.5 Check generator COM communication", token => deviceManager.CheckProgrammingInstrumentsAsync(), "COM OK", "COM Fail");
@@ -1991,7 +2184,14 @@ namespace TestPlatform.TestSequences
             string calibrationDate = string.Empty;
             string bcmSerial = string.Empty;
 
-            AddMbdCommandStep(steps, row++, deviceManager, "27.8/9 " + suffix + " send " + remoteCommand, remoteCommand, 0);
+            AddMbdCommandPairStep(
+                steps,
+                row++,
+                deviceManager,
+                "27.8/9 " + suffix + " send EXIT then " + remoteCommand,
+                "EXIT",
+                remoteCommand,
+                0);
             AddMbdCommandStep(steps, row++, deviceManager, "27.10 " + suffix + " send DIAG ON", "DIAG ON", 0);
             AddMbdCommandStep(steps, row++, deviceManager, "27.11 " + suffix + " write W38=" + slaveIndex + " indice_slave", "W38=" + slaveIndex, 0);
             AddMbdCommandStep(steps, row++, deviceManager, "27.11 " + suffix + " write W39=MCU_ID", "W39=MCU_ID", 0);
@@ -2053,7 +2253,7 @@ namespace TestPlatform.TestSequences
                     string response = await QueryBcm125MbdCommandAsync(deviceManager, "ACT->FLASH", 0);
                     bool pass = !string.IsNullOrWhiteSpace(response)
                         && response.IndexOf("ACT values copied to FLASH", StringComparison.OrdinalIgnoreCase) >= 0
-                        && response.IndexOf("Ready", StringComparison.OrdinalIgnoreCase) >= 0;
+                        && TargetBoardComm.HasTerminalPrompt(response);
                     return new StepResult { IsPass = pass, Value = pass ? "1" : (response ?? "No Data"), StoreKey = storeKey, NumericValue = pass ? 1 : 0, Unit = string.Empty };
                 }
             });

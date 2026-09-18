@@ -268,11 +268,15 @@ namespace TestPlatform.TestSequences
                         return false;
                     }
 
-                    if (string.Equals(
-                            ExpectedBoardType,
-                            "BCM-250",
-                            StringComparison.OrdinalIgnoreCase) &&
-                        !await deviceManager.EnableBcm250ElectronicLoadSupplyAsync())
+                    if ((string.Equals(
+                             ExpectedBoardType,
+                             "BCM-125",
+                             StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(
+                             ExpectedBoardType,
+                             "BCM-250",
+                             StringComparison.OrdinalIgnoreCase)) &&
+                        !await deviceManager.EnableBcmElectronicLoadSupplyAsync())
                     {
                         await deviceManager.EmergencyStopOutputsAsync(
                             ExpectedBoardType,

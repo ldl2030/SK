@@ -39,9 +39,14 @@ their thresholds and units are stored only in XML. Table 6 defines the four R71
 rows L01/L05/L09/L13 as `0..any mV`; the XML preserves those document values
 without an additional polarity gate or inferred high/low production limits.
 
-VBUS output-on rows before B01 and D01 now wait for measured source-A voltage
-stability. Every VBUS power edge releases the old USB-B serial handle; after a
-power cycle the MBD path is rediscovered and validated before commands resume.
+Only the two Chapter 15 VBUS restores after Relay_5 switching use the
+user-selected ramp `25 -> 50 -> 75 -> 100 -> 125 -> 137.5 V`, with one visible
+XML row and a fixed 200 ms wait at every level. These rows do not poll voltage
+stability. Chapters 7, 9 and 10 retain the Rev.3 direct 137.5 V startup. Every
+VBUS power edge releases the old USB-B serial
+handle; after a power cycle the MBD path is rediscovered and validated before
+commands resume. Chapter 15 keeps VBUS-off, Relay_5 switching, every ramp
+level, MBD recovery, `EXIT`, and `DIAG ON` as separate visible rows.
 The visible chapter 8/9/17 communication-close rows now execute instead of
 silently returning success.
 
@@ -73,6 +78,7 @@ rows run is decided by the global failure policy.
 | 13.26 | Text says set drive to zero but command is `W101=5` after prior shutdown | Safety-confirm `W101=0` | Verify target firmware accepts zero command |
 | 16.4/16.5 | Text names RELAY_6 and parenthetically `ex 7` | Current Rev.3 table 8 CH_4 / DAQ304 functional relay | Continuity-check DAQ304 Relay_6 to J7.5 |
 | 8.6 | “Gradually” gives no increment or dwell | 1 V increments, 100 ms dwell, 5-80 V | Approve ramp resolution and dwell at station |
+| Chapter 15 VBUS restores | Rev.3 applies 137.5 V directly and gives no inrush-control ramp | User-selected safety override only for the two Relay_5 restores: `25/50/75/100/125/137.5 V`, fixed 200 ms per level, no stability polling; Chapters 7/9/10 remain direct | Validate first on one known-good MPS-125 board before a complete Hardware-mode run |
 | G02 | Maximum is infinity | XML uses 1 MOhm to 1 TOhm as an executable open-contact range | Confirm DAQ over-range representation |
 | Table 6 L01/L05/L09/L13 | `0..any mV` does not define a high/low functional limit | Preserve the authoritative Rev.3 range `0..any mV`; record each state value without adding an inferred polarity gate | Review recorded values if a future controlled document revision introduces state limits |
 | PDF table 9 vs current station table | Older implementation used COM_USB=CH05, shunt=CH11, P+=CH04, MCU_ISOBATT=CH17, LSI.COM=CH07 and Gen VBUS=CH16 | Latest user-provided MPS-125UP table: COM_USB=CH11, shunt=CH17, P+=CH13, MCU_ISOBATT=CH05, LSI.COM=CH18; CH16 is empty | Continuity-check CH05/11/13/17/18 before the first Hardware-mode run |
@@ -82,5 +88,6 @@ rows run is decided by the global failure policy.
 Before Hardware mode: confirm DAQ301-306 relay polarity, continuity for Relay_2
 dual contacts, DAQ118 resistance over-range behavior, source-B VBATT polarity,
 TP433 K01-K03 limits, CH05/11/13/17/18 continuity, USB-B insertion/probing,
-and the 1 V/100 ms ignition ramp. Validate first at low voltage, then one
-selected chapter, then the complete flow.
+the 1 V/100 ms ignition ramp, and the two Chapter 15 six-level 25-137.5 V restore ramps.
+Validate first at low voltage, then one selected chapter, then the complete
+flow.

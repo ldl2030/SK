@@ -39,49 +39,9 @@
       <DependsOn />
     </Group>
     <Group>
-      <GroupId>BCM250.CH10</GroupId>
-      <Name>CH10</Name>
+      <GroupId>BCM250.CH10-15</GroupId>
+      <Name>CH10-15 烧录、通讯、版本与复位检查</Name>
       <SequenceOrder>5</SequenceOrder>
-      <Mandatory>false</Mandatory>
-      <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn />
-    </Group>
-    <Group>
-      <GroupId>BCM250.CH11</GroupId>
-      <Name>CH11</Name>
-      <SequenceOrder>6</SequenceOrder>
-      <Mandatory>false</Mandatory>
-      <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn />
-    </Group>
-    <Group>
-      <GroupId>BCM250.CH12</GroupId>
-      <Name>CH12</Name>
-      <SequenceOrder>7</SequenceOrder>
-      <Mandatory>false</Mandatory>
-      <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn />
-    </Group>
-    <Group>
-      <GroupId>BCM250.CH13</GroupId>
-      <Name>CH13</Name>
-      <SequenceOrder>8</SequenceOrder>
-      <Mandatory>false</Mandatory>
-      <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn />
-    </Group>
-    <Group>
-      <GroupId>BCM250.CH14</GroupId>
-      <Name>CH14</Name>
-      <SequenceOrder>9</SequenceOrder>
-      <Mandatory>false</Mandatory>
-      <DefaultEnabled>true</DefaultEnabled>
-      <DependsOn />
-    </Group>
-    <Group>
-      <GroupId>BCM250.CH15</GroupId>
-      <Name>CH15</Name>
-      <SequenceOrder>10</SequenceOrder>
       <Mandatory>false</Mandatory>
       <DefaultEnabled>true</DefaultEnabled>
       <DependsOn />
@@ -586,7 +546,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9. 2 闭合TTL TX/RX/GND编程继电器</Name>
+    <Name>9. 2 保持TTL编程路径断开，先检查现有固件</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -600,11 +560,11 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9. 3 等待300ms</Name>
+    <Name>9. 3 无需TTL稳定等待</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
-    <DelayMs>300</DelayMs>
+    <DelayMs>0</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH09.S007.ACTION</StepId>
@@ -731,7 +691,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9. 12 RESET置位W86=1</Name>
+    <Name>9. 12 检查BCM/SAFE通讯及BCM固件版本，按需准备烧录</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -867,7 +827,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S001.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>48</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -881,7 +841,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S002.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>49</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -896,7 +856,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S003.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>50</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -910,7 +870,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S004.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>51</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -924,7 +884,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S005.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>52</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -938,7 +898,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S006.D01</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>53</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -953,7 +913,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S007.D02</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>54</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -968,7 +928,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH10.S008.ACTION</StepId>
-    <GroupId>BCM250.CH10</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>55</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -982,7 +942,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S001.ACTION</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>56</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -996,7 +956,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S002.ACTION</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>57</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1010,7 +970,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S003.ACTION</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>58</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1024,7 +984,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S004.E01</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>59</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1039,7 +999,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S005.ACTION</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>60</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1053,7 +1013,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH11.S006.ACTION</StepId>
-    <GroupId>BCM250.CH11</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>61</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1067,7 +1027,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S001.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>62</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1081,22 +1041,22 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S002.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>63</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>12. 2 等待3000ms</Name>
+    <Name>12. 2 轮询R10直到运行时间不少于3秒</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
-    <DelayMs>3000</DelayMs>
+    <DelayMs>8000</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S003.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>64</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1110,7 +1070,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S004.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>65</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1124,7 +1084,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S005.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>66</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1138,35 +1098,35 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S006.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>67</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>12. 6 发送REMOTE2进入BCM250终端</Name>
+    <Name>12. 6 复用R10轮询建立的BCM250终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S007.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>68</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>12. 7 读取复位前R10 running_time</Name>
+    <Name>12. 7 记录复位前R10 running_time</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S008.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>69</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1180,7 +1140,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S009.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>70</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1194,7 +1154,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S010.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>71</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1208,22 +1168,22 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S011.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>72</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>12. 11 等待1000ms</Name>
+    <Name>12. 11 轮询REMOTE2/R10等待BCM应用恢复</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
-    <DelayMs>1000</DelayMs>
+    <DelayMs>5000</DelayMs>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S012.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>73</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1237,7 +1197,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S013.F01</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>74</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1252,7 +1212,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S014.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>75</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1266,7 +1226,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S015.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>76</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1280,7 +1240,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH12.S016.ACTION</StepId>
-    <GroupId>BCM250.CH12</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>77</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1294,7 +1254,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S001.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>78</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1308,7 +1268,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S002.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>79</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1322,7 +1282,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S003.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>80</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1336,7 +1296,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S004.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>81</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1350,7 +1310,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S005.G01</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>82</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1365,21 +1325,21 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S006.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>83</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>13. 8 发送EXIT返回MBD终端</Name>
+    <Name>13. 8 按后续章节需要保持REMOTE2或返回MBD</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH13.S007.ACTION</StepId>
-    <GroupId>BCM250.CH13</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>84</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1393,7 +1353,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S001.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>85</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1407,7 +1367,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S002.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>86</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1421,21 +1381,21 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S003.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>87</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>14. 3 发送EXIT进入MBD终端</Name>
+    <Name>14. 3 按需进入MBD终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S004.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>88</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1449,7 +1409,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S005.H01</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>89</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1464,7 +1424,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S006.H02</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>90</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1479,21 +1439,21 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S007.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>91</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>14. 7 发送EXIT返回MBD终端</Name>
+    <Name>14. 7 按后续章节需要保持REMOTE2或返回MBD</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH14.S008.ACTION</StepId>
-    <GroupId>BCM250.CH14</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>92</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1507,7 +1467,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S001.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>93</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1521,7 +1481,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S002.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>94</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1535,21 +1495,21 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S003.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>95</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>15. 3 发送EXIT进入MBD终端</Name>
+    <Name>15. 3 按需进入MBD终端</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S004.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>96</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1563,7 +1523,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S005.I01</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>97</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1578,7 +1538,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S006.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>98</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>
@@ -1592,7 +1552,7 @@
   </TestItem>
   <TestItem>
     <StepId>BCM250.CH15.S007.ACTION</StepId>
-    <GroupId>BCM250.CH15</GroupId>
+    <GroupId>BCM250.CH10-15</GroupId>
     <SequenceOrder>99</SequenceOrder>
     <DefaultEnabled>true</DefaultEnabled>
     <Mandatory>false</Mandatory>

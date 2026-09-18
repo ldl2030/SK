@@ -12,6 +12,7 @@ namespace TestPlatform
         private readonly List<string> _powerSafetyTrace = new List<string>();
         private bool _ansOutputOn;
         private bool _vbusOutputOn;
+        private float _vbusCommandedVoltage;
         private bool _secondaryOutputOn;
         private bool _electronicLoadOn;
         public const int MpsVbattSourcePowerRelay = 1;
@@ -115,6 +116,135 @@ namespace TestPlatform
             }
         }
 
+        private void RecordVbusSetpoint(float voltage)
+        {
+            lock (_powerSafetySync)
+                _vbusCommandedVoltage = voltage;
+        }
+
+        private bool IsVbusOutputOn(out float commandedVoltage)
+        {
+            lock (_powerSafetySync)
+            {
+                commandedVoltage = _vbusCommandedVoltage;
+                return _vbusOutputOn;
+            }
+        }
+
+        public async Task<bool> SetMps250VbusRampStepAsync(
+            float voltage,
+            float current,
+            float ovp,
+            bool startOutput)
+        {
+            return await SetMpsVbusRampStepAsync(
+                "MPS-250",
+                50.001f,
+                voltage,
+                current,
+                ovp,
+                startOutput);
+        }
+
+        public async Task<bool> SetMps125VbusRampStepAsync(
+            float voltage,
+            float current,
+            float ovp,
+            bool startOutput)
+        {
+            return await SetMpsVbusRampStepAsync(
+                "MPS-125",
+                25.001f,
+                voltage,
+                current,
+                ovp,
+                startOutput);
+        }
+
+        private async Task<bool> SetMpsVbusRampStepAsync(
+            string boardType,
+            float maximumStepVoltage,
+            float voltage,
+            float current,
+            float ovp,
+            bool startOutput)
+        {
+            if (!string.Equals(
+                SimulationBoardType,
+                boardType,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                LogError?.Invoke($"VBUS分级缓升仅允许用于{boardType}。");
+                return false;
+            }
+
+            if (startOutput)
+            {
+                if (voltage > maximumStepVoltage)
+                {
+                    LogError?.Invoke(
+                        $"禁止{boardType}从输出关闭状态直接以{voltage:0.###}V上电；" +
+                        $"首级不得超过{maximumStepVoltage - 0.001f:0.###}V。");
+                    lock (_powerSafetySync)
+                        _powerSafetyTrace.Add("BLOCK " + boardType.Replace("-", string.Empty) + " DIRECT VBUS ON " + voltage);
+                    return false;
+                }
+
+                return await SetVbusGeneratorAsync(voltage, current, ovp, true);
+            }
+
+            float previousVoltage;
+            bool outputOn = IsVbusOutputOn(out previousVoltage);
+            if (!outputOn || voltage <= previousVoltage || voltage - previousVoltage > maximumStepVoltage)
+            {
+                LogError?.Invoke(
+                    $"{boardType} VBUS缓升顺序无效：当前设定={previousVoltage:0.###}V，" +
+                    $"下一设定={voltage:0.###}V，输出={(outputOn ? "ON" : "OFF")}。" +
+                    $"要求输出保持ON且单级升幅不超过{maximumStepVoltage - 0.001f:0.###}V。");
+                lock (_powerSafetySync)
+                    _powerSafetyTrace.Add("BLOCK " + boardType.Replace("-", string.Empty) + " INVALID VBUS RAMP " + previousVoltage + "->" + voltage);
+                if (outputOn)
+                    await SetVbusGeneratorAsync(0, 0, ovp, false);
+                return false;
+            }
+
+            string safetyError;
+            if (!ValidatePowerSourceEnable("VBUS", voltage, out safetyError))
+            {
+                LogError?.Invoke(safetyError);
+                await SetVbusGeneratorAsync(0, 0, ovp, false);
+                return false;
+            }
+
+            try
+            {
+                if (SkipComInit)
+                {
+                    await Task.Delay(1);
+                    _mockVbusVoltage = voltage;
+                    _mockVbusCurrentLimit = current;
+                }
+                else
+                {
+                    HengHuiPower1.SetCurrent(current);
+                    HengHuiPower1.SetOvp(ovp);
+                    HengHuiPower1.SetVoltage(voltage);
+                }
+
+                RecordVbusSetpoint(voltage);
+                LogInfo?.Invoke(
+                    $"{boardType} VBUS保持输出ON并缓升至{voltage:0.###}V/" +
+                    $"{current:0.###}A, OVP={ovp:0.###}V");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError?.Invoke($"{boardType} VBUS缓升至{voltage:0.###}V失败: {ex.Message}");
+                await SetVbusGeneratorAsync(0, 0, ovp, false);
+                return false;
+            }
+        }
+
         private bool ValidatePowerRelaySwitch(int relayId, bool close, out string error)
         {
             if (close && !ValidateEmergencyAllowsEnergizing("闭合功率继电器 " + relayId, out error))
@@ -179,6 +309,10 @@ namespace TestPlatform
                     SimulationBoardType,
                     "BCM-250",
                     StringComparison.OrdinalIgnoreCase);
+                bool isBcm125 = string.Equals(
+                    SimulationBoardType,
+                    "BCM-125",
+                    StringComparison.OrdinalIgnoreCase);
                 int requiredRelay = domain == "ANS" && !isMps ? 7 : 0;
                 bool closed;
                 if (requiredRelay > 0 && (!_powerRelayStates.TryGetValue(requiredRelay, out closed) || !closed))
@@ -193,6 +327,17 @@ namespace TestPlatform
                 {
                     error = "禁止开启String输出：16路大功率继电器 Y1、Y3、Y6 尚未全部确认闭合";
                     _powerSafetyTrace.Add("BLOCK OUTPUT SECONDARY ON: RELAYS 1,3,6 REQUIRED");
+                    return false;
+                }
+
+                if (isBcm125 && domain == "SECONDARY" &&
+                    !AreAllPowerRelaysClosedUnsafe(
+                        Bcm125StationMap.StringGeneratorSourcePowerRelay,
+                        Bcm125StationMap.StringGeneratorRoutePowerRelay,
+                        Bcm125StationMap.StringGeneratorReturnPowerRelay))
+                {
+                    error = "禁止开启BCM125 String输出：站3大功率继电器Y1、Y4、Y6尚未全部确认闭合";
+                    _powerSafetyTrace.Add("BLOCK OUTPUT SECONDARY ON: RELAYS 1,4,6 REQUIRED");
                     return false;
                 }
 
@@ -460,7 +605,7 @@ namespace TestPlatform
 
             if (relayId == 7)
                 return VerifyPowerDomainsOffAsync("ANS");
-            // BCM250 station-3 Y2/Y5 power the electronic load itself. Requiring
+            // BCM station-3 Y2/Y5 power the electronic load itself. Requiring
             // a LOAD measurement before closing them creates an impossible loop
             // while the load is still unpowered. Confirm every source feeding the
             // fixture is off, then power the load and verify it separately.
@@ -471,7 +616,7 @@ namespace TestPlatform
             return Task.FromResult(true);
         }
 
-        public async Task<bool> EnableBcm250ElectronicLoadSupplyAsync()
+        public async Task<bool> EnableBcmElectronicLoadSupplyAsync()
         {
             const int loadPowerRelay1 = 2;
             const int loadPowerRelay2 = 5;
@@ -513,6 +658,11 @@ namespace TestPlatform
             }
         }
 
+        public Task<bool> EnableBcm250ElectronicLoadSupplyAsync()
+        {
+            return EnableBcmElectronicLoadSupplyAsync();
+        }
+
         private async Task<bool> VerifyFixturePowerIsOffAsync()
         {
             string error;
@@ -544,6 +694,14 @@ namespace TestPlatform
                 // BCM功率路径属于16路功率继电器站3，不属于工装继电器站1。
                 bool ok = await ControlRelayAsync(relayId, close);
                 passed = ok && passed;
+            }
+
+            // Match the BCM250 fail-safe behavior: a partially closed String path
+            // is never left energized after a relay command failure.
+            if (close && !passed)
+            {
+                for (int index = relayIds.Length - 1; index >= 0; index--)
+                    await ControlRelayAsync(relayIds[index], false);
             }
             return passed;
         }

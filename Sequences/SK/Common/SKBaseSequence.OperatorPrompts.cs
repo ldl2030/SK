@@ -114,5 +114,40 @@ namespace TestPlatform.TestSequences
                     dialog.UpdateMessage(message);
             });
         }
+
+        protected async Task<FirmwareProgrammingWindow> ShowFirmwareProgrammingAsync(
+            string firmwareName)
+        {
+            if (Application.Current == null)
+                return null;
+
+            return await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var dialog = new FirmwareProgrammingWindow(firmwareName)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                dialog.Show();
+                return dialog;
+            });
+        }
+
+        protected async Task CompleteFirmwareProgrammingAsync(
+            FirmwareProgrammingWindow dialog,
+            bool success,
+            string detail)
+        {
+            if (dialog == null || Application.Current == null)
+                return;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (dialog.IsVisible)
+                    dialog.SetCompleted(success, detail);
+            });
+
+            await Task.Delay(success ? 900 : 1800);
+            await Application.Current.Dispatcher.InvokeAsync(() => dialog.CloseSafely());
+        }
     }
 }

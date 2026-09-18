@@ -8,7 +8,15 @@ namespace TestPlatform.TestSequences
         public const string Prefix = "BCM250";
         public const string Precheck = Prefix + ".PRECHECK";
         public const string Cleanup = Prefix + ".CLEANUP";
+        public const string StartupAndCommunication = Prefix + ".CH10-15";
         public static string Chapter(int chapter) => Prefix + ".CH" + chapter.ToString("00");
+
+        public static string PlanGroupForChapter(int chapter)
+        {
+            return chapter >= 10 && chapter <= 15
+                ? StartupAndCommunication
+                : Chapter(chapter);
+        }
     }
 
     public static class Bcm250Commands
@@ -30,6 +38,7 @@ namespace TestPlatform.TestSequences
         public const string DischargeOneAmpMa = "BCM250.CAL.IDCH_1A_MA";
         public const string DischargeSixAmpMa = "BCM250.CAL.IDCH_6A_MA";
         public const string ResetFlatRunningTimeBefore = "BCM250.RESET_FLAT.R10_BEFORE";
+        public const string ResetFlatRunningTimeAfter = "BCM250.RESET_FLAT.R10_AFTER";
 
         public static string ShuntResistanceForChannel(int channel)
         {
@@ -48,6 +57,10 @@ namespace TestPlatform.TestSequences
         FixtureRelays,
         DaqRelays,
         CheckMbdCommunication,
+        FirmwareReadinessCheck,
+        WaitForBcmRunningTime,
+        WaitForBcmApplication,
+        BcmSerialBatchBoundary,
         DocumentedBoundary,
         MbdCommand,
         Delay,
@@ -83,6 +96,8 @@ namespace TestPlatform.TestSequences
         public double Scale { get; set; }
         public bool State { get; set; }
         public bool AlwaysRun { get; set; }
+        public bool OnlyWhenFirmwareProgrammingRequired { get; set; }
+        public bool OnlyAfterFirmwareProgramming { get; set; }
         public string[] RequiresResultIds { get; set; } = Array.Empty<string>();
 
         public bool IsResult => !string.IsNullOrWhiteSpace(ResultId);

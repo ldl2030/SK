@@ -105,6 +105,7 @@ namespace TestPlatform.TestSequences
                 ExpectedGroupId = groupId,
                 RowIndex = steps.Count,
                 AlwaysRun = action.AlwaysRun,
+                MaxRetries = action.Kind == Mps250ActionKind.SetVbusRampStep ? 0 : -1,
                 SafetyCritical = IsSafetyCritical(action) && !IsFinalChapterResult(action),
                 PowerCritical = IsPowerCritical(action) && !IsFinalChapterResult(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps250ActionKind.Cleanup
@@ -130,6 +131,7 @@ namespace TestPlatform.TestSequences
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
 
+            string actionArgument = ResolveActionArgument(step, action);
             bool passed;
             switch (action.Kind)
             {
@@ -171,29 +173,52 @@ namespace TestPlatform.TestSequences
                         action.Argument);
                     break;
                 case Mps250ActionKind.SetVbus:
-                    passed = await SetGeneratorAsync(device, action.Argument, true, action.State);
+                    passed = await SetGeneratorAsync(device, actionArgument, true, action.State);
                     break;
                 case Mps250ActionKind.SetVbusAndWaitStable:
                     {
-                        double[] values = ParseNumbers(action.Argument);
+                        double[] values = ParseNumbers(actionArgument);
                         passed = values.Length >= 1 &&
-                            await SetGeneratorAsync(device, action.Argument, true, true);
+                            await SetGeneratorAsync(device, actionArgument, true, true);
                         if (passed)
                         {
                             passed = await device.WaitForMps250VbusStableAsync(
                                 (float)values[0],
                                 token);
                         }
+                        if (passed && action.Chapter == 15)
+                            passed = await device.WaitForMbdReadyAfterPowerCycleAsync(25000, token);
                         break;
                     }
+                case Mps250ActionKind.SetVbusRampStep:
+                    {
+                        double[] values = ParseNumbers(actionArgument);
+                        passed = values.Length >= 3 &&
+                            await device.SetMps250VbusRampStepAsync(
+                                (float)values[0],
+                                (float)values[1],
+                                (float)values[2],
+                                action.State);
+                        if (passed)
+                        {
+                            int delayMs = GetPlanDelayMs(new[] { step }, 0, 200);
+                            await Task.Delay(
+                                device.SkipComInit ? Math.Min(delayMs, 1) : delayMs,
+                                token);
+                        }
+                        break;
+                    }
+                case Mps250ActionKind.WaitForMbdReadyAfterPowerCycle:
+                    passed = await device.WaitForMbdReadyAfterPowerCycleAsync(25000, token);
+                    break;
                 case Mps250ActionKind.SetVbatt:
-                    passed = await SetGeneratorAsync(device, action.Argument, false, action.State);
+                    passed = await SetGeneratorAsync(device, actionArgument, false, action.State);
                     break;
                 case Mps250ActionKind.SetVbattAndWaitStable:
                     {
-                        double[] values = ParseNumbers(action.Argument);
+                        double[] values = ParseNumbers(actionArgument);
                         passed = values.Length >= 1 &&
-                            await SetGeneratorAsync(device, action.Argument, false, action.State);
+                            await SetGeneratorAsync(device, actionArgument, false, action.State);
                         if (passed)
                         {
                             passed = await device.WaitForMps250VbattVoltageAsync(
@@ -263,7 +288,7 @@ namespace TestPlatform.TestSequences
 
             if (action.Kind == Mps250ActionKind.FirmwareVersion)
             {
-                string expected = string.IsNullOrWhiteSpace(plan.ExpectedValue) ? "mcu_app U.1.1.4" : plan.ExpectedValue;
+                string expected = string.IsNullOrWhiteSpace(plan.ExpectedValue) ? "mcu_app U.1.1.5" : plan.ExpectedValue;
                 string response = device.SkipComInit ? expected : await device.QueryMbdCommandAsync(action.Argument, 0);
                 string actual = device.SkipComInit
                     ? response
@@ -359,6 +384,8 @@ namespace TestPlatform.TestSequences
             {
                 case Mps250ActionKind.SetVbus:
                 case Mps250ActionKind.SetVbusAndWaitStable:
+                case Mps250ActionKind.SetVbusRampStep:
+                case Mps250ActionKind.WaitForMbdReadyAfterPowerCycle:
                 case Mps250ActionKind.SetVbatt:
                 case Mps250ActionKind.SetVbattAndWaitStable:
                 case Mps250ActionKind.SafeVbusRelay:
@@ -385,7 +412,8 @@ namespace TestPlatform.TestSequences
             if (action.AlwaysRun)
                 return false;
 
-            if (action.Kind == Mps250ActionKind.SafeVbattConnect ||
+            if (action.Kind == Mps250ActionKind.SetVbusRampStep ||
+                action.Kind == Mps250ActionKind.SafeVbattConnect ||
                 action.Kind == Mps250ActionKind.SetVbattAndWaitStable ||
                 action.Kind == Mps250ActionKind.DaqAverageVoltageAfterVbattBaseline)
             {
@@ -553,6 +581,23 @@ namespace TestPlatform.TestSequences
                 (float)values[1],
                 (float)values[2],
                 state);
+        }
+
+        private static string ResolveActionArgument(TestStepItem step, Mps250ActionDefinition action)
+        {
+            if (step.PlanDefinition != null &&
+                !string.IsNullOrWhiteSpace(step.PlanDefinition.ExpectedValue) &&
+                (action.Kind == Mps250ActionKind.SetVbusRampStep ||
+                 action.Kind == Mps250ActionKind.SetVbus ||
+                 (action.Chapter == 15 &&
+                 (action.Kind == Mps250ActionKind.SetVbusAndWaitStable ||
+                 action.Kind == Mps250ActionKind.SetVbatt ||
+                 action.Kind == Mps250ActionKind.SetVbattAndWaitStable))))
+            {
+                return step.PlanDefinition.ExpectedValue;
+            }
+
+            return action.Argument;
         }
 
         private static int[] ParseRelayList(string value) => (value ?? string.Empty)

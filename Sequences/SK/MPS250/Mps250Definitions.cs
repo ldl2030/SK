@@ -20,7 +20,7 @@ namespace TestPlatform.TestSequences
     {
         CheckInstruments, AllOutputsOff, DaqRelays, CheckMbdCommunication,
         CloseMbdCommunication, MbdCommand, MbdCleanupIfConnected, Delay, SetVbus,
-        SetVbusAndWaitStable, SetVbatt,
+        SetVbusAndWaitStable, SetVbusRampStep, WaitForMbdReadyAfterPowerCycle, SetVbatt,
         SetVbattAndWaitStable,
         SafeVbusRelay, SafeVbattConnect, SafeVbattDisconnect,
         DaqVoltage, DaqAverageVoltage, DaqAverageVoltageAfterVbattBaseline,
@@ -56,6 +56,9 @@ namespace TestPlatform.TestSequences
             int cleanupRow = 0;
             foreach (Mps250ActionDefinition item in items)
             {
+                if (!string.IsNullOrWhiteSpace(item.StepId))
+                    continue;
+
                 if (item.AlwaysRun)
                 {
                     item.StepId = "MPS250.CLEANUP.S" + (++cleanupRow).ToString("000") + ".ACTION";

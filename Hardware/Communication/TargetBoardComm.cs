@@ -173,16 +173,19 @@ namespace TestPlatform
                 return false;
 
             string normalized = response.TrimEnd('\r', '\n', '\0', ' ', '\t');
+            return Regex.IsMatch(
+                normalized,
+                @"(?:^|[\r\n|])\s*(?:\d+\s+chars answered\.\s*)?Ready\.?\s*$",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
 
-            return normalized.IndexOf(
-                       "chars answered. Ready",
-                       StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   normalized.IndexOf(
-                       "Ready.",
-                       StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   normalized.EndsWith(
-                       "Ready",
-                       StringComparison.OrdinalIgnoreCase);
+        public static bool ContainsReadyPrompt(string response)
+        {
+            return !string.IsNullOrWhiteSpace(response) &&
+                   Regex.IsMatch(
+                       response,
+                       @"(?:^|[\r\n|])\s*(?:\d+\s+chars answered\.\s*)?Ready\.?(?=\s|$)",
+                       RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
         private static string FormatCommandForLog(string command)

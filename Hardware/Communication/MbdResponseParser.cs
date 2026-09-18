@@ -155,7 +155,35 @@ namespace TestPlatform
             out string error)
         {
             if (IsSuccessfulCommandResponse(response, out error))
+            {
+                if (!TargetBoardComm.HasTerminalPrompt(response))
+                {
+                    error = "MBD command response did not end with the Ready prompt.";
+                    return false;
+                }
+
+                int expectedRemoteSlave;
+                if (TryGetExpectedRemoteSlave(command, out expectedRemoteSlave))
+                {
+                    string slavePattern = string.Format(
+                        CultureInfo.InvariantCulture,
+                        @"\bSLAVE\s+{0}\b",
+                        expectedRemoteSlave);
+                    if (!Regex.IsMatch(
+                        response,
+                        slavePattern,
+                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                    {
+                        error = string.Format(
+                            CultureInfo.InvariantCulture,
+                            "REMOTE{0} response did not confirm SLAVE {0}.",
+                            expectedRemoteSlave);
+                        return false;
+                    }
+                }
+
                 return true;
+            }
 
             if (IsAcceptedExitNoOpResponse(command, response, error))
             {
@@ -163,6 +191,81 @@ namespace TestPlatform
                 return true;
             }
 
+            return false;
+        }
+
+        public static bool IsSuccessfulQueryResponse(
+            string command,
+            string response,
+            out string error)
+        {
+            if (!IsSuccessfulCommandResponse(response, out error))
+                return false;
+
+            if (!TargetBoardComm.ContainsReadyPrompt(response))
+            {
+                error = "MBD query response did not contain the Ready prompt.";
+                return false;
+            }
+
+            int expectedRegister;
+            if (!TryGetRequestedRegister(command, out expectedRegister))
+            {
+                error = string.Empty;
+                return true;
+            }
+
+            MatchCollection lines = RegisterLineRegex.Matches(response ?? string.Empty);
+            if (lines.Count == 0)
+            {
+                error = "MBD query response contains no register assignment for " + command + ".";
+                return false;
+            }
+
+            foreach (Match candidate in lines)
+            {
+                int actualRegister;
+                if (int.TryParse(
+                        candidate.Groups["register"].Value,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out actualRegister) &&
+                    actualRegister == expectedRegister)
+                {
+                    error = string.Empty;
+                    return true;
+                }
+            }
+
+            string receivedRegisters = string.Join(
+                ", ",
+                lines.Cast<Match>().Select(item => item.Groups["register"].Value));
+            error = string.Format(
+                CultureInfo.InvariantCulture,
+                "MBD query register mismatch: requested {0}, received {1}.",
+                command,
+                receivedRegisters);
+            return false;
+        }
+
+        private static bool TryGetExpectedRemoteSlave(
+            string command,
+            out int expectedRemoteSlave)
+        {
+            string normalized = (command ?? string.Empty).Trim();
+            if (string.Equals(normalized, "REMOTE1", StringComparison.OrdinalIgnoreCase))
+            {
+                expectedRemoteSlave = 1;
+                return true;
+            }
+
+            if (string.Equals(normalized, "REMOTE2", StringComparison.OrdinalIgnoreCase))
+            {
+                expectedRemoteSlave = 2;
+                return true;
+            }
+
+            expectedRemoteSlave = 0;
             return false;
         }
 
@@ -193,7 +296,7 @@ namespace TestPlatform
         private static Match GetRegisterLine(string command, string response)
         {
             string error;
-            if (!IsSuccessfulCommandResponse(response, out error))
+            if (!IsSuccessfulQueryResponse(command, response, out error))
             {
                 throw new InvalidOperationException(
                     "MBD response error for " + command + ": " + error + ". Response: " + response);

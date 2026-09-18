@@ -26,6 +26,7 @@ namespace TestPlatform
 
         public event Action<string> LogInfo;
         public event Action<string> LogError;
+        public event Action<string, int> ProgressChanged;
 
         public bool IsConnected => _serialPort != null && _serialPort.IsOpen;
         public string PortName => IsConnected ? _serialPort.PortName : null;
@@ -130,6 +131,7 @@ namespace TestPlatform
             try
             {
                 LastError = null;
+                ReportProgress("加载固件", 1);
                 if (!File.Exists(firmwarePath))
                     throw new FileNotFoundException("固件文件不存在。", firmwarePath);
 
@@ -141,6 +143,7 @@ namespace TestPlatform
                     $"HEX解析完成：{Path.GetFileName(firmwarePath)}，" +
                     $"地址=0x{image.StartAddress:X8}-0x{image.EndAddress:X8}，" +
                     $"数据={image.Data.Length} bytes");
+                ReportProgress("连接 Bootloader", 5);
                 if (!image.HasEndOfFileRecord)
                     LogInfo?.Invoke("HEX未包含EOF记录：已按有效Flash地址完成解析，不修改原文件。");
 
@@ -188,10 +191,13 @@ namespace TestPlatform
                 throw new InvalidOperationException(
                     $"芯片ID不匹配：期望STM32F101/F102/F103 Medium-density 0x410，实际0x{chipId:X3}。");
 
+            ReportProgress("擦除目标页", 12);
+
             int firstPage = checked((int)((image.StartAddress - Stm32FlashBase) / PageSize));
             int lastPage = checked((int)((image.EndAddress - Stm32FlashBase) / PageSize));
             int[] pages = Enumerable.Range(firstPage, lastPage - firstPage + 1).ToArray();
             ErasePages(commands, pages, token);
+            ReportProgress("写入固件", 20);
 
             LogInfo?.Invoke($"STM32开始写入：{image.Data.Length} bytes，块大小={BlockSize}");
             for (int offset = 0; offset < image.Data.Length; offset += BlockSize)
@@ -205,6 +211,7 @@ namespace TestPlatform
             }
 
             LogInfo?.Invoke("STM32开始逐块回读校验...");
+            ReportProgress("回读校验", 60);
             for (int offset = 0; offset < image.Data.Length; offset += BlockSize)
             {
                 token.ThrowIfCancellationRequested();
@@ -224,6 +231,7 @@ namespace TestPlatform
             }
 
             LogInfo?.Invoke("STM32固件写入及回读校验成功。");
+            ReportProgress("烧录完成", 100);
             return true;
         }
 
@@ -448,10 +456,26 @@ namespace TestPlatform
 
         private void LogProgress(string phase, int completed, int total)
         {
+            int percent = total == 0 ? 100 : completed * 100 / total;
+            int overallPercent = string.Equals(phase, "写入", StringComparison.Ordinal)
+                ? 20 + percent * 40 / 100
+                : 60 + percent * 40 / 100;
+            ReportProgress(phase == "写入" ? "写入固件" : "回读校验", overallPercent);
             if (completed == total || completed % 8192 == 0)
             {
-                int percent = total == 0 ? 100 : completed * 100 / total;
                 LogInfo?.Invoke($"STM32 {phase}进度：{completed}/{total} bytes ({percent}%)");
+            }
+        }
+
+        private void ReportProgress(string phase, int percent)
+        {
+            try
+            {
+                ProgressChanged?.Invoke(phase, Math.Max(0, Math.Min(100, percent)));
+            }
+            catch
+            {
+                // UI progress reporting must never interrupt a physical flash operation.
             }
         }
 

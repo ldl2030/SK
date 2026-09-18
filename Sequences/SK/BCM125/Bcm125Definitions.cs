@@ -44,47 +44,47 @@ namespace TestPlatform.TestSequences
         }
 
         public static BcmStringChannelConfig DischargeString1 => Create(
-            true, "SKBCM125DischargeSt1CloseRelays", "8,11,10",
+            true, "SKBCM125DischargeSt1CloseRelays", Bcm125StationMap.DischargeString1PowerRelays,
             Bcm125ResultIds.Range("N", 1, 8));
 
         public static BcmStringChannelConfig DischargeString2 => Create(
-            false, "SKBCM125DischargeSt2CloseRelays", "8,16,10",
+            false, "SKBCM125DischargeSt2CloseRelays", Bcm125StationMap.DischargeString2PowerRelays,
             Bcm125ResultIds.Range("N", 9, 8));
 
         public static BcmStringChannelConfig ChargingString1 =>
             WithWrites(Create(
-                true, "SKBCM125ChargingSt1CloseRelays", "15,11,8",
+                true, "SKBCM125ChargingSt1CloseRelays", Bcm125StationMap.ChargingString1PowerRelays,
                 Bcm125ResultIds.Range("Q", 1, 16)));
 
         public static BcmStringChannelConfig ChargingString2 =>
             WithWrites(Create(
-                false, "SKBCM125ChargingSt2CloseRelays", "16,12,8",
+                false, "SKBCM125ChargingSt2CloseRelays", Bcm125StationMap.ChargingString2PowerRelays,
                 Bcm125ResultIds.Range("Q", 17, 16)));
 
         public static BcmStringChannelConfig VerificationString1 => Create(
-            true, "SKBCM125VerificationSt1CloseRelays", "15,11,8",
+            true, "SKBCM125VerificationSt1CloseRelays", Bcm125StationMap.ChargingString1PowerRelays,
             Bcm125ResultIds.Range("R", 1, 14));
 
         public static BcmStringChannelConfig VerificationString2 => Create(
-            false, "SKBCM125VerificationSt2CloseRelays", "16,12,8",
+            false, "SKBCM125VerificationSt2CloseRelays", Bcm125StationMap.ChargingString2PowerRelays,
             Bcm125ResultIds.Range("R", 15, 14));
 
         public static BcmStringChannelConfig CcbString1 => Create(
-            true, "SKBCM125CcbSt1CloseRelays", "9,13,8",
+            true, "SKBCM125CcbSt1CloseRelays", Bcm125StationMap.CcbString1PowerRelays,
             Bcm125ResultIds.Range("S", 1, 2),
             Bcm125StationMap.String1VoltageDaqChannel);
 
         public static BcmStringChannelConfig CcbString2 => Create(
-            false, "SKBCM125CcbSt2CloseRelays", "9,14,8",
+            false, "SKBCM125CcbSt2CloseRelays", Bcm125StationMap.CcbString2PowerRelays,
             Bcm125ResultIds.Range("S", 3, 2),
             Bcm125StationMap.String2VoltageDaqChannel);
 
         public static BcmStringChannelConfig StringTest1 => Create(
-            true, "SKBCM125StringTestSt1CloseRelays", "9,13,8",
+            true, "SKBCM125StringTestSt1CloseRelays", Bcm125StationMap.CcbString1PowerRelays,
             Bcm125ResultIds.Range("T", 1, 3));
 
         public static BcmStringChannelConfig StringTest2 => Create(
-            false, "SKBCM125StringTestSt2CloseRelays", "9,14,8",
+            false, "SKBCM125StringTestSt2CloseRelays", Bcm125StationMap.CcbString2PowerRelays,
             Bcm125ResultIds.Range("T", 4, 3));
 
         private static BcmStringChannelConfig WithWrites(BcmStringChannelConfig config)

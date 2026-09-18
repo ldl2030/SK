@@ -9,7 +9,7 @@ namespace TestPlatform
     /// HengHui 8602 programmable DC supply using its SCPI serial protocol.
     /// Station-confirmed settings: 9600 baud, 8N1, LF terminator.
     /// </summary>
-    public class HengHuiPowerSupply : IDisposable
+    public class HengHuiPowerSupply : IDisposable, IProgrammablePowerSupply
     {
         private static readonly Dictionary<string, SerialPort> SharedPorts =
             new Dictionary<string, SerialPort>(StringComparer.OrdinalIgnoreCase);

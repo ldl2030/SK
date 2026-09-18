@@ -33,11 +33,12 @@ namespace Mps125StructureTests
                 ValidatePowerSafety();
                 RunEndToEnd(xml, false);
                 RunEndToEnd(xml, true);
+                RunSafetyGateFault(xml, "MPS125.CH15.P011.ACTION", "MPS125.CH15.P012.ACTION");
                 RunSafetyGateFault(xml, "MPS125.CH16.S005.ACTION", "MPS125.CH16.S006.K02");
                 RunGlobalResultFailureContinue(xml, "MPS125.CH16.S003.K01", "MPS125.CH16.S004.ACTION");
                 RunGlobalResultFailureContinue(xml, "MPS125.CH17.S014.L04", "MPS125.CH17.S015.ACTION");
 
-                Console.WriteLine("PASS MPS125: 213 rows, 70 PDF results, chapters 6-17, DAQ-only functional relays, VBUS/VBATT safety gates, USB-B power-edge handling, full simulation and fault cleanup.");
+                Console.WriteLine("PASS MPS125: 231 rows, two Chapter 15 25-137.5 V/200 ms VBUS ramps, direct nominal startup in Chapters 7/9/10, 70 PDF results, USB-B recovery, full simulation and fault cleanup.");
                 return 0;
             }
             catch (Exception ex)
@@ -60,11 +61,15 @@ namespace Mps125StructureTests
         private static void ValidateStructure(ResolvedTestPlan plan, IList steps)
         {
             List<TestPlanStepDefinition> definitions = plan.Definition.Steps.OrderBy(x => x.SequenceOrder).ToList();
-            Require(steps.Count == 213, "Expected 213 rows, got " + steps.Count + ".");
+            Require(steps.Count == 231, "Expected 231 rows, got " + steps.Count + ".");
             Require(definitions.Count == steps.Count, "Code/XML row count mismatch.");
-            Require(definitions.Select(x => x.StepId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 213, "StepIds are not unique.");
+            Require(definitions.Select(x => x.StepId).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 231, "StepIds are not unique.");
             Require(definitions.Any(x => x.StepId == "MPS125.PRECHECK.S009.ACTION"), "MPS-125 USB-B insertion row is missing.");
             Require(definitions.Count(x => x.AlwaysRun) == 6, "Expected six cleanup rows.");
+            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(7)) == 12, "Chapter 7 must use direct nominal VBUS startup.");
+            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(9)) == 10, "Chapter 9 must use direct nominal VBUS startup.");
+            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(10)) == 10, "Chapter 10 must use direct nominal VBUS startup.");
+            Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(15)) == 42, "Chapter 15 must expose both relay-separated VBUS ramps.");
             Require(definitions.Count(x => x.GroupId == Mps125GroupIds.Chapter(17)) == 42, "Chapter 17 must expose 42 detailed rows after removing nonexistent Relay_1.");
 
             var resultIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -99,14 +104,51 @@ namespace Mps125StructureTests
                 "MBD diagnostic-mode-off response must fail a write command.");
             ValidateLimit(plan, "J08", 200000, 205000, "Count");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.2.2.2", "Firmware expectation mismatch.");
+            ValidateExpectedValue(plan, "MPS125.CH15.P001.ACTION", "0,0,300");
+            ValidateExpectedValue(plan, "MPS125.CH15.P003.ACTION", "0,0,300");
+            ValidateExpectedValue(plan, "MPS125.CH07.S001.ACTION", "137.5,2,300");
+            ValidateExpectedValue(plan, "MPS125.CH07.S003.ACTION", "137.5,2,300");
+            ValidateExpectedValue(plan, "MPS125.CH09.S001.ACTION", "137.5,2,300");
+            ValidateExpectedValue(plan, "MPS125.CH09.S002.ACTION", "137.5,2,300");
+            ValidateExpectedValue(plan, "MPS125.CH10.S002.ACTION", "137.5,2,300");
+            ValidateExpectedValue(plan, "MPS125.CH10.S003.ACTION", "137.5,2,300");
+            ValidateRampRows(plan, new[]
+            {
+                "MPS125.CH15.P002.ACTION", "MPS125.CH15.P009.ACTION", "MPS125.CH15.P010.ACTION",
+                "MPS125.CH15.P011.ACTION", "MPS125.CH15.P012.ACTION", "MPS125.CH15.P013.ACTION"
+            });
+            ValidateRampRows(plan, new[]
+            {
+                "MPS125.CH15.P004.ACTION", "MPS125.CH15.P014.ACTION", "MPS125.CH15.P015.ACTION",
+                "MPS125.CH15.P016.ACTION", "MPS125.CH15.P017.ACTION", "MPS125.CH15.P018.ACTION"
+            });
         }
 
         private static void ValidateCatalog()
         {
             IReadOnlyList<Mps125ActionDefinition> catalog = Mps125ActionCatalog.Create();
             Require(catalog.Any(x => x.Kind == Mps125ActionKind.SetVbatt), "VBATT source B actions missing.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbusRampStep) == 12,
+                "MPS-125 Chapter 15 must expose two independent six-level VBUS ramps.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbusRampStep && x.State) == 2,
+                "Each Chapter 15 VBUS ramp must have exactly one 25 V output-enable row.");
+            Require(catalog.Where(x => x.Kind == Mps125ActionKind.SetVbusRampStep).All(x => x.Chapter == 15),
+                "MPS-125 VBUS ramps must be limited to Chapter 15.");
+            Require(catalog.Count(x => x.Kind == Mps125ActionKind.WaitForMbdReadyAfterPowerCycle) == 2,
+                "Chapter 15 must expose MBD recovery after both VBUS ramps.");
             Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbusAndWaitStable) == 2,
-                "B01 and D01 must wait for measured VBUS stability.");
+                "MPS-125 Chapters 7 and 9 must directly start nominal VBUS and wait for measured stability.");
+            Require(catalog.Any(x => x.Chapter == 10 && x.Kind == Mps125ActionKind.SetVbus && x.State &&
+                string.Equals(x.Argument, "137.5,2,300", StringComparison.Ordinal)),
+                "MPS-125 Chapter 10 direct 137.5 V output-enable action is missing.");
+            Require(!catalog.Any(x => x.Chapter == 15 && x.Kind == Mps125ActionKind.SafeVbusRelay),
+                "Chapter 15 must not combine VBUS and Relay_5 into one row.");
+            Require(catalog.Count(x => x.Chapter == 15 && x.Kind == Mps125ActionKind.DaqRelays && x.Argument == "5") == 2,
+                "Chapter 15 must have separate Relay_5 close/open rows.");
+            Require(catalog.Single(x => x.StepId == "MPS125.CH15.P007.ACTION").Argument == "EXIT",
+                "Chapter 15 must re-enter the MCU terminal after restoring VBUS.");
+            Require(catalog.Single(x => x.StepId == "MPS125.CH15.P008.ACTION").Argument == "DIAG ON",
+                "Chapter 15 must restore diagnostic mode after restoring VBUS.");
             Require(catalog.Count(x => x.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline) == 1,
                 "K01 must prepare an isolated/discharged VBATT baseline before sampling.");
             Require(catalog.Count(x => x.Kind == Mps125ActionKind.SetVbattAndWaitStable) == 1,
@@ -256,10 +298,58 @@ namespace Mps125StructureTests
                 "Open-upper limit mismatch " + resultId + ".");
         }
 
+        private static void ValidateExpectedValue(
+            ResolvedTestPlan plan,
+            string stepId,
+            string expectedValue)
+        {
+            TestPlanStepDefinition item = plan.Definition.Steps.Single(x =>
+                string.Equals(x.StepId, stepId, StringComparison.OrdinalIgnoreCase));
+            Require(item.ExpectedValue == expectedValue,
+                "ExpectedValue mismatch " + stepId + ".");
+        }
+
+        private static void ValidateRampRows(ResolvedTestPlan plan, string[] stepIds)
+        {
+            double[] voltages = { 25, 50, 75, 100, 125, 137.5 };
+            Require(stepIds.Length == voltages.Length,
+                "Ramp validation requires six step IDs.");
+            for (int index = 0; index < stepIds.Length; index++)
+            {
+                TestPlanStepDefinition item = plan.Definition.Steps.Single(x =>
+                    string.Equals(x.StepId, stepIds[index], StringComparison.OrdinalIgnoreCase));
+                string expected = voltages[index].ToString(
+                    System.Globalization.CultureInfo.InvariantCulture) + ",2,300";
+                Require(item.ExpectedValue == expected,
+                    "Ramp setpoint mismatch " + stepIds[index] + ".");
+                Require(item.DelayMs == 200,
+                    "Ramp delay must be 200 ms for " + stepIds[index] + ".");
+            }
+        }
+
+        private static bool RunMps125VbusRamp(SK441Device device)
+        {
+            float[] voltages = { 25, 50, 75, 100, 125, 137.5f };
+            for (int index = 0; index < voltages.Length; index++)
+            {
+                if (!device.SetMps125VbusRampStepAsync(
+                    voltages[index],
+                    2,
+                    300,
+                    index == 0).GetAwaiter().GetResult())
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static void ValidatePowerSafety()
         {
             var device = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-125" };
-            Require(device.SetVbusGeneratorAsync(137.5f, 2, 300, true).GetAwaiter().GetResult(), "MPS VBUS must enable directly without a high-power relay.");
+            Require(device.SetVbusGeneratorAsync(137.5f, 2, 300, true).GetAwaiter().GetResult(),
+                "MPS-125 direct 137.5 V start failed.");
             Require(device.SetVbattGeneratorAsync(125, 0.1f, 150, true).GetAwaiter().GetResult(), "MPS VBATT failed to close Y1/Y9 before output enable.");
             string[] vbattOnTrace = device.GetPowerSafetyTrace();
             int y1Closed = Array.IndexOf(vbattOnTrace, "RELAY 1 CLOSED");
@@ -277,7 +367,8 @@ namespace Mps125StructureTests
             Require(!device.StopFixturePressDownAsync("MPS-125").GetAwaiter().GetResult(), "Fixture released while VBUS was energized.");
             Require(!device.ControlMpsRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 closed while VBUS was energized.");
             Require(device.ControlMpsRelayAsync(3, Mps125StationMap.WithdrawalDaqRelay, true).GetAwaiter().GetResult(), "Relay_3/DAQ301 live functional switching was incorrectly blocked.");
-            Require(device.SafeSwitchMpsVbusRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true, 137.5f, 2, 300, true).GetAwaiter().GetResult(), "Relay_5/DAQ303 safe switching failed.");
+            Require(device.SafeSwitchMpsVbusRelayAsync(5, Mps125StationMap.SensPrecDaqRelay, true, 137.5f, 2, 300, false).GetAwaiter().GetResult(), "Relay_5/DAQ303 safe switching failed.");
+            Require(RunMps125VbusRamp(device), "MPS-125 VBUS ramp after Relay_5 switching failed.");
             Require(device.SetVbusGeneratorAsync(0, 0, 300, false).GetAwaiter().GetResult(), "Cannot turn off VBUS.");
             Require(device.SafeConnectMpsVbattRelayAsync(6, Mps125StationMap.IsoBattDaqRelay, 150).GetAwaiter().GetResult(), "Relay_6/DAQ304 safe connection failed.");
             Require(device.SafeDisconnectMpsVbattRelayAsync(6, Mps125StationMap.IsoBattDaqRelay, 150).GetAwaiter().GetResult(), "Safe MPS VBATT disconnection failed.");

@@ -88,10 +88,14 @@ namespace Bcm125StructureTests
                 ValidateDependencies(plan.Definition);
                 ValidateInstrumentMapping();
                 ValidateMbdResponseCleaning();
+                ValidateBcm125TerminalStateMachine();
+                ValidateAllBcm125MockQueries();
+                ValidateExplicitRemoteTransitions(steps);
                 ValidateXmlParameterAuthority(steps);
                 ValidateResetFloatingPointAndSt2Wait(steps);
                 ValidatePowerResultFailureDoesNotBypassPolicy(steps);
                 ValidatePowerSafety();
+                ValidateStringGeneratorPowerPathSteps(steps);
                 ValidateAllActionSafety(steps, executableDefinitions);
 
                 Console.WriteLine(
@@ -331,11 +335,64 @@ namespace Bcm125StructureTests
                 "RLP8 must use DAQ relay 306.");
             Require(Bcm125StationMap.ShortProtectionSelectorDaqRelay == "@304",
                 "Short-protection selector must use DAQ relay 304.");
+            Require(Bcm125StationMap.MidpointDaqRelay == "@301",
+                "RL6 midpoint path must use DAQ relay 301.");
             Require(Bcm125StationMap.StringSimulatorDaqRelays == "@302,@303",
                 "String simulator relays must use DAQ relays 302/303.");
+            Require(Bcm125StationMap.StringGeneratorPowerRelays == "1,4,6",
+                "BCM125 String supply must use station-3 power relays Y1/Y4/Y6.");
+            Require(Bcm125StationMap.ElectronicLoadPowerRelays == "2,5",
+                "BCM125 electronic-load supply must use station-3 power relays Y2/Y5.");
+            Require(Bcm125StationMap.DutPowerRelay == 7 &&
+                    Bcm125StationMap.Rl2BPowerRelay == 8 &&
+                    Bcm125StationMap.Rl1aBPowerRelay == 9 &&
+                    Bcm125StationMap.Rl2APowerRelay == 10 &&
+                    Bcm125StationMap.Rl1bAPowerRelay == 11 &&
+                    Bcm125StationMap.Rl9APowerRelay == 12 &&
+                    Bcm125StationMap.Rl1bBPowerRelay == 13 &&
+                    Bcm125StationMap.Rl9BPowerRelay == 14 &&
+                    Bcm125StationMap.Rl1aAPowerRelay == 15 &&
+                    Bcm125StationMap.Rl1aCPowerRelay == 16,
+                "BCM125 named high-power relay mapping changed.");
+            Require(Bcm125StationMap.DischargeString1PowerRelays == "1,4,6,9,13,10",
+                "BCM125 ST1 discharge path must use RL1a_B/RL1b_B/RL2A.");
+            Require(Bcm125StationMap.DischargeString2PowerRelays == "1,4,6,9,14,10",
+                "BCM125 ST2 discharge path must use RL1a_B/RL9_B/RL2A.");
+            Require(Bcm125ChannelProfiles.DischargeString1.RelayDefaults ==
+                    Bcm125StationMap.DischargeString1PowerRelays &&
+                    Bcm125ChannelProfiles.DischargeString2.RelayDefaults ==
+                    Bcm125StationMap.DischargeString2PowerRelays,
+                "BCM125 discharge profiles are not bound to the station map.");
             Require(Bcm125StationMap.PlacementRelayA == "@318" &&
                     Bcm125StationMap.PlacementRelayB == "@319",
                 "Placement detection must use DAQ relays 318/319.");
+
+            BcmStringChannelConfig[] string1Profiles =
+            {
+                Bcm125ChannelProfiles.DischargeString1,
+                Bcm125ChannelProfiles.ChargingString1,
+                Bcm125ChannelProfiles.VerificationString1,
+                Bcm125ChannelProfiles.CcbString1,
+                Bcm125ChannelProfiles.StringTest1
+            };
+            BcmStringChannelConfig[] string2Profiles =
+            {
+                Bcm125ChannelProfiles.DischargeString2,
+                Bcm125ChannelProfiles.ChargingString2,
+                Bcm125ChannelProfiles.VerificationString2,
+                Bcm125ChannelProfiles.CcbString2,
+                Bcm125ChannelProfiles.StringTest2
+            };
+            Require(string1Profiles.All(profile =>
+                    string.Equals(profile.Suffix, "ST1", StringComparison.Ordinal) &&
+                    string.Equals(profile.RemoteCommand, "REMOTE1", StringComparison.Ordinal) &&
+                    string.Equals(profile.MbdRelayCommandPrefix, "W94=", StringComparison.Ordinal)),
+                "A BCM125 String-1 profile is not bound to REMOTE1/W94.");
+            Require(string2Profiles.All(profile =>
+                    string.Equals(profile.Suffix, "ST2", StringComparison.Ordinal) &&
+                    string.Equals(profile.RemoteCommand, "REMOTE2", StringComparison.Ordinal) &&
+                    string.Equals(profile.MbdRelayCommandPrefix, "W91=", StringComparison.Ordinal)),
+                "A BCM125 String-2 profile is not bound to REMOTE2/W91.");
 
             string[] resultIds = Bcm125ChannelProfiles.ChargingString1.ResultIds
                 .Concat(Bcm125ChannelProfiles.ChargingString2.ResultIds)
@@ -374,6 +431,235 @@ namespace Bcm125StructureTests
                     out responseError) &&
                 string.Equals(responseError, "READ ONLY ERROR", StringComparison.Ordinal),
                 "MBD READ ONLY ERROR was incorrectly accepted as a successful write.");
+
+            Require(
+                MbdResponseParser.IsSuccessfulCommandResponse(
+                    "REMOTE1",
+                    "REMOTE SLAVE 1.\r\nReady.\r\n",
+                    out responseError),
+                "REMOTE1 did not accept the confirmed SLAVE 1 terminal response.");
+            Require(
+                MbdResponseParser.IsSuccessfulCommandResponse(
+                    "REMOTE2",
+                    "SLAVE   2\r\nReady.\r\n",
+                    out responseError),
+                "REMOTE2 did not accept the whitespace-tolerant SLAVE 2 response.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "REMOTE2",
+                    "000 = stcu_UP125_V8 | Ready.\r\n",
+                    out responseError) &&
+                responseError.IndexOf("SLAVE 2", StringComparison.OrdinalIgnoreCase) >= 0,
+                "REMOTE2 incorrectly accepted a BCM register response without SLAVE 2 confirmation.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "REMOTE2",
+                    "REMOTE SLAVE 1.\r\nReady.\r\n",
+                    out responseError),
+                "REMOTE2 incorrectly accepted the SLAVE 1 terminal response.");
+
+            Require(
+                !TargetBoardComm.HasTerminalPrompt(
+                    "Ready.\r\nREMOTE SLAVE 2.\r\ntrailing data\r\n"),
+                "Ready text before trailing data was incorrectly accepted as a terminal prompt.");
+            Require(
+                !MbdResponseParser.IsSuccessfulCommandResponse(
+                    "W69=1",
+                    "OK\r\n",
+                    out responseError),
+                "A write response without the terminal Ready prompt was incorrectly accepted.");
+            Require(
+                MbdResponseParser.IsSuccessfulCommandResponse(
+                    "W69=1",
+                    "OK\r\nReady.\r\n",
+                    out responseError),
+                "A complete write response ending in Ready was rejected.");
+            Require(
+                !MbdResponseParser.IsSuccessfulQueryResponse(
+                    "R45",
+                    "000 = stcu_UP125_V8\r\nReady.\r\n",
+                    out responseError) &&
+                responseError.IndexOf("mismatch", StringComparison.OrdinalIgnoreCase) >= 0,
+                "A wrong-terminal R45 response was not rejected by register identity.");
+            Require(
+                !MbdResponseParser.IsSuccessfulQueryResponse(
+                    "R45",
+                    "045 = 852\r\n",
+                    out responseError),
+                "An R45 response without the terminal Ready prompt was incorrectly accepted.");
+            Require(
+                MbdResponseParser.IsSuccessfulQueryResponse(
+                    "R45",
+                    "045 = 852\r\nReady.\r\n",
+                    out responseError),
+                "A complete R45 response was rejected.");
+        }
+
+        private static void ValidateBcm125TerminalStateMachine()
+        {
+            var sequence = new SKBCM125Sequence(null, null);
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "BCM-125"
+            };
+            var log = new List<string>();
+            device.LogInfo = message => log.Add(message ?? string.Empty);
+            MethodInfo send = FindMethod(
+                sequence.GetType(),
+                "SendBcm125MbdCommandAsync");
+            MethodInfo query = FindMethod(
+                sequence.GetType(),
+                "QueryBcm125MbdCommandAsync");
+
+            Require(
+                InvokePrivateBoolTask(send, sequence, device, "REMOTE2", 0),
+                "REMOTE2 failed from an unknown BCM125 terminal state.");
+            RequireCommandOrder(log, "EXIT", "REMOTE2",
+                "Unknown terminal state did not synchronize through EXIT before REMOTE2.");
+
+            log.Clear();
+            Require(
+                InvokePrivateBoolTask(send, sequence, device, "W94=1", 0),
+                "MBD-root W94 failed while returning from REMOTE2.");
+            RequireCommandOrder(log, "EXIT", "W94=1",
+                "MBD-root W94 was not protected by EXIT from REMOTE2.");
+
+            log.Clear();
+            Require(
+                !InvokePrivateBoolTask(send, sequence, device, "W69=1", 0),
+                "SLAVE-only W69 was accepted at the MBD root terminal.");
+            Require(!ContainsSimulatedCommand(log, "W69=1"),
+                "Rejected SLAVE-only W69 was still transmitted at the MBD root terminal.");
+
+            Require(
+                InvokePrivateBoolTask(send, sequence, device, "REMOTE1", 0),
+                "REMOTE1 failed from the synchronized MBD root terminal.");
+            Require(
+                InvokePrivateBoolTask(send, sequence, device, "W69=1", 0),
+                "SLAVE-only W69 failed after REMOTE1 confirmation.");
+
+            log.Clear();
+            Require(
+                InvokePrivateBoolTask(send, sequence, device, "REMOTE2", 0),
+                "REMOTE1 to REMOTE2 transition failed.");
+            RequireCommandOrder(log, "EXIT", "REMOTE2",
+                "REMOTE1 to REMOTE2 transition did not return through MBD root.");
+
+            log.Clear();
+            string rootResponse = InvokePrivateStringTask(
+                query,
+                sequence,
+                device,
+                "R81",
+                0);
+            Require(
+                MbdResponseParser.ParseScalar("R81", rootResponse) == 1,
+                "MBD-root R81 query did not return a valid response.");
+            RequireCommandOrder(log, "EXIT", "R81",
+                "MBD-root R81 query was not protected by EXIT from REMOTE2.");
+
+            bool rejectedRemoteQuery = false;
+            try
+            {
+                InvokePrivateStringTask(query, sequence, device, "R45", 0);
+            }
+            catch (InvalidOperationException)
+            {
+                rejectedRemoteQuery = true;
+            }
+            Require(rejectedRemoteQuery,
+                "SLAVE-only R45 query was accepted without REMOTE1/2 confirmation.");
+        }
+
+        private static void ValidateAllBcm125MockQueries()
+        {
+            var device = new SK441Device
+            {
+                SkipComInit = true,
+                SimulationBoardType = "BCM-125"
+            };
+            string[] commands =
+            {
+                "R0", "R10", "R14", "R15", "R18", "R19", "R20", "R21",
+                "R40", "R41", "R42", "R43", "R44", "R45", "R50", "R51",
+                "R52", "R53", "R54", "R55", "R56", "R57", "R59", "R60",
+                "R61", "R68", "R69", "R81", "R92", "R93", "ACT->FLASH"
+            };
+
+            foreach (string command in commands)
+            {
+                string response = device.QueryMbdCommandAsync(command, 0)
+                    .GetAwaiter()
+                    .GetResult();
+                string error;
+                Require(
+                    MbdResponseParser.IsSuccessfulQueryResponse(
+                        command,
+                        response,
+                        out error),
+                    "BCM125 mock query failed protocol validation for " + command +
+                    ": " + error);
+            }
+        }
+
+        private static bool InvokePrivateBoolTask(
+            MethodInfo method,
+            object instance,
+            SK441Device device,
+            string command,
+            int waitAfterMs)
+        {
+            var task = (Task<bool>)method.Invoke(
+                instance,
+                new object[] { device, command, waitAfterMs });
+            return task.GetAwaiter().GetResult();
+        }
+
+        private static string InvokePrivateStringTask(
+            MethodInfo method,
+            object instance,
+            SK441Device device,
+            string command,
+            int waitAfterMs)
+        {
+            var task = (Task<string>)method.Invoke(
+                instance,
+                new object[] { device, command, waitAfterMs });
+            return task.GetAwaiter().GetResult();
+        }
+
+        private static void RequireCommandOrder(
+            IList<string> log,
+            string first,
+            string second,
+            string message)
+        {
+            int firstIndex = Enumerable.Range(0, log.Count)
+                .FirstOrDefault(index => ContainsSimulatedCommand(log[index], first));
+            int secondIndex = Enumerable.Range(0, log.Count)
+                .FirstOrDefault(index => ContainsSimulatedCommand(log[index], second));
+            bool firstFound = log.Any(item => ContainsSimulatedCommand(item, first));
+            bool secondFound = log.Any(item => ContainsSimulatedCommand(item, second));
+            Require(firstFound && secondFound && secondIndex > firstIndex, message);
+        }
+
+        private static bool ContainsSimulatedCommand(string logLine, string command)
+        {
+            string value = logLine ?? string.Empty;
+            return value.IndexOf(
+                       "USB-B/MBD 发送命令: " + command,
+                       StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   value.IndexOf(
+                       "USB-B/MBD 查询: " + command,
+                       StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool ContainsSimulatedCommand(
+            IEnumerable<string> log,
+            string command)
+        {
+            return log.Any(item => ContainsSimulatedCommand(item, command));
         }
 
         private static void ValidateResetFloatingPointAndSt2Wait(IList steps)
@@ -395,6 +681,46 @@ namespace Bcm125StructureTests
                 "PlanDefinition");
             Require(waitDefinition.DelayMs == 3000,
                 "BCM125 ST2 pre-reset wait is not controlled by XML DelayMs=3000.");
+        }
+
+        private static void ValidateExplicitRemoteTransitions(IList steps)
+        {
+            var transitions = new[]
+            {
+                Tuple.Create("BCM125.CH18.S052.ACTION", "REMOTE2"),
+                Tuple.Create("BCM125.CH20.S013.ACTION", "REMOTE1"),
+                Tuple.Create("BCM125.CH20.S024.ACTION", "REMOTE1"),
+                Tuple.Create("BCM125.CH20.S044.ACTION", "REMOTE2"),
+                Tuple.Create("BCM125.CH20.S055.ACTION", "REMOTE2"),
+                Tuple.Create("BCM125.CH21.S013.ACTION", "REMOTE1"),
+                Tuple.Create("BCM125.CH21.S027.ACTION", "REMOTE2"),
+                Tuple.Create("BCM125.CH22.S015.ACTION", "REMOTE1"),
+                Tuple.Create("BCM125.CH22.S041.ACTION", "REMOTE2"),
+                Tuple.Create("BCM125.CH27.S009.ACTION", "REMOTE1"),
+                Tuple.Create("BCM125.CH27.S023.ACTION", "REMOTE2")
+            };
+
+            foreach (Tuple<string, string> transition in transitions)
+            {
+                var log = new List<string>();
+                _simulationDevice.LogInfo = message => log.Add(message ?? string.Empty);
+
+                object step = FindStep(steps, transition.Item1);
+                object result = InvokeStep(step.GetType(), step);
+                Require(Read<bool>(result.GetType(), result, "IsPass"),
+                    transition.Item1 + " failed in simulation.");
+
+                int exitIndex = log.FindIndex(message =>
+                    message.IndexOf("USB-B/MBD", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    message.EndsWith(": EXIT", StringComparison.OrdinalIgnoreCase));
+                int remoteIndex = log.FindIndex(message =>
+                    message.IndexOf("USB-B/MBD", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    message.EndsWith(": " + transition.Item2, StringComparison.OrdinalIgnoreCase));
+                Require(exitIndex >= 0 && remoteIndex > exitIndex,
+                    transition.Item1 + " did not execute EXIT before " + transition.Item2 + ".");
+            }
+
+            _simulationDevice.LogInfo = null;
         }
 
         private static void ValidateXmlParameterAuthority(IList steps)
@@ -536,6 +862,24 @@ namespace Bcm125StructureTests
             Require(device.SetVbusGeneratorAsync(0, 0, 150, false).GetAwaiter().GetResult(), "Cannot turn VBUS off after safe relay opening.");
             Require(device.GetPowerSafetyTrace().Any(x => x.StartsWith("BLOCK", StringComparison.Ordinal)), "No unsafe power action was recorded.");
 
+            var stringSupply = new SK441Device { SkipComInit = true, SimulationBoardType = "BCM-125" };
+            Require(!stringSupply.SetStringGeneratorAsync(5, 0.3f, 10, true).GetAwaiter().GetResult(),
+                "BCM125 String supply energized before Y1/Y4/Y6 were closed.");
+            Require(stringSupply.SetBcm125PowerPathRelaysAsync(
+                    Bcm125StationMap.GetStringGeneratorPowerRelayIds(),
+                    true,
+                    "String supply safety path").GetAwaiter().GetResult(),
+                "Cannot close BCM125 String supply relays Y1/Y4/Y6.");
+            Require(stringSupply.SetStringGeneratorAsync(5, 0.3f, 10, true).GetAwaiter().GetResult(),
+                "BCM125 String supply did not energize after Y1/Y4/Y6 were closed.");
+            Require(stringSupply.SetStringGeneratorAsync(0, 0, 10, false).GetAwaiter().GetResult(),
+                "Cannot turn BCM125 String supply off.");
+            Require(stringSupply.SetBcm125PowerPathRelaysAsync(
+                    Bcm125StationMap.GetStringGeneratorPowerRelayIds(),
+                    false,
+                    "String supply safety path").GetAwaiter().GetResult(),
+                "Cannot open BCM125 String supply relays Y1/Y4/Y6.");
+
             var emergency = new SK441Device { SkipComInit = true, SimulationBoardType = "BCM-125" };
             Require(emergency.EnableFixturePressDownAsync("BCM-125").GetAwaiter().GetResult(), "BCM-125 fixture Y1/Y2 did not close.");
             Require(emergency.EmergencyStopOutputsAsync("BCM-125", "test emergency").GetAwaiter().GetResult(), "BCM-125 emergency output shutdown failed.");
@@ -552,6 +896,60 @@ namespace Bcm125StructureTests
             Require(
                 inputFailure.IsEmergencyStopTriggered(failSafeRawState),
                 "Legacy digital-input API did not fail safe as emergency pressed.");
+        }
+
+        private static void ValidateStringGeneratorPowerPathSteps(IList steps)
+        {
+            Require(
+                _simulationDevice.TurnOffAllInstrumentsAsync().GetAwaiter().GetResult(),
+                "Cannot reset BCM125 outputs before String path validation.");
+            int traceStart = _simulationDevice.GetPowerSafetyTrace().Length;
+
+            object closeStep = FindStep(steps, "BCM125.CH21.S008.ACTION");
+            object closeResult = InvokeStep(closeStep.GetType(), closeStep);
+            Require(Read<bool>(closeResult.GetType(), closeResult, "IsPass"),
+                "BCM125 O01 setup failed to close its String path.");
+
+            string[] closeTrace = _simulationDevice.GetPowerSafetyTrace().Skip(traceStart).ToArray();
+            Require(closeTrace.Contains("RELAY 1 CLOSED") &&
+                    closeTrace.Contains("RELAY 4 CLOSED") &&
+                    closeTrace.Contains("RELAY 6 CLOSED") &&
+                    closeTrace.Contains("RELAY 9 CLOSED") &&
+                    closeTrace.Contains("RELAY 13 CLOSED") &&
+                    closeTrace.Contains("RELAY 10 CLOSED"),
+                "BCM125 O01 setup did not close Y1/Y4/Y6 + RL1a_B/RL1b_B/RL2A.");
+            Require(!closeTrace.Contains("RELAY 8 CLOSED") &&
+                    !closeTrace.Contains("RELAY 11 CLOSED") &&
+                    !closeTrace.Contains("RELAY 16 CLOSED"),
+                "BCM125 O01 setup closed a relay from the old incorrect mapping.");
+
+            object openStep = FindStep(steps, "BCM125.CH21.S020.ACTION");
+            object openResult = InvokeStep(openStep.GetType(), openStep);
+            Require(Read<bool>(openResult.GetType(), openResult, "IsPass"),
+                "BCM125 O01 teardown failed to open its String path.");
+
+            traceStart = _simulationDevice.GetPowerSafetyTrace().Length;
+            object closeSt2Step = FindStep(steps, "BCM125.CH21.S022.ACTION");
+            object closeSt2Result = InvokeStep(closeSt2Step.GetType(), closeSt2Step);
+            Require(Read<bool>(closeSt2Result.GetType(), closeSt2Result, "IsPass"),
+                "BCM125 O02 setup failed to close its String path.");
+
+            string[] closeSt2Trace = _simulationDevice.GetPowerSafetyTrace().Skip(traceStart).ToArray();
+            Require(closeSt2Trace.Contains("RELAY 1 CLOSED") &&
+                    closeSt2Trace.Contains("RELAY 4 CLOSED") &&
+                    closeSt2Trace.Contains("RELAY 6 CLOSED") &&
+                    closeSt2Trace.Contains("RELAY 9 CLOSED") &&
+                    closeSt2Trace.Contains("RELAY 14 CLOSED") &&
+                    closeSt2Trace.Contains("RELAY 10 CLOSED"),
+                "BCM125 O02 setup did not close Y1/Y4/Y6 + RL1a_B/RL9_B/RL2A.");
+            Require(!closeSt2Trace.Contains("RELAY 8 CLOSED") &&
+                    !closeSt2Trace.Contains("RELAY 16 CLOSED"),
+                "BCM125 O02 setup closed a relay from the old incorrect mapping.");
+
+            object openSt2Step = FindStep(steps, "BCM125.CH21.S034.ACTION");
+            object openSt2Result = InvokeStep(openSt2Step.GetType(), openSt2Step);
+            Require(Read<bool>(openSt2Result.GetType(), openSt2Result, "IsPass"),
+                "BCM125 O02 teardown failed to open its String path.");
         }
 
         private static void ValidateAllActionSafety(IList steps, IEnumerable<TestPlanStepDefinition> definitions)

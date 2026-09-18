@@ -22,6 +22,11 @@ namespace TestPlatform.TestSequences
             new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         private MbdTerminalState _mbdTerminalState;
         private bool _mbdReadyObserved;
+        private bool _firmwareReadinessEvaluated;
+        private bool _programFirmwareThisRun;
+        private bool _firmwareProgrammedThisRun;
+        private string _precheckedFirmwareVersion;
+        private bool _firmwarePrecheckCacheValid;
 
         private enum MbdTerminalState
         {
@@ -75,21 +80,26 @@ namespace TestPlatform.TestSequences
             _prefetchedHardwareValues.Clear();
             _mbdTerminalState = MbdTerminalState.Unknown;
             _mbdReadyObserved = false;
+            _firmwareReadinessEvaluated = false;
+            _programFirmwareThisRun = false;
+            _firmwareProgrammedThisRun = false;
+            _precheckedFirmwareVersion = null;
+            _firmwarePrecheckCacheValid = false;
             foreach (Bcm250ActionDefinition resultAction in catalog.Where(x => x.IsResult))
                 _actionsByResultId[resultAction.ResultId] = resultAction;
-            foreach (IGrouping<int, Bcm250ActionDefinition> chapter in catalog
+            foreach (IGrouping<string, Bcm250ActionDefinition> chapterGroup in catalog
                 .Where(x => !x.AlwaysRun)
-                .GroupBy(x => x.Chapter)
-                .OrderBy(x => x.Key))
+                .GroupBy(x => Bcm250GroupIds.PlanGroupForChapter(x.Chapter))
+                .OrderBy(x => x.Min(action => action.Chapter)))
             {
-                string groupId = Bcm250GroupIds.Chapter(chapter.Key);
+                string groupId = chapterGroup.Key;
                 AddPlanChapter(
                     steps,
                     context,
                     groupId,
                     () =>
                     {
-                        foreach (Bcm250ActionDefinition action in chapter)
+                        foreach (Bcm250ActionDefinition action in chapterGroup)
                             AddCatalogStep(steps, context, deviceManager, action, groupId);
                     });
             }
@@ -145,6 +155,12 @@ namespace TestPlatform.TestSequences
                 return Result(false, "Injected fault", action);
             }
 
+            if (action.OnlyWhenFirmwareProgrammingRequired && !_programFirmwareThisRun)
+                return Result(true, "SKIPPED (firmware verified)", action);
+
+            if (action.OnlyAfterFirmwareProgramming && !_firmwareProgrammedThisRun)
+                return Result(true, "SKIPPED (no programming power cycle)", action);
+
             if (action.Kind == Bcm250ActionKind.Delay)
             {
                 int delayMs = GetPlanDelayMs(
@@ -167,30 +183,6 @@ namespace TestPlatform.TestSequences
 
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
-
-            if (action.Kind == Bcm250ActionKind.MbdCommand &&
-                string.Equals(action.StepId, "BCM250.CH12.S007.ACTION", StringComparison.OrdinalIgnoreCase))
-            {
-                double runningTime = device.SkipComInit
-                    ? 5.0
-                    : MbdResponseParser.ParseScalar(
-                        action.Argument,
-                        await device.QueryMbdCommandAsync(action.Argument, 0));
-                double integerPart = Math.Floor(runningTime);
-                OnLogInfo(string.Format(
-                    CultureInfo.InvariantCulture,
-                    "平线复位前R10 running_time={0:0.###} s（整数部分={1:0}）",
-                    runningTime,
-                    integerPart));
-                return new StepResult
-                {
-                    IsPass = true,
-                    Value = runningTime.ToString("0.###", CultureInfo.InvariantCulture),
-                    NumericValue = integerPart,
-                    StoreKey = Bcm250ResultKeys.ResetFlatRunningTimeBefore,
-                    Unit = "s"
-                };
-            }
 
             if (action.Kind == Bcm250ActionKind.DaqShuntResistance)
             {
@@ -242,6 +234,7 @@ namespace TestPlatform.TestSequences
                     passed = await device.CloseTargetBoardCommunicationAsync() &&
                              await device.DisableAnsThenOpenRl4Async(ParseInt(action.Argument));
                     ResetMbdState();
+                    InvalidateFirmwarePrecheckCache();
                     break;
                 case Bcm250ActionKind.PowerRelays:
                     passed = await SetPowerRelaysAsync(
@@ -256,12 +249,41 @@ namespace TestPlatform.TestSequences
                         action.Name);
                     break;
                 case Bcm250ActionKind.CheckMbdCommunication:
-                    passed = _mbdReadyObserved || await device.CheckMbdCommunicationAsync();
-                    _mbdReadyObserved = false;
-                    if (passed)
-                        _mbdTerminalState = MbdTerminalState.Unknown;
-                    else
-                        ResetMbdState();
+                    {
+                        bool reusedExistingConnection =
+                            (_mbdTerminalState == MbdTerminalState.Mbd ||
+                             _mbdTerminalState == MbdTerminalState.Bcm) &&
+                            device.IsTargetBoardCommunicationConnected;
+                        if (reusedExistingConnection)
+                        {
+                            OnLogInfo(
+                                "BCM250复用现有USB-B连接和终端上下文，跳过重复0D探测。");
+                            passed = true;
+                        }
+                        else
+                        {
+                            passed = _mbdReadyObserved || await device.CheckMbdCommunicationAsync();
+                        }
+                        _mbdReadyObserved = false;
+                        if (!passed)
+                            ResetMbdState();
+                        else if (!reusedExistingConnection)
+                            _mbdTerminalState = MbdTerminalState.Unknown;
+                        break;
+                    }
+                case Bcm250ActionKind.FirmwareReadinessCheck:
+                    passed = await EvaluateFirmwareReadinessAsync(device, token);
+                    break;
+                case Bcm250ActionKind.WaitForBcmRunningTime:
+                    return await WaitForBcmRunningTimeAsync(device, action, step, token);
+                case Bcm250ActionKind.WaitForBcmApplication:
+                    return await WaitForBcmApplicationAsync(device, action, step, token);
+                case Bcm250ActionKind.BcmSerialBatchBoundary:
+                    passed = await CompleteBcmSerialBatchChapterAsync(
+                        context,
+                        device,
+                        action,
+                        token);
                     break;
                 case Bcm250ActionKind.DocumentedBoundary:
                     passed = true;
@@ -373,12 +395,25 @@ namespace TestPlatform.TestSequences
                 string expectedFirmware = string.IsNullOrWhiteSpace(plan.ExpectedValue)
                     ? Bcm250Commands.FirmwareVersion
                     : plan.ExpectedValue;
-                string response = device.SkipComInit
-                    ? expectedFirmware
-                    : await device.QueryMbdCommandAsync(action.Argument, 0);
-                string actualFirmware = device.SkipComInit
-                    ? response
-                    : MbdResponseParser.ParsePayloadText(action.Argument, response);
+                string actualFirmware;
+                if (_firmwarePrecheckCacheValid &&
+                    !_firmwareProgrammedThisRun &&
+                    !string.IsNullOrWhiteSpace(_precheckedFirmwareVersion))
+                {
+                    actualFirmware = _precheckedFirmwareVersion;
+                    OnLogInfo("E01复用本次供电周期内的R0预检查结果。");
+                }
+                else
+                {
+                    string response = device.SkipComInit
+                        ? expectedFirmware
+                        : await device.QueryMbdCommandOnCurrentConnectionAsync(
+                            action.Argument,
+                            0);
+                    actualFirmware = device.SkipComInit
+                        ? response
+                        : MbdResponseParser.ParsePayloadText(action.Argument, response);
+                }
                 bool pass = string.Equals(
                     actualFirmware,
                     expectedFirmware,
@@ -410,11 +445,21 @@ namespace TestPlatform.TestSequences
                     };
                 }
 
-                double afterRaw = device.SkipComInit
-                    ? 1.0
-                    : MbdResponseParser.ParseScalar(
-                        action.Argument,
-                        await device.QueryMbdCommandAsync(action.Argument, 0));
+                double afterRaw;
+                if (!TryGetStoredNumericValue(
+                    context,
+                    Bcm250ResultKeys.ResetFlatRunningTimeAfter,
+                    out afterRaw))
+                {
+                    return new StepResult
+                    {
+                        IsPass = false,
+                        Value = "缺少复位后R10就绪值",
+                        NumericValue = 0.0,
+                        StoreKey = Bcm250ResultKeys.For(action.ResultId),
+                        Unit = plan.Unit
+                    };
+                }
                 double after = Math.Floor(afterRaw);
                 bool resetPassed = Math.Abs(before - after) >= 2.0 &&
                                    Math.Abs(after - 1.0) < 0.001;
@@ -630,14 +675,23 @@ namespace TestPlatform.TestSequences
                         return currentMa;
                     }
                 case Bcm250ActionKind.ProgramFirmware:
-                    if (!device.IsTtlProgrammingRequired)
+                    if (!_firmwareReadinessEvaluated)
                     {
-                        OnLogWarning("BCM250 TTL烧录已跳过：未执行也未模拟烧录。");
+                        OnLogError("BCM250尚未完成通讯和版本预检查，禁止进入C01。");
+                        return 0.0;
+                    }
+                    if (!_programFirmwareThisRun)
+                    {
+                        OnLogSuccess(
+                            "BCM250现有固件已通过通讯和版本检查，C01不重复烧录。" +
+                            (string.IsNullOrWhiteSpace(_precheckedFirmwareVersion)
+                                ? string.Empty
+                                : " 版本=" + _precheckedFirmwareVersion));
                         return 1.0;
                     }
-                    return await device.FlashBcm250FirmwareAsync(
-                        action.Argument,
-                        token) ? 1.0 : 0.0;
+                    return await ProgramFirmwareWithDisplayAsync(device, action.Argument, token)
+                        ? 1.0
+                        : 0.0;
                 case Bcm250ActionKind.StoreToFlash:
                     return await device.SendMbdCommandAsync(Bcm250Commands.StoreToFlash, 0) ? 1.0 : 0.0;
                 case Bcm250ActionKind.WriteIdentity:
@@ -706,6 +760,448 @@ namespace TestPlatform.TestSequences
             {
                 OnLogWarning("BCM250 CCB诊断读取失败[" + phase + "]：" + ex.Message);
             }
+        }
+
+        private async Task<bool> EvaluateFirmwareReadinessAsync(
+            SK441Device device,
+            CancellationToken token)
+        {
+            _firmwareReadinessEvaluated = true;
+            _programFirmwareThisRun = false;
+            _firmwareProgrammedThisRun = false;
+            _precheckedFirmwareVersion = null;
+            InvalidateFirmwarePrecheckCache();
+
+            string expectedVersion = Bcm250Commands.FirmwareVersion;
+            TestStepItem firmwareStep;
+            if (_stepsByResultId.TryGetValue("E01", out firmwareStep) &&
+                firmwareStep.PlanDefinition != null &&
+                !string.IsNullOrWhiteSpace(firmwareStep.PlanDefinition.ExpectedValue))
+            {
+                expectedVersion = firmwareStep.PlanDefinition.ExpectedValue;
+            }
+
+            if (device.SkipComInit)
+            {
+                _precheckedFirmwareVersion = expectedVersion;
+                _prefetchedHardwareValues["D01"] = 0.0;
+                _prefetchedHardwareValues["D02"] = 0.0;
+                _firmwarePrecheckCacheValid = true;
+                OnLogInfo(
+                    "[调试模式] BCM250通讯和版本预检查通过，模拟按版本一致跳过烧录。");
+                return true;
+            }
+
+            bool bcmCanOk = false;
+            bool safeCanOk = false;
+            try
+            {
+                bcmCanOk = Math.Abs(await ReadCanStatusAsync(
+                    device,
+                    "D01",
+                    "R14",
+                    token)) < 0.001;
+            }
+            catch (Exception ex)
+            {
+                OnLogWarning("BCM250烧录前R14检查未通过：" + ex.Message);
+            }
+
+            try
+            {
+                safeCanOk = Math.Abs(await ReadCanStatusAsync(
+                    device,
+                    "D02",
+                    "R15VERB",
+                    token)) < 0.001;
+            }
+            catch (Exception ex)
+            {
+                OnLogError("BCM250烧录前R15 SAFE检查失败：" + ex.Message);
+            }
+
+            if (!safeCanOk)
+            {
+                OnLogError(
+                    "SAFE内部CAN异常不能通过烧录BCM250修复；本轮禁止烧录并停止测试。");
+                return false;
+            }
+
+            bool enteredBcm = await SendCommandsAsync(
+                device,
+                Bcm250Commands.EnterBcm,
+                "BCM250.FIRMWARE.READINESS.REMOTE2",
+                token);
+            if (enteredBcm)
+            {
+                try
+                {
+                    string response = await device.QueryMbdCommandAsync("R0", 0);
+                    _precheckedFirmwareVersion = MbdResponseParser.ParsePayloadText("R0", response);
+                }
+                catch (Exception ex)
+                {
+                    OnLogWarning("BCM250烧录前R0版本读取失败：" + ex.Message);
+                }
+            }
+            else
+            {
+                OnLogWarning("BCM250烧录前无法进入REMOTE2，将按应用固件不可用处理。");
+            }
+
+            bool versionMatches = string.Equals(
+                _precheckedFirmwareVersion,
+                expectedVersion,
+                StringComparison.OrdinalIgnoreCase);
+
+            // W86 and the CAN status registers belong to the MBD terminal.
+            // Always leave REMOTE2 before either skipping or preparing Bootloader mode.
+            if (!await SendCommandsAsync(
+                device,
+                Bcm250Commands.EnterMbd,
+                "BCM250.FIRMWARE.READINESS.EXIT",
+                token))
+            {
+                OnLogError("BCM250版本预检查后无法返回MBD终端，禁止继续烧录。");
+                return false;
+            }
+
+            if (versionMatches)
+            {
+                _prefetchedHardwareValues["D01"] = bcmCanOk ? 0.0 : 1.0;
+                _prefetchedHardwareValues["D02"] = 0.0;
+                _firmwarePrecheckCacheValid = true;
+                if (!bcmCanOk)
+                {
+                    OnLogWarning(
+                        "BCM250 R0版本正确但R14状态异常：不重复烧录，交由正式D01复检判定。");
+                }
+                OnLogSuccess(
+                    "BCM250现有固件版本正确（" + expectedVersion + "），跳过本轮TTL烧录。");
+                return true;
+            }
+
+            OnLogWarning(string.Format(
+                CultureInfo.InvariantCulture,
+                "BCM250需要烧录：R14={0}，当前版本={1}，目标版本={2}。",
+                bcmCanOk ? "OK" : "FAIL/NO RESPONSE",
+                string.IsNullOrWhiteSpace(_precheckedFirmwareVersion)
+                    ? "NO RESPONSE"
+                    : _precheckedFirmwareVersion,
+                expectedVersion));
+
+            if (!device.IsTtlProgrammingRequired)
+            {
+                OnLogError(
+                    "BCM250版本不匹配或无响应，但当前配置禁止TTL烧录，C01不能按成功放行。");
+                return false;
+            }
+
+            _programFirmwareThisRun = true;
+            if (!await SendCommandsAsync(
+                    device,
+                    Bcm250Commands.EnableDiagnostics,
+                    "BCM250.FIRMWARE.READINESS.DIAG",
+                    token) ||
+                !await SendCommandsAsync(
+                    device,
+                    "W86=1",
+                    "BCM250.FIRMWARE.READINESS.RESET",
+                    token))
+            {
+                OnLogError("BCM250无法通过MBD置位RESET，禁止进入Bootloader烧录。");
+                return false;
+            }
+
+            bool ttlRouteReady = await device.SetFixtureRelaysAsync(
+                ParseRelayList(Bcm250StationMap.ProgrammingFixtureRelays),
+                true,
+                "BCM250按需烧录TTL路由");
+            if (!ttlRouteReady)
+            {
+                OnLogError("BCM250 TTL TX/RX/GND编程继电器闭合失败。");
+                return false;
+            }
+
+            return true;
+        }
+
+        private async Task<bool> ProgramFirmwareWithDisplayAsync(
+            SK441Device device,
+            string firmwareFileName,
+            CancellationToken token)
+        {
+            FirmwareProgrammingWindow dialog = await ShowFirmwareProgrammingAsync(
+                firmwareFileName);
+            Action<string, int> progressHandler = (phase, percent) =>
+            {
+                if (dialog != null)
+                {
+                    dialog.UpdateProgress(
+                        phase,
+                        percent,
+                        percent < 100
+                            ? "请勿断电、拔出 USB-B 或移动测试板。"
+                            : "正在完成烧录收尾...");
+                }
+            };
+
+            device.Flasher.ProgressChanged += progressHandler;
+            bool flashed = false;
+            try
+            {
+                if (dialog != null)
+                    dialog.UpdateProgress("连接 STM32 Bootloader", 0);
+
+                flashed = await device.FlashBcm250FirmwareAsync(
+                    firmwareFileName,
+                    token);
+                _firmwareProgrammedThisRun = flashed;
+                if (flashed)
+                    InvalidateFirmwarePrecheckCache();
+
+                string detail = flashed
+                    ? "即将复位并重新上电检查通讯和版本。"
+                    : (device.Flasher.LastError ?? "请检查TTL串口、BOOT0、RESET及固件文件。");
+                await CompleteFirmwareProgrammingAsync(dialog, flashed, detail);
+                return flashed;
+            }
+            finally
+            {
+                device.Flasher.ProgressChanged -= progressHandler;
+                if (!flashed && dialog != null)
+                    dialog.CloseSafely();
+            }
+        }
+
+        private async Task<StepResult> WaitForBcmRunningTimeAsync(
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            TestStepItem step,
+            CancellationToken token)
+        {
+            if (device.SkipComInit)
+            {
+                return RunningTimeResult(
+                    true,
+                    5.0,
+                    Bcm250ResultKeys.ResetFlatRunningTimeBefore,
+                    "BCM application ready",
+                    action);
+            }
+
+            int timeoutMs = GetPollingTimeoutMs(step, 8000);
+            Stopwatch timer = Stopwatch.StartNew();
+            string lastError = null;
+            while (timer.ElapsedMilliseconds < timeoutMs)
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    if (await EnsureBcmTerminalForPollingAsync(device, token))
+                    {
+                        double runningTime = MbdResponseParser.ParseScalar(
+                            "R10",
+                            await device.QueryMbdCommandOnCurrentConnectionAsync("R10", 0));
+                        if (runningTime >= 3.0)
+                        {
+                            OnLogInfo(string.Format(
+                                CultureInfo.InvariantCulture,
+                                "BCM250复位前R10已就绪：{0:0.###}s，用时{1}ms。",
+                                runningTime,
+                                timer.ElapsedMilliseconds));
+                            return RunningTimeResult(
+                                true,
+                                runningTime,
+                                Bcm250ResultKeys.ResetFlatRunningTimeBefore,
+                                "BCM application ready",
+                                action);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                    ResetMbdState();
+                }
+
+                int remainingMs = timeoutMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs <= 0)
+                    break;
+                await Task.Delay(Math.Min(250, remainingMs), token);
+            }
+
+            OnLogError(
+                "BCM250复位前R10在" + timeoutMs + "ms内未达到3秒。" +
+                (string.IsNullOrWhiteSpace(lastError) ? string.Empty : " 最后错误：" + lastError));
+            return RunningTimeResult(
+                false,
+                0.0,
+                Bcm250ResultKeys.ResetFlatRunningTimeBefore,
+                "R10 readiness timeout",
+                action);
+        }
+
+        private async Task<StepResult> WaitForBcmApplicationAsync(
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            TestStepItem step,
+            CancellationToken token)
+        {
+            if (device.SkipComInit)
+            {
+                return RunningTimeResult(
+                    true,
+                    1.0,
+                    Bcm250ResultKeys.ResetFlatRunningTimeAfter,
+                    "BCM reset recovery ready",
+                    action);
+            }
+
+            int timeoutMs = GetPollingTimeoutMs(step, 5000);
+            Stopwatch timer = Stopwatch.StartNew();
+            string lastError = null;
+            await Task.Delay(Math.Min(300, timeoutMs), token);
+            while (timer.ElapsedMilliseconds < timeoutMs)
+            {
+                token.ThrowIfCancellationRequested();
+                try
+                {
+                    if (await EnsureBcmTerminalForPollingAsync(device, token))
+                    {
+                        double runningTime = MbdResponseParser.ParseScalar(
+                            "R10",
+                            await device.QueryMbdCommandOnCurrentConnectionAsync("R10", 0));
+                        if (runningTime >= 1.0)
+                        {
+                            OnLogInfo(string.Format(
+                                CultureInfo.InvariantCulture,
+                                "W86复位后BCM250应用已恢复：R10={0:0.###}s，用时{1}ms。",
+                                runningTime,
+                                timer.ElapsedMilliseconds));
+                            return RunningTimeResult(
+                                true,
+                                runningTime,
+                                Bcm250ResultKeys.ResetFlatRunningTimeAfter,
+                                "BCM reset recovery ready",
+                                action);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                    ResetMbdState();
+                }
+
+                int remainingMs = timeoutMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs <= 0)
+                    break;
+                await Task.Delay(Math.Min(200, remainingMs), token);
+            }
+
+            OnLogError(
+                "W86复位后BCM250应用在" + timeoutMs + "ms内未恢复。" +
+                (string.IsNullOrWhiteSpace(lastError) ? string.Empty : " 最后错误：" + lastError));
+            return RunningTimeResult(
+                false,
+                0.0,
+                Bcm250ResultKeys.ResetFlatRunningTimeAfter,
+                "BCM reset recovery timeout",
+                action);
+        }
+
+        private async Task<bool> EnsureBcmTerminalForPollingAsync(
+            SK441Device device,
+            CancellationToken token)
+        {
+            if (_mbdTerminalState == MbdTerminalState.Bcm &&
+                device.IsTargetBoardCommunicationConnected)
+            {
+                return true;
+            }
+
+            if (_mbdTerminalState != MbdTerminalState.Mbd)
+            {
+                if (!await SendCommandsAsync(
+                    device,
+                    Bcm250Commands.EnterMbd,
+                    "BCM250.R10.POLL.EXIT",
+                    token))
+                {
+                    return false;
+                }
+            }
+
+            return await SendCommandsAsync(
+                device,
+                Bcm250Commands.EnterBcm,
+                "BCM250.R10.POLL.REMOTE2",
+                token);
+        }
+
+        private async Task<bool> CompleteBcmSerialBatchChapterAsync(
+            TestSequenceContext context,
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            CancellationToken token)
+        {
+            bool hasFollowingBcmReadChapter = context != null &&
+                context.TestPlan != null &&
+                (action.Argument ?? string.Empty)
+                    .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Any(context.TestPlan.ShouldRun);
+            if (hasFollowingBcmReadChapter &&
+                _mbdTerminalState == MbdTerminalState.Bcm &&
+                device.IsTargetBoardCommunicationConnected)
+            {
+                OnLogInfo(
+                    action.StepId + " 保持REMOTE2，下一串口测量章节复用当前连接。");
+                return true;
+            }
+
+            return await SendCommandsAsync(
+                device,
+                Bcm250Commands.EnterMbd,
+                action.StepId,
+                token);
+        }
+
+        private static StepResult RunningTimeResult(
+            bool passed,
+            double runningTime,
+            string storeKey,
+            string value,
+            Bcm250ActionDefinition action)
+        {
+            return new StepResult
+            {
+                IsPass = passed,
+                Value = passed
+                    ? runningTime.ToString("0.###", CultureInfo.InvariantCulture)
+                    : value,
+                NumericValue = runningTime,
+                StoreKey = storeKey,
+                Unit = "s"
+            };
+        }
+
+        private static int GetPollingTimeoutMs(TestStepItem step, int fallbackMs)
+        {
+            if (step != null &&
+                step.PlanDefinition != null &&
+                step.PlanDefinition.DelayMs.GetValueOrDefault() > 0)
+            {
+                return step.PlanDefinition.DelayMs.Value;
+            }
+            return fallbackMs;
+        }
+
+        private void InvalidateFirmwarePrecheckCache()
+        {
+            _firmwarePrecheckCacheValid = false;
+            _prefetchedHardwareValues.Remove("D01");
+            _prefetchedHardwareValues.Remove("D02");
         }
 
         private static bool IsPowerCritical(Bcm250ActionDefinition action)
@@ -805,7 +1301,7 @@ namespace TestPlatform.TestSequences
             return passed ? 0.0 : 1.0;
         }
 
-        private static async Task<double> ReadMbdAverageAsync(
+        private async Task<double> ReadMbdAverageAsync(
             SK441Device device,
             string command,
             int sampleCount,
@@ -816,7 +1312,10 @@ namespace TestPlatform.TestSequences
             for (int index = 0; index < sampleCount; index++)
             {
                 token.ThrowIfCancellationRequested();
-                string response = await device.QueryMbdCommandAsync(command, 0);
+                string response = _mbdTerminalState == MbdTerminalState.Bcm &&
+                                  device.IsTargetBoardCommunicationConnected
+                    ? await device.QueryMbdCommandOnCurrentConnectionAsync(command, 0)
+                    : await device.QueryMbdCommandAsync(command, 0);
                 total += MbdResponseParser.ParseScalar(command, response);
                 if (intervalMs > 0 && index + 1 < sampleCount)
                     await Task.Delay(intervalMs, token);
@@ -1240,7 +1739,7 @@ namespace TestPlatform.TestSequences
             foreach (string command in (commands ?? string.Empty).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string normalizedCommand = command.Trim();
-                if (CanSkipMbdCommand(normalizedCommand))
+                if (CanSkipMbdCommand(normalizedCommand, stepId))
                 {
                     OnLogInfo("重复 MBD 状态命令已消除：" + normalizedCommand);
                     continue;
@@ -1260,11 +1759,26 @@ namespace TestPlatform.TestSequences
             return true;
         }
 
-        private bool CanSkipMbdCommand(string command)
+        private bool CanSkipMbdCommand(string command, string stepId)
         {
             string normalized = (command ?? string.Empty).Trim().ToUpperInvariant();
             return (normalized == "EXIT" && _mbdTerminalState == MbdTerminalState.Mbd) ||
-                   (normalized == "REMOTE2" && _mbdTerminalState == MbdTerminalState.Bcm);
+                   (normalized == "REMOTE2" && _mbdTerminalState == MbdTerminalState.Bcm) ||
+                   (normalized == "EXIT" &&
+                    _mbdTerminalState == MbdTerminalState.Bcm &&
+                    IsBcmBatchChapterEntry(stepId));
+        }
+
+        private static bool IsBcmBatchChapterEntry(string stepId)
+        {
+            return string.Equals(
+                       stepId,
+                       "BCM250.CH14.S003.ACTION",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(
+                       stepId,
+                       "BCM250.CH15.S003.ACTION",
+                       StringComparison.OrdinalIgnoreCase);
         }
 
         private void RecordMbdCommandState(string command)
@@ -1275,7 +1789,7 @@ namespace TestPlatform.TestSequences
             else if (normalized == "REMOTE2")
                 _mbdTerminalState = MbdTerminalState.Bcm;
             else if (normalized.StartsWith("W86=", StringComparison.Ordinal))
-                ResetMbdState();
+                _mbdTerminalState = MbdTerminalState.Mbd;
         }
 
         private void ResetMbdState()
