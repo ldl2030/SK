@@ -15,7 +15,7 @@ namespace TestPlatform
     public sealed class SKSerialDeviceDiscoveryResult
     {
         public string AnsPowerPort { get; internal set; }
-        public string HengHuiPowerAPort { get; internal set; }
+        public string AinuoPowerAPort { get; internal set; }
         public string HengHuiPowerBPort { get; internal set; }
         public string ElectronicLoadPort { get; internal set; }
         public string DaqPort { get; internal set; }
@@ -29,7 +29,7 @@ namespace TestPlatform
 
         public bool IsComplete =>
             !string.IsNullOrWhiteSpace(AnsPowerPort) &&
-            !string.IsNullOrWhiteSpace(HengHuiPowerAPort) &&
+            !string.IsNullOrWhiteSpace(AinuoPowerAPort) &&
             !string.IsNullOrWhiteSpace(HengHuiPowerBPort) &&
             !string.IsNullOrWhiteSpace(ElectronicLoadPort) &&
             !string.IsNullOrWhiteSpace(DaqPort) &&
@@ -50,7 +50,9 @@ namespace TestPlatform
 
             var missing = new List<string>();
             if (requiredPorts.Contains("ansPowerComName") && string.IsNullOrWhiteSpace(AnsPowerPort)) missing.Add("ANS电源");
-            if (requiredPorts.Contains("hengHuiPowerAComName") && string.IsNullOrWhiteSpace(HengHuiPowerAPort)) missing.Add("恒辉电源A");
+            if ((requiredPorts.Contains("ainuoPowerAComName") ||
+                 requiredPorts.Contains("hengHuiPowerAComName")) &&
+                string.IsNullOrWhiteSpace(AinuoPowerAPort)) missing.Add("艾诺AN50300-10电源A");
             if (requiredPorts.Contains("hengHuiPowerBComName") && string.IsNullOrWhiteSpace(HengHuiPowerBPort)) missing.Add("恒辉电源B");
             if (requiredPorts.Contains("electronicLoadComName") && string.IsNullOrWhiteSpace(ElectronicLoadPort)) missing.Add("KUNKIN 7303电子负载");
             if (requiredPorts.Contains("daqComName") && string.IsNullOrWhiteSpace(DaqPort)) missing.Add("GWInstek DAQ-9600");
@@ -64,7 +66,7 @@ namespace TestPlatform
         public IEnumerable<string> GetMissingDeviceNames()
         {
             if (string.IsNullOrWhiteSpace(AnsPowerPort)) yield return "ANS电源";
-            if (string.IsNullOrWhiteSpace(HengHuiPowerAPort)) yield return "恒辉电源A";
+            if (string.IsNullOrWhiteSpace(AinuoPowerAPort)) yield return "艾诺AN50300-10电源A";
             if (string.IsNullOrWhiteSpace(HengHuiPowerBPort)) yield return "恒辉电源B";
             if (string.IsNullOrWhiteSpace(ElectronicLoadPort)) yield return "KUNKIN 7303电子负载";
             if (string.IsNullOrWhiteSpace(DaqPort)) yield return "GWInstek DAQ-9600";
@@ -77,7 +79,7 @@ namespace TestPlatform
 
     /// <summary>
     /// Discovers the fixed SK station instruments without relying on Windows COM numbers.
-    /// Probes are read-only: SCPI *IDN? or Modbus register reads.
+    /// Probes are read-only: SCPI identity/setpoint queries or Modbus register reads.
     /// </summary>
     public static class SKSerialDeviceDiscovery
     {
@@ -100,9 +102,8 @@ namespace TestPlatform
         }
 
         /// <summary>
-        /// Verifies explicitly configured COM ports first. If every required device
-        /// answers with the expected identity, no full-port scan is needed. Otherwise
-        /// the station is scanned and a newly identified port wins over configuration.
+        /// Resolves stable USB identities to this PC's current COM ports, then verifies
+        /// instrument protocol responses. A full-port scan is used only when needed.
         /// </summary>
         public static async Task<SKSerialDeviceDiscoveryResult> ResolveConfiguredOrDiscoverAsync(
             Action<string> logAction = null,
@@ -110,6 +111,9 @@ namespace TestPlatform
         {
             bool requireTtl = GetBoolSetting("SKRequireTtl", true);
             SKSerialDeviceDiscoveryResult configured = CreateConfiguredResult(requireTtl);
+            PreferAinuoPortByUsbSerial(configured, logAction);
+            PreferStationPortsByUsbSerial(configured, logAction);
+            configured.TtlPort = ResolveTtlPortByHardwareId(configured.TtlPort, logAction);
             RemoveUnavailableConfiguredPorts(configured, logAction);
             LogConfiguredPorts(configured, logAction);
 
@@ -117,7 +121,7 @@ namespace TestPlatform
             string[] configuredActivePorts = new[]
             {
                 configured.AnsPowerPort,
-                configured.HengHuiPowerAPort,
+                configured.AinuoPowerAPort,
                 configured.HengHuiPowerBPort,
                 configured.ElectronicLoadPort,
                 configured.DaqPort,
@@ -130,7 +134,7 @@ namespace TestPlatform
                 .ToArray();
 
             logAction?.Invoke(
-                $"先校验预设设备端口：{(configuredActivePorts.Length == 0 ? "无" : string.Join(", ", configuredActivePorts))}");
+                $"先校验USB身份定位的设备端口：{(configuredActivePorts.Length == 0 ? "无" : string.Join(", ", configuredActivePorts))}");
             PortProbe[] configuredProbes = await Task.WhenAll(
                 configuredActivePorts.Select(port =>
                     Task.Run(() => ProbePort(port, logAction))));
@@ -142,16 +146,17 @@ namespace TestPlatform
                 logAction);
             if (verifiedConfigured.IsCompleteFor(requiredPorts))
             {
-                logAction?.Invoke("预设COM口身份校验全部通过，直接使用，不执行全端口扫描。");
+                logAction?.Invoke("USB身份与仪器协议校验全部通过，直接使用，不执行全端口扫描。");
                 ApplyToCommunicationState(verifiedConfigured);
                 return verifiedConfigured;
             }
 
             logAction?.Invoke(
-                "预设COM口未通过全部必需设备身份校验，开始全端口扫描；" +
+                "USB身份定位端口未通过全部必需设备校验，开始全端口扫描；" +
                 "扫描识别结果将覆盖对应默认值。");
             SKSerialDeviceDiscoveryResult discovered = await DiscoverAsync(logAction);
             ApplyConfiguredFallbackPorts(configured, discovered);
+            VerifyStationUsbSerialBindings(discovered, logAction);
             ApplyToCommunicationState(discovered);
             return discovered;
         }
@@ -173,7 +178,7 @@ namespace TestPlatform
                 }
             };
             validate("ANS电源", () => result.AnsPowerPort, () => result.AnsPowerPort = null);
-            validate("恒辉电源A", () => result.HengHuiPowerAPort, () => result.HengHuiPowerAPort = null);
+            validate("艾诺AN50300-10电源A", () => result.AinuoPowerAPort, () => result.AinuoPowerAPort = null);
             validate("恒辉电源B", () => result.HengHuiPowerBPort, () => result.HengHuiPowerBPort = null);
             validate("电子负载", () => result.ElectronicLoadPort, () => result.ElectronicLoadPort = null);
             validate("DAQ", () => result.DaqPort, () => result.DaqPort = null);
@@ -189,7 +194,7 @@ namespace TestPlatform
             return new SKSerialDeviceDiscoveryResult
             {
                 AnsPowerPort = NormalizePort(GetSetting("AnsPort", null)),
-                HengHuiPowerAPort = NormalizePort(GetSetting("HengHui1Port", null)),
+                AinuoPowerAPort = NormalizePort(GetSetting("AinuoPowerAPort", null)),
                 HengHuiPowerBPort = NormalizePort(GetSetting("HengHui2Port", null)),
                 ElectronicLoadPort = NormalizePort(GetSetting("LoadPort", null)),
                 DaqPort = NormalizePort(GetSetting("DaqPort", null)),
@@ -207,34 +212,206 @@ namespace TestPlatform
             return string.IsNullOrWhiteSpace(portName) ? null : portName.Trim();
         }
 
+        private static void PreferAinuoPortByUsbSerial(
+            SKSerialDeviceDiscoveryResult result,
+            Action<string> logAction)
+        {
+            string expectedSerial = GetSetting("AinuoPowerAUsbSerial", null);
+            if (string.IsNullOrWhiteSpace(expectedSerial))
+                return;
+
+            string matchedPort = SerialPort.GetPortNames()
+                .FirstOrDefault(portName => string.Equals(
+                    TryGetFtdiSerial(portName),
+                    expectedSerial,
+                    StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(matchedPort))
+            {
+                logAction?.Invoke(
+                    $"未找到电源A绑定的FTDI序列号 {expectedSerial}，" +
+                    $"先校验配置端口 {result.AinuoPowerAPort ?? "未配置"}。");
+                return;
+            }
+
+            if (!string.Equals(
+                result.AinuoPowerAPort,
+                matchedPort,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                logAction?.Invoke(
+                    $"电源A按FTDI序列号 {expectedSerial} 映射到 {matchedPort}，" +
+                    $"替代配置端口 {result.AinuoPowerAPort ?? "未配置"}。");
+            }
+            else
+            {
+                logAction?.Invoke(
+                    $"电源A FTDI序列号绑定确认：{expectedSerial} = {matchedPort}。");
+            }
+            result.AinuoPowerAPort = matchedPort;
+        }
+
+        private static void PreferStationPortsByUsbSerial(
+            SKSerialDeviceDiscoveryResult result,
+            Action<string> logAction)
+        {
+            PreferPortByUsbSerial("AnsPowerUsbSerial", "ANS电源", value => result.AnsPowerPort = value, logAction);
+            PreferPortByUsbSerial("HengHuiPowerBUsbSerial", "恒辉电源B", value => result.HengHuiPowerBPort = value, logAction);
+            PreferPortByUsbSerial("ElectronicLoadUsbSerial", "电子负载", value => result.ElectronicLoadPort = value, logAction);
+            PreferPortByUsbSerial("DaqUsbSerial", "DAQ", value => result.DaqPort = value, logAction);
+            PreferPortByUsbSerial("SKRelayBusUsbSerial", "数字输入/继电器总线", value =>
+            {
+                result.DigitalInputPort = value;
+                result.FixtureRelayPort = value;
+                result.Relay16Port = value;
+            }, logAction);
+        }
+
+        private static void PreferPortByUsbSerial(
+            string settingKey,
+            string displayName,
+            Action<string> assign,
+            Action<string> logAction)
+        {
+            string expected = GetSetting(settingKey, null);
+            if (string.IsNullOrWhiteSpace(expected))
+                return;
+
+            string[] matches = SerialPort.GetPortNames()
+                .Where(port => string.Equals(TryGetUsbSerial(port), expected, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (matches.Length != 1)
+            {
+                assign(null);
+                logAction?.Invoke($"{displayName}的USB序列号 {expected} 未唯一匹配串口，稍后按协议扫描确认。");
+                return;
+            }
+            assign(matches[0]);
+            logAction?.Invoke($"{displayName}按USB序列号 {expected} 定位到 {matches[0]}。");
+        }
+
+        private static void VerifyStationUsbSerialBindings(
+            SKSerialDeviceDiscoveryResult result,
+            Action<string> logAction)
+        {
+            VerifyUsbSerialBinding(result, "AnsPowerUsbSerial", "ANS电源", () => result.AnsPowerPort,
+                value => result.AnsPowerPort = value, logAction);
+            VerifyUsbSerialBinding(result, "AinuoPowerAUsbSerial", "艾诺电源A", () => result.AinuoPowerAPort,
+                value => result.AinuoPowerAPort = value, logAction);
+            VerifyUsbSerialBinding(result, "HengHuiPowerBUsbSerial", "恒辉电源B", () => result.HengHuiPowerBPort,
+                value => result.HengHuiPowerBPort = value, logAction);
+            VerifyUsbSerialBinding(result, "ElectronicLoadUsbSerial", "电子负载", () => result.ElectronicLoadPort,
+                value => result.ElectronicLoadPort = value, logAction);
+            VerifyUsbSerialBinding(result, "DaqUsbSerial", "DAQ", () => result.DaqPort,
+                value => result.DaqPort = value, logAction);
+            VerifyUsbSerialBinding(result, "SKRelayBusUsbSerial", "数字输入", () => result.DigitalInputPort,
+                value => result.DigitalInputPort = value, logAction);
+            VerifyUsbSerialBinding(result, "SKRelayBusUsbSerial", "工装继电器", () => result.FixtureRelayPort,
+                value => result.FixtureRelayPort = value, logAction);
+            VerifyUsbSerialBinding(result, "SKRelayBusUsbSerial", "16路继电器", () => result.Relay16Port,
+                value => result.Relay16Port = value, logAction);
+        }
+
+        private static void VerifyUsbSerialBinding(
+            SKSerialDeviceDiscoveryResult result,
+            string settingKey,
+            string displayName,
+            Func<string> selectedPort,
+            Action<string> clearPort,
+            Action<string> logAction)
+        {
+            string expected = GetSetting(settingKey, null);
+            if (string.IsNullOrWhiteSpace(expected))
+                return;
+
+            string actual = selectedPort();
+            if (!string.IsNullOrWhiteSpace(actual) &&
+                string.Equals(TryGetUsbSerial(actual), expected, StringComparison.OrdinalIgnoreCase))
+            {
+                logAction?.Invoke($"{displayName}协议及USB序列号双重确认：{actual} / {expected}。");
+                return;
+            }
+
+            clearPort(null);
+            result.Errors.Add($"{displayName}未通过USB序列号 {expected} 与协议的双重确认" +
+                (string.IsNullOrWhiteSpace(actual) ? "。" : $"；协议识别端口为 {actual}。"));
+        }
+
+        private static string ResolveTtlPortByHardwareId(
+            string configuredPort,
+            Action<string> logAction)
+        {
+            string expectedSerial = GetSetting("TtlUsbSerial", null);
+            if (!string.IsNullOrWhiteSpace(expectedSerial))
+            {
+                string[] serialMatches = SerialPort.GetPortNames()
+                    .Where(port => string.Equals(
+                        TryGetUsbSerial(port),
+                        expectedSerial,
+                        StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                if (serialMatches.Length != 1)
+                {
+                    logAction?.Invoke($"TTL USB序列号 {expectedSerial} 匹配到 {serialMatches.Length} 个串口；禁止猜测烧录口。");
+                    return null;
+                }
+                logAction?.Invoke($"TTL烧录口按USB序列号 {expectedSerial} 定位到 {serialMatches[0]}。");
+                return serialMatches[0];
+            }
+
+            string expected = GetSetting("TtlUsbHardwareId", null);
+            if (string.IsNullOrWhiteSpace(expected))
+                return configuredPort;
+
+            string[] matches = SerialPort.GetPortNames()
+                .Where(port => string.Equals(
+                    TryGetUsbHardwareId(port),
+                    expected,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (matches.Length != 1)
+            {
+                logAction?.Invoke($"TTL USB硬件ID {expected} 匹配到 {matches.Length} 个串口；禁止猜测烧录口。");
+                return null;
+            }
+            logAction?.Invoke($"TTL烧录口按唯一USB硬件ID {expected} 定位到 {matches[0]}。");
+            return matches[0];
+        }
+
         private static void ApplyConfiguredFallbackPorts(
             SKSerialDeviceDiscoveryResult configured,
             SKSerialDeviceDiscoveryResult result)
         {
             // A positive identity probe is stronger evidence than a COM number
             // copied from another PC. Only fill gaps in the scan from configuration.
-            if (string.IsNullOrWhiteSpace(result.AnsPowerPort) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("AnsPowerUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.AnsPowerPort) &&
                 !string.IsNullOrWhiteSpace(configured.AnsPowerPort))
                 result.AnsPowerPort = configured.AnsPowerPort;
-            if (string.IsNullOrWhiteSpace(result.HengHuiPowerAPort) &&
-                !string.IsNullOrWhiteSpace(configured.HengHuiPowerAPort))
-                result.HengHuiPowerAPort = configured.HengHuiPowerAPort;
-            if (string.IsNullOrWhiteSpace(result.HengHuiPowerBPort) &&
+            // Source A must pass its SCPI identity probe. Do not turn a configured
+            // COM number into a successful discovery result when the supply did
+            // not answer.
+            if (string.IsNullOrWhiteSpace(GetSetting("HengHuiPowerBUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.HengHuiPowerBPort) &&
                 !string.IsNullOrWhiteSpace(configured.HengHuiPowerBPort))
                 result.HengHuiPowerBPort = configured.HengHuiPowerBPort;
-            if (string.IsNullOrWhiteSpace(result.ElectronicLoadPort) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("ElectronicLoadUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.ElectronicLoadPort) &&
                 !string.IsNullOrWhiteSpace(configured.ElectronicLoadPort))
                 result.ElectronicLoadPort = configured.ElectronicLoadPort;
-            if (string.IsNullOrWhiteSpace(result.DaqPort) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("DaqUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.DaqPort) &&
                 !string.IsNullOrWhiteSpace(configured.DaqPort))
                 result.DaqPort = configured.DaqPort;
-            if (string.IsNullOrWhiteSpace(result.DigitalInputPort) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("SKRelayBusUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.DigitalInputPort) &&
                 !string.IsNullOrWhiteSpace(configured.DigitalInputPort))
                 result.DigitalInputPort = configured.DigitalInputPort;
-            if (string.IsNullOrWhiteSpace(result.FixtureRelayPort) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("SKRelayBusUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.FixtureRelayPort) &&
                 !string.IsNullOrWhiteSpace(configured.FixtureRelayPort))
                 result.FixtureRelayPort = configured.FixtureRelayPort;
-            if (string.IsNullOrWhiteSpace(result.Relay16Port) &&
+            if (string.IsNullOrWhiteSpace(GetSetting("SKRelayBusUsbSerial", null)) &&
+                string.IsNullOrWhiteSpace(result.Relay16Port) &&
                 !string.IsNullOrWhiteSpace(configured.Relay16Port))
                 result.Relay16Port = configured.Relay16Port;
             if (string.IsNullOrWhiteSpace(result.TargetBoardPort) &&
@@ -252,7 +429,7 @@ namespace TestPlatform
             var configured = new[]
             {
                 new { Name = "ANS电源", Port = result.AnsPowerPort },
-                new { Name = "恒辉电源A", Port = result.HengHuiPowerAPort },
+                new { Name = "艾诺AN50300-10电源A", Port = result.AinuoPowerAPort },
                 new { Name = "恒辉电源B", Port = result.HengHuiPowerBPort },
                 new { Name = "电子负载", Port = result.ElectronicLoadPort },
                 new { Name = "DAQ", Port = result.DaqPort },
@@ -264,7 +441,7 @@ namespace TestPlatform
             };
 
             foreach (var item in configured.Where(item => !string.IsNullOrWhiteSpace(item.Port)))
-                logAction?.Invoke($"使用预设串口：{item.Name}={item.Port}");
+                logAction?.Invoke($"待校验串口：{item.Name}={item.Port}");
         }
 
         private static SKSerialDeviceDiscoveryResult BuildResultFromProbes(
@@ -286,6 +463,7 @@ namespace TestPlatform
             AssignFixtureRelay(probeArray, result);
             AssignRelay16(probeArray, result);
             AssignHengHui(probeArray, result, logAction);
+            AssignAinuoAn50(probeArray, result, logAction);
             result.TtlPort = ValidateConfiguredPassivePort(
                 availablePorts,
                 configuredTtlPort,
@@ -293,6 +471,7 @@ namespace TestPlatform
                 requireTtl,
                 logAction,
                 result);
+            VerifyStationUsbSerialBindings(result, logAction);
             return result;
         }
 
@@ -308,7 +487,8 @@ namespace TestPlatform
             logAction?.Invoke(
                 $"开始扫描 {portNames.Length} 个串口：{string.Join(", ", portNames)}");
 
-            string configuredTtlPort = GetSetting("TtlPort", null);
+            string configuredTtlPort = ResolveTtlPortByHardwareId(
+                GetSetting("TtlPort", null), logAction);
             bool requireTtl = GetBoolSetting("SKRequireTtl", true);
             var passivePorts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (!string.IsNullOrWhiteSpace(configuredTtlPort))
@@ -331,6 +511,7 @@ namespace TestPlatform
             AssignFixtureRelay(probes, result);
             AssignRelay16(probes, result);
             AssignHengHui(probes, result, logAction);
+            AssignAinuoAn50(probes, result, logAction);
             result.TargetBoardPort = null;
             logAction?.Invoke("MBD UART识别已延后：将在DUT上电并完成启动等待后执行0D探测。");
             result.TtlPort = ValidateConfiguredPassivePort(
@@ -340,6 +521,8 @@ namespace TestPlatform
                 requireTtl,
                 logAction,
                 result);
+
+            VerifyStationUsbSerialBindings(result, logAction);
 
             ApplyToCommunicationState(result);
 
@@ -374,7 +557,7 @@ namespace TestPlatform
             var excludedPorts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 ComName.ansPowerComName,
-                ComName.hengHuiPowerAComName,
+                ComName.ainuoPowerAComName,
                 ComName.hengHuiPowerBComName,
                 ComName.electronicLoadComName,
                 ComName.daqComName,
@@ -458,7 +641,7 @@ namespace TestPlatform
         {
             if (result == null) return;
             ComName.ansPowerComName = result.AnsPowerPort;
-            ComName.hengHuiPowerAComName = result.HengHuiPowerAPort;
+            ComName.ainuoPowerAComName = result.AinuoPowerAPort;
             ComName.hengHuiPowerBComName = result.HengHuiPowerBPort;
             ComName.electronicLoadComName = result.ElectronicLoadPort;
             ComName.daqComName = result.DaqPort;
@@ -512,6 +695,73 @@ namespace TestPlatform
 
         private static PortProbe ProbePort(string portName, Action<string> logAction)
         {
+            string usbSerial = TryGetUsbSerial(portName);
+            if (MatchesConfiguredUsbSerial(usbSerial, "SKRelayBusUsbSerial"))
+                return ProbeFixtureBusPort(portName, logAction) ?? NewProbe(portName, "UNKNOWN", null);
+            if (MatchesConfiguredUsbSerial(usbSerial, "AnsPowerUsbSerial"))
+                return ProbeAnsPort(portName, logAction) ?? NewProbe(portName, "UNKNOWN", null);
+            if (MatchesConfiguredUsbSerial(usbSerial, "AinuoPowerAUsbSerial"))
+            {
+                string identity;
+                string error;
+                int baudRate = GetIntSetting("AinuoPowerABaudRate", 38400);
+                if (ProbeAinuoAn50(portName, baudRate, out identity, out error))
+                {
+                    logAction?.Invoke($"识别成功：{portName} = 艾诺{AinuoAn50PowerSupply.Model}电源A " +
+                        $"({identity}, {baudRate} baud)");
+                    return NewProbe(portName, "AINUO_AN50", identity);
+                }
+                logAction?.Invoke($"艾诺电源A已按USB序列号定位到 {portName}，但只读SCPI探测失败：{error}");
+                return NewProbe(portName, "UNKNOWN", null);
+            }
+            if (MatchesConfiguredUsbSerial(usbSerial, "ElectronicLoadUsbSerial"))
+            {
+                string error;
+                int baudRate = GetIntSetting("SKElectronicLoadBaudRate", 38400);
+                string identity = QueryScpiIdn(portName, baudRate, 2000, out error);
+                if (IsElectronicLoadIdentity(identity))
+                {
+                    logAction?.Invoke($"识别成功：{portName} = KUNKIN 7303电子负载 " +
+                        $"({identity}, {baudRate} baud)");
+                    return NewProbe(portName, "LOAD", identity);
+                }
+                logAction?.Invoke($"电子负载已按USB序列号定位到 {portName}，但IDN探测失败：{error ?? identity}");
+                return NewProbe(portName, "UNKNOWN", identity);
+            }
+            if (MatchesConfiguredUsbSerial(usbSerial, "HengHuiPowerBUsbSerial"))
+            {
+                string lastIdentity = null;
+                string lastError = null;
+                for (int attempt = 0; attempt < 2; attempt++)
+                {
+                    lastIdentity = QueryScpiIdn(portName, 9600, attempt == 0 ? 800 : 1500, out lastError);
+                    if (!string.IsNullOrWhiteSpace(lastIdentity) &&
+                        lastIdentity.IndexOf("DC POWER", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        lastIdentity.IndexOf("8602", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        logAction?.Invoke($"识别成功：{portName} = 恒辉8602，USB序列号={usbSerial}" +
+                            (attempt > 0 ? "（IDN重试后确认）" : string.Empty));
+                        return NewProbe(portName, "HENGHUI", lastIdentity);
+                    }
+                }
+                logAction?.Invoke($"恒辉电源B已按USB序列号定位到 {portName}，但两次IDN校验失败：{lastError ?? lastIdentity}");
+                return NewProbe(portName, "UNKNOWN", lastIdentity);
+            }
+            if (MatchesConfiguredUsbSerial(usbSerial, "DaqUsbSerial"))
+            {
+                string error;
+                string identity = QueryScpiIdn(portName, 9600, 1500, out error);
+                if (!string.IsNullOrWhiteSpace(identity) &&
+                    identity.IndexOf("GWInstek", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    identity.IndexOf("DAQ-9600", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    logAction?.Invoke($"识别成功：{portName} = GWInstek DAQ-9600 ({identity})");
+                    return NewProbe(portName, "DAQ", identity);
+                }
+                logAction?.Invoke($"DAQ已按USB序列号定位到 {portName}，但IDN校验失败：{error ?? identity}");
+                return NewProbe(portName, "UNKNOWN", identity);
+            }
+
             string scpiError;
             string idn = QueryScpiIdn(portName, 9600, 2000, out scpiError);
             if (!string.IsNullOrWhiteSpace(idn))
@@ -562,16 +812,54 @@ namespace TestPlatform
                 }
             }
 
+            int an50BaudRate = GetIntSetting("AinuoPowerABaudRate", 38400);
+            string an50Identity;
+            string an50Error;
+            if (ProbeAinuoAn50(
+                portName,
+                an50BaudRate,
+                out an50Identity,
+                out an50Error))
+            {
+                logAction?.Invoke(
+                    $"识别成功：{portName} = 艾诺{AinuoAn50PowerSupply.Model}电源A " +
+                    $"({an50Identity}, {an50BaudRate} baud)");
+                return NewProbe(portName, "AINUO_AN50", an50Identity);
+            }
+
             if (!string.IsNullOrWhiteSpace(idn))
                 logAction?.Invoke($"串口 {portName} 返回未登记的IDN：{idn}");
             else if (!string.IsNullOrWhiteSpace(scpiError) &&
-                     !string.IsNullOrWhiteSpace(loadScpiError))
+                     !string.IsNullOrWhiteSpace(loadScpiError) &&
+                     !string.IsNullOrWhiteSpace(an50Error))
             {
                 logAction?.Invoke(
                     $"串口 {portName} SCPI探测未完成：" +
-                    $"9600={scpiError}；{loadBaudRate}={loadScpiError}");
+                    $"9600={scpiError}；{loadBaudRate}={loadScpiError}；" +
+                    $"AN50/{an50BaudRate}={an50Error}");
             }
 
+            PortProbe fixtureProbe = ProbeFixtureBusPort(portName, logAction);
+            if (fixtureProbe != null)
+                return fixtureProbe;
+
+            PortProbe ansProbe = ProbeAnsPort(portName, logAction);
+            if (ansProbe != null)
+                return ansProbe;
+
+            logAction?.Invoke($"未能识别串口：{portName}");
+            return NewProbe(portName, "UNKNOWN", null);
+        }
+
+        private static bool MatchesConfiguredUsbSerial(string actualSerial, string settingKey)
+        {
+            string expected = GetSetting(settingKey, null);
+            return !string.IsNullOrWhiteSpace(expected) &&
+                   string.Equals(actualSerial, expected, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static PortProbe ProbeFixtureBusPort(string portName, Action<string> logAction)
+        {
             bool isDigitalInput = ProbeModbus(
                 portName,
                 38400,
@@ -614,6 +902,11 @@ namespace TestPlatform
                 return fixtureProbe;
             }
 
+            return null;
+        }
+
+        private static PortProbe ProbeAnsPort(string portName, Action<string> logAction)
+        {
             if (ProbeModbus(
                 portName,
                 9600,
@@ -625,8 +918,7 @@ namespace TestPlatform
                 return NewProbe(portName, "ANS", "Modbus 01/03/0000");
             }
 
-            logAction?.Invoke($"未能识别串口：{portName}");
-            return NewProbe(portName, "UNKNOWN", null);
+            return null;
         }
 
         private static PortProbe ProbeMbdPort(
@@ -649,6 +941,45 @@ namespace TestPlatform
             else if (!string.IsNullOrWhiteSpace(error))
                 logAction?.Invoke($"串口 {portName} MBD 0D探测未通过：{error}");
             return NewProbe(portName, "UNKNOWN", response);
+        }
+
+        private static bool ProbeAinuoAn50(
+            string portName,
+            int baudRate,
+            out string identity,
+            out string error)
+        {
+            identity = null;
+            error = null;
+            try
+            {
+                using (var supply = new AinuoAn50PowerSupply())
+                {
+                    supply.ReadTimeoutMs = Math.Max(
+                        100,
+                        GetIntSetting("AinuoPowerAReadTimeoutMs", 1500));
+                    supply.WriteTimeoutMs = Math.Max(
+                        100,
+                        GetIntSetting("AinuoPowerAWriteTimeoutMs", 1000));
+                    supply.OpenSettleMs = Math.Max(
+                        0,
+                        GetIntSetting("AinuoPowerAOpenSettleMs", 200));
+                    supply.ResponseIdleMs = Math.Max(
+                        20,
+                        GetIntSetting("AinuoPowerAResponseIdleMs", 120));
+                    supply.CommandDelayMs = Math.Max(
+                        0,
+                        GetIntSetting("AinuoPowerACommandDelayMs", 180));
+                    supply.Connect(portName, baudRate);
+                    identity = supply.Identity;
+                    return !string.IsNullOrWhiteSpace(identity);
+                }
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
         }
 
         /// <summary>
@@ -748,7 +1079,7 @@ namespace TestPlatform
                 PortName = portName,
                 Kind = kind,
                 Identity = identity,
-                UsbSerial = TryGetFtdiSerial(portName)
+                UsbSerial = TryGetUsbSerial(portName)
             };
         }
 
@@ -773,6 +1104,57 @@ namespace TestPlatform
             }
         }
 
+        private static void AssignAinuoAn50(
+            IEnumerable<PortProbe> probes,
+            SKSerialDeviceDiscoveryResult result,
+            Action<string> logAction)
+        {
+            PortProbe[] allProbes = probes.ToArray();
+            PortProbe[] matches = allProbes
+                .Where(item => item.Kind == "AINUO_AN50")
+                .ToArray();
+            string expectedSerial = GetSetting("AinuoPowerAUsbSerial", null);
+
+            if (!string.IsNullOrWhiteSpace(expectedSerial))
+            {
+                PortProbe serialProbe = allProbes.FirstOrDefault(item => string.Equals(
+                    item.UsbSerial,
+                    expectedSerial,
+                    StringComparison.OrdinalIgnoreCase));
+                if (serialProbe != null && serialProbe.Kind == "AINUO_AN50")
+                {
+                    result.AinuoPowerAPort = serialProbe.PortName;
+                    logAction?.Invoke(
+                        $"艾诺{AinuoAn50PowerSupply.Model}电源A按SCPI应答和FTDI序列号双重确认：" +
+                        $"{serialProbe.PortName} / {expectedSerial}。");
+                    return;
+                }
+
+                if (serialProbe != null)
+                {
+                    result.Errors.Add(
+                        $"电源A FTDI序列号 {expectedSerial} 位于 {serialProbe.PortName}，" +
+                        "但AN50300-10只读SCPI探测未通过。");
+                    return;
+                }
+
+                if (matches.Length > 0)
+                {
+                    result.Errors.Add(
+                        $"识别到AN50300-10应答端口 {string.Join(", ", matches.Select(item => item.PortName))}，" +
+                        $"但其FTDI序列号与配置值 {expectedSerial} 不匹配。");
+                    return;
+                }
+            }
+
+            AssignSingle(
+                matches,
+                "AINUO_AN50",
+                $"艾诺{AinuoAn50PowerSupply.Model}电源A",
+                value => result.AinuoPowerAPort = value,
+                result);
+        }
+
         private static void AssignHengHui(
             IEnumerable<PortProbe> probes,
             SKSerialDeviceDiscoveryResult result,
@@ -780,34 +1162,26 @@ namespace TestPlatform
         {
             PortProbe[] allProbes = probes.ToArray();
             PortProbe[] matches = allProbes.Where(item => item.Kind == "HENGHUI").ToArray();
-            string serialA = GetSetting("HengHuiPowerAUsbSerial", "FTBBD8D9A");
-            string serialB = GetSetting("HengHuiPowerBUsbSerial", "FTB6D146A");
+            string serialB = GetSetting("HengHuiPowerBUsbSerial", null);
+            PortProbe matchB = string.IsNullOrWhiteSpace(serialB)
+                ? (matches.Length == 1 ? matches[0] : null)
+                : matches.FirstOrDefault(item => string.Equals(
+                    item.UsbSerial, serialB, StringComparison.OrdinalIgnoreCase));
 
-            PortProbe matchA = allProbes.FirstOrDefault(
-                item => string.Equals(item.UsbSerial, serialA, StringComparison.OrdinalIgnoreCase));
-            PortProbe matchB = allProbes.FirstOrDefault(
-                item => string.Equals(item.UsbSerial, serialB, StringComparison.OrdinalIgnoreCase));
-
-            result.HengHuiPowerAPort = matchA?.PortName;
             result.HengHuiPowerBPort = matchB?.PortName;
-
-            if (matchA != null && matchA.Kind != "HENGHUI")
+            if (!string.IsNullOrWhiteSpace(serialB) && matchB == null)
             {
-                logAction?.Invoke(
-                    $"恒辉电源A按已绑定USB序列号确认：{matchA.PortName} / {serialA}；" +
-                    "本轮IDN未正常返回，后续实机命令仍会校验通信结果。");
-            }
-            if (matchB != null && matchB.Kind != "HENGHUI")
-            {
-                logAction?.Invoke(
-                    $"恒辉电源B按已绑定USB序列号确认：{matchB.PortName} / {serialB}；" +
-                    "本轮IDN未正常返回，后续实机命令仍会校验通信结果。");
+                PortProbe serialProbe = allProbes.FirstOrDefault(item => string.Equals(
+                    item.UsbSerial, serialB, StringComparison.OrdinalIgnoreCase));
+                result.Errors.Add(serialProbe == null
+                    ? $"未找到恒辉电源B绑定的USB序列号 {serialB}。"
+                    : $"恒辉电源B的USB序列号 {serialB} 位于 {serialProbe.PortName}，但8602 IDN未通过。");
             }
 
-            foreach (PortProbe unmatched in matches.Where(item => item != matchA && item != matchB))
+            foreach (PortProbe unmatched in matches.Where(item => item != matchB))
             {
                 result.Errors.Add(
-                    $"恒辉8602 {unmatched.PortName} 的USB序列号 {unmatched.UsbSerial ?? "未知"} 未绑定A/B");
+                    $"恒辉8602 {unmatched.PortName} 的USB序列号 {unmatched.UsbSerial ?? "未知"} 未绑定电源B");
             }
         }
 
@@ -1055,6 +1429,86 @@ namespace TestPlatform
             catch
             {
                 // Registry information is optional; an unbound device will be reported.
+            }
+            return null;
+        }
+
+        private static string TryGetUsbSerial(string portName)
+        {
+            string ftdiSerial = TryGetFtdiSerial(portName);
+            if (!string.IsNullOrWhiteSpace(ftdiSerial))
+                return ftdiSerial;
+
+            try
+            {
+                using (RegistryKey root = Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Enum\USB"))
+                {
+                    if (root == null) return null;
+                    foreach (string deviceName in root.GetSubKeyNames())
+                    {
+                        using (RegistryKey device = root.OpenSubKey(deviceName))
+                        {
+                            if (device == null) continue;
+                            foreach (string instanceName in device.GetSubKeyNames())
+                            {
+                                // An instance path with ampersands is a USB location,
+                                // not a device-owned serial number (e.g. CH340).
+                                if (instanceName.IndexOf('&') >= 0)
+                                    continue;
+                                using (RegistryKey parameters = device.OpenSubKey(
+                                    instanceName + @"\Device Parameters"))
+                                {
+                                    if (string.Equals(
+                                        parameters?.GetValue("PortName") as string,
+                                        portName,
+                                        StringComparison.OrdinalIgnoreCase))
+                                        return instanceName;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // A USB serial is optional unless a configured binding requires it.
+            }
+            return null;
+        }
+
+        private static string TryGetUsbHardwareId(string portName)
+        {
+            try
+            {
+                using (RegistryKey root = Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Enum\USB"))
+                {
+                    if (root == null) return null;
+                    foreach (string deviceName in root.GetSubKeyNames())
+                    {
+                        using (RegistryKey device = root.OpenSubKey(deviceName))
+                        {
+                            if (device == null) continue;
+                            foreach (string instanceName in device.GetSubKeyNames())
+                            {
+                                using (RegistryKey parameters = device.OpenSubKey(
+                                    instanceName + @"\Device Parameters"))
+                                {
+                                    if (string.Equals(
+                                        parameters?.GetValue("PortName") as string,
+                                        portName,
+                                        StringComparison.OrdinalIgnoreCase))
+                                        return deviceName;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // A missing hardware ID must not select a programmer by COM number.
             }
             return null;
         }

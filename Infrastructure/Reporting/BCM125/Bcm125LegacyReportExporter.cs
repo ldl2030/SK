@@ -21,6 +21,7 @@ namespace TestPlatform
         public const int ExpectedReportItemCount = 176;
         public const int Bcm250ExpectedReportItemCount = 91;
         public const int Mps250ExpectedReportItemCount = 60;
+        public const int Mps125ExpectedReportItemCount = 70;
 
         private sealed class ReportProfile
         {
@@ -31,6 +32,8 @@ namespace TestPlatform
             public int ExpectedItemCount { get; set; }
             public bool LimitsBeforeUnit { get; set; }
             public bool UseSpacedFailureFileName { get; set; }
+            public bool DisplayUnitlessLimits { get; set; }
+            public bool KeepReportGroupsTogether { get; set; }
         }
 
         public sealed class ExportResult
@@ -127,7 +130,8 @@ namespace TestPlatform
                         profile.BoardFolder,
                         profile.AutoTestFileName),
                     profile.ExpectedItemCount,
-                    profile.OutputModelName);
+                    profile.OutputModelName,
+                    profile.DisplayUnitlessLimits);
                 Dictionary<string, DataRow> rowsByStepId = sourceTable.AsEnumerable()
                     .Where(row => !string.IsNullOrWhiteSpace(row["StepId"]?.ToString()))
                     .GroupBy(
@@ -213,7 +217,7 @@ namespace TestPlatform
                         textTempPath,
                         reportLines,
                         new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-                    WritePdf(pdfTempPath, reportLines);
+                    WritePdf(pdfTempPath, reportLines, profile.KeepReportGroupsTogether);
 
                     File.Move(textTempPath, textFilePath);
                     File.Move(pdfTempPath, pdfFilePath);
@@ -242,7 +246,8 @@ namespace TestPlatform
             string definitionPath,
             string autoTestPath,
             int expectedItemCount,
-            string outputModelName)
+            string outputModelName,
+            bool displayUnitlessLimits)
         {
             if (!File.Exists(definitionPath))
                 throw new FileNotFoundException("找不到BCM报告定义文件。", definitionPath);
@@ -305,13 +310,14 @@ namespace TestPlatform
             if (duplicateStepIds.Length > 0)
                 throw new InvalidDataException("报告StepId重复：" + string.Join("、", duplicateStepIds));
 
-            SynchronizeLimitsFromXml(definitions, autoTestPath);
+            SynchronizeLimitsFromXml(definitions, autoTestPath, displayUnitlessLimits);
             return definitions;
         }
 
         private static void SynchronizeLimitsFromXml(
             IReadOnlyList<ReportDefinition> definitions,
-            string autoTestPath)
+            string autoTestPath,
+            bool displayUnitlessLimits)
         {
             if (!File.Exists(autoTestPath))
                 throw new FileNotFoundException("找不到客户报告对应的自动测试XML。", autoTestPath);
@@ -332,7 +338,7 @@ namespace TestPlatform
                 // The legacy report omits limits for command, firmware and
                 // other logic rows.  Their PSV definitions deliberately have
                 // no display unit; XML may still carry 0/1 pass criteria.
-                if (string.IsNullOrWhiteSpace(definition.Unit))
+                if (string.IsNullOrWhiteSpace(definition.Unit) && !displayUnitlessLimits)
                 {
                     definition.LowerLimit = string.Empty;
                     definition.UpperLimit = string.Empty;
@@ -505,7 +511,7 @@ namespace TestPlatform
                    string.Equals(value, "N/A", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void WritePdf(string filePath, IReadOnlyList<string> lines)
+        private static void WritePdf(string filePath, IReadOnlyList<string> lines, bool keepGroupsTogether)
         {
             const float pageWidth = 595.0f;
             const float pageHeight = 842.0f;
@@ -528,9 +534,20 @@ namespace TestPlatform
                 float y = 0;
                 try
                 {
-                    foreach (string line in lines)
+                    for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
                     {
-                        if (canvas == null || y + lineHeight > pageHeight - bottomMargin)
+                        string line = lines[lineIndex];
+                        bool moveGroup = false;
+                        if (keepGroupsTogether && line != null && line.EndsWith(":", StringComparison.Ordinal))
+                        {
+                            int groupEnd = lineIndex + 1;
+                            while (groupEnd < lines.Count && !lines[groupEnd].EndsWith(":", StringComparison.Ordinal))
+                                groupEnd++;
+                            float groupHeight = (groupEnd - lineIndex) * lineHeight;
+                            moveGroup = groupHeight <= pageHeight - topMargin - bottomMargin &&
+                                y + groupHeight > pageHeight - bottomMargin;
+                        }
+                        if (canvas == null || moveGroup || y + lineHeight > pageHeight - bottomMargin)
                         {
                             if (canvas != null)
                                 document.EndPage();
@@ -602,6 +619,20 @@ namespace TestPlatform
                     AutoTestFileName = "BCM-125_autoTest.xml",
                     OutputModelName = "BCM_UP125",
                     ExpectedItemCount = ExpectedReportItemCount
+                };
+            }
+
+            if (normalized.Contains("MPS125") || normalized.Contains("MPSUP125"))
+            {
+                return new ReportProfile
+                {
+                    BoardFolder = "MPS-125",
+                    DefinitionFileName = "MPS-125_report.psv",
+                    AutoTestFileName = "MPS-125_autoTest.xml",
+                    OutputModelName = "MPS_UP125",
+                    ExpectedItemCount = Mps125ExpectedReportItemCount,
+                    DisplayUnitlessLimits = true,
+                    KeepReportGroupsTogether = true
                 };
             }
 

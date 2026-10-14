@@ -23,6 +23,7 @@ namespace TestPlatform.TestSequences
         private MbdTerminalState _mbdTerminalState;
         private bool _mbdReadyObserved;
         private bool _firmwareReadinessEvaluated;
+        private bool _firmwareReadinessPrepared;
         private bool _programFirmwareThisRun;
         private bool _firmwareProgrammedThisRun;
         private string _precheckedFirmwareVersion;
@@ -41,30 +42,70 @@ namespace TestPlatform.TestSequences
             public string[][] Branches { get; set; }
         }
 
+        private sealed class MeasurementReadinessDefinition
+        {
+            public string Leader { get; set; }
+            public string[] ProbeResultIds { get; set; }
+            public int TimeoutMs { get; set; }
+        }
+
+        private sealed class MeasurementReadinessResult
+        {
+            public bool IsReady { get; set; }
+            public Dictionary<string, double> LastValues { get; set; }
+            public Dictionary<string, string> FailedProbes { get; set; }
+            public string FailureReason { get; set; }
+        }
+
+        private sealed class MeasurementReadinessDaqState
+        {
+            public int? LastChannel { get; set; }
+        }
+
         private static readonly ParallelMeasurementBatch[] ParallelMeasurementBatches =
         {
-            Batch(new[] { "M01" }, new[] { "M02" }),
-            Batch(new[] { "M03" }, new[] { "M04" }),
-            Batch(new[] { "N01" }, new[] { "N02" }),
-            Batch(new[] { "N03" }, new[] { "N04" }),
+            // M/N/R working points must be sampled in plan order after DUT-side
+            // readiness is confirmed. Prefetching their later rows preserved
+            // transient values across breakpoints and caused false failures.
             Batch(new[] { "Q01", "Q02" }, new[] { "Q03", "Q04" }),
             Batch(new[] { "Q05", "Q06" }, new[] { "Q07" }),
             Batch(new[] { "Q08", "Q09" }, new[] { "Q10", "Q11" }),
-            Batch(new[] { "R01", "R02" }, new[] { "R03" }),
-            Batch(new[] { "R04", "R05" }, new[] { "R06", "R07" }),
-            Batch(new[] { "R08", "R09" }, new[] { "R10" }),
-            Batch(new[] { "R11", "R12" }, new[] { "R13", "R14" }),
             Batch(new[] { "T01" }, new[] { "T02" })
         };
-        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming;
+
+        private static readonly MeasurementReadinessDefinition[] MeasurementReadinessDefinitions =
+        {
+            Readiness("M01", "M01", "M02"),
+            Readiness("M03", "M03", "M04"),
+            Readiness("M09", "M09"),
+            Readiness("N01", "N01", "N02"),
+            Readiness("N03", "N03", "N04"),
+            Readiness("N07", "N07"),
+            Readiness("N08", "N08"),
+            Readiness("R01", "R01", "R02", "R03"),
+            Readiness("R04", "R04", "R05", "R06", "R07"),
+            Readiness("R08", "R08", "R09", "R10"),
+            Readiness("R11", "R11", "R12", "R13", "R14")
+        };
+        private readonly bool _forceFirmwareProgramming;
+        private readonly bool _skipFirmwareVerification;
+        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming && !_forceFirmwareProgramming;
+        protected override bool ForceFirmwareProgramming => _forceFirmwareProgramming;
+        protected override bool SkipFirmwareVerification => _skipFirmwareVerification;
 
         public SKBCM250Sequence(
             ITestGridService grid = null,
             Func<string, Task<bool>> confirmAsync = null,
-            bool skipFirmwareProgramming = false)
+            bool skipFirmwareProgramming = false,
+            bool? forceFirmwareProgramming = null,
+            bool skipFirmwareVerification = false)
             : base(grid, confirmAsync)
         {
             _skipFirmwareProgramming = skipFirmwareProgramming;
+            _forceFirmwareProgramming = forceFirmwareProgramming ?? !skipFirmwareProgramming;
+            // Explicit force from the UI takes priority; the default above keeps
+            // existing callers' enabled/disabled programming semantics.
+            _skipFirmwareVerification = skipFirmwareVerification;
         }
 
         protected override void AddElectricalTestSteps(
@@ -81,6 +122,7 @@ namespace TestPlatform.TestSequences
             _mbdTerminalState = MbdTerminalState.Unknown;
             _mbdReadyObserved = false;
             _firmwareReadinessEvaluated = false;
+            _firmwareReadinessPrepared = false;
             _programFirmwareThisRun = false;
             _firmwareProgrammedThisRun = false;
             _precheckedFirmwareVersion = null;
@@ -488,10 +530,39 @@ namespace TestPlatform.TestSequences
 
             if (device.SkipComInit)
             {
-                value = SimulationValue(action.ResultId, lower, upper);
+                value = action.Kind == Bcm250ActionKind.ProgramFirmware
+                    ? await ReadHardwareValueAsync(device, action, unit, context, token)
+                    : SimulationValue(action.ResultId, lower, upper);
             }
             else
             {
+                MeasurementReadinessResult readiness = await WaitForMeasurementReadinessAsync(
+                    device,
+                    action.ResultId,
+                    context,
+                    token);
+                if (!readiness.IsReady)
+                {
+                    double lastValue = 0.0;
+                    bool hasLastValue = readiness.LastValues != null &&
+                        readiness.LastValues.TryGetValue(action.ResultId, out lastValue);
+                    string failureSummary = FormatReadinessFailureSummary(readiness);
+                    string displayValue = hasLastValue
+                        ? lastValue.ToString("0.###", CultureInfo.InvariantCulture) +
+                          "（门禁失败：" + failureSummary + "）"
+                        : "无有效值（门禁失败：" + failureSummary + "）";
+                    return new StepResult
+                    {
+                        IsPass = false,
+                        Value = displayValue,
+                        NumericValue = hasLastValue ? lastValue : (double?)null,
+                        StoreKey = Bcm250ResultKeys.For(action.ResultId),
+                        Unit = unit
+                    };
+                }
+
+                CacheReusableReadinessValues(readiness);
+
                 value = await ReadHardwareValueWithParallelPrefetchAsync(
                     device,
                     action,
@@ -520,6 +591,45 @@ namespace TestPlatform.TestSequences
             };
         }
 
+        private void CacheReusableReadinessValues(MeasurementReadinessResult readiness)
+        {
+            if (readiness?.LastValues == null)
+                return;
+
+            var reusableIds = new List<string>();
+            foreach (KeyValuePair<string, double> pair in readiness.LastValues)
+            {
+                // R01-R14 are single-sample verification rows. The readiness
+                // gate already captured three consecutive in-limit samples from
+                // these exact probes. Averaged calibration rows still execute
+                // their complete configured sample series.
+                if (!Regex.IsMatch(pair.Key ?? string.Empty, "^R(?:0[1-9]|1[0-4])$"))
+                    continue;
+
+                _prefetchedHardwareValues[pair.Key] = pair.Value;
+                reusableIds.Add(pair.Key);
+            }
+
+            if (reusableIds.Count > 0)
+            {
+                OnLogInfo(
+                    "复用工作点稳定门禁的最终采样作为R结果：" +
+                    string.Join(",", reusableIds));
+            }
+        }
+
+        private static MeasurementReadinessDefinition Readiness(
+            string leader,
+            params string[] probeResultIds)
+        {
+            return new MeasurementReadinessDefinition
+            {
+                Leader = leader,
+                ProbeResultIds = probeResultIds,
+                TimeoutMs = 15000
+            };
+        }
+
         private static ParallelMeasurementBatch Batch(string[] mbdBranch, string[] daqBranch)
         {
             return new ParallelMeasurementBatch
@@ -529,6 +639,333 @@ namespace TestPlatform.TestSequences
             };
         }
 
+        private async Task<MeasurementReadinessResult> WaitForMeasurementReadinessAsync(
+            SK441Device device,
+            string resultId,
+            TestSequenceContext context,
+            CancellationToken token)
+        {
+            MeasurementReadinessDefinition definition = MeasurementReadinessDefinitions.FirstOrDefault(x =>
+                string.Equals(x.Leader, resultId, StringComparison.OrdinalIgnoreCase));
+            if (definition == null)
+            {
+                return new MeasurementReadinessResult
+                {
+                    IsReady = true,
+                    LastValues = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase),
+                    FailedProbes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                };
+            }
+
+            int requiredConsecutiveSamples = GetConfiguredStableSampleCount();
+            const int pollIntervalMs = 200;
+            var timer = Stopwatch.StartNew();
+            var lastValues = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var lastFailedProbes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var daqState = new MeasurementReadinessDaqState();
+            int consecutiveSamples = 0;
+            int sampleNumber = 0;
+
+            OnLogInfo(
+                "开始工作点就绪确认：" + definition.Leader +
+                "，探针=" + string.Join("+", definition.ProbeResultIds) +
+                "，要求连续稳定=" + requiredConsecutiveSamples +
+                "，最长等待=" + definition.TimeoutMs + "ms。");
+
+            while (timer.ElapsedMilliseconds < definition.TimeoutMs)
+            {
+                token.ThrowIfCancellationRequested();
+                sampleNumber++;
+                bool allInRange = true;
+                var statuses = new List<string>();
+                var currentFailedProbes =
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (string probeResultId in definition.ProbeResultIds)
+                {
+                    Bcm250ActionDefinition probeAction;
+                    TestStepItem probeStep;
+                    if (!_actionsByResultId.TryGetValue(probeResultId, out probeAction) ||
+                        !_stepsByResultId.TryGetValue(probeResultId, out probeStep) ||
+                        probeStep.PlanDefinition == null ||
+                        !probeStep.PlanDefinition.LowerLimit.HasValue ||
+                        !probeStep.PlanDefinition.UpperLimit.HasValue)
+                    {
+                        throw new TestPlanConfigurationException(
+                            "Measurement readiness has no complete XML definition for " + probeResultId);
+                    }
+
+                    double lower = probeStep.PlanDefinition.LowerLimit.Value;
+                    double upper = probeStep.PlanDefinition.UpperLimit.Value;
+                    // Readiness answers "has the working point arrived?"; the
+                    // formal result row below still uses the unmodified XML limits.
+                    // A few milliamps outside the production limit must not make
+                    // the leader row wait 15 seconds and fail as a second result.
+                    double readinessMargin = GetReadinessMargin(probeResultId);
+                    lower -= readinessMargin;
+                    upper += readinessMargin;
+                    string unit = probeStep.PlanDefinition.Unit ?? string.Empty;
+                    try
+                    {
+                        double value = await ReadMeasurementReadinessProbeAsync(
+                            device,
+                            probeAction,
+                            unit,
+                            context,
+                            daqState,
+                            token);
+                        lastValues[probeResultId] = value;
+                        bool inRange = value >= lower && value <= upper;
+                        allInRange &= inRange;
+                        if (!inRange)
+                        {
+                            currentFailedProbes[probeResultId] = string.Format(
+                                CultureInfo.InvariantCulture,
+                                "{0:0.###}{1}不在{2:0.###}~{3:0.###}{1}",
+                                value,
+                                unit,
+                                lower,
+                                upper);
+                        }
+                        statuses.Add(string.Format(
+                            CultureInfo.InvariantCulture,
+                            "{0}={1:0.###}{2}[{3:0.###}~{4:0.###}]({5})",
+                            probeResultId,
+                            value,
+                            string.IsNullOrWhiteSpace(unit) ? string.Empty : unit,
+                            lower,
+                            upper,
+                            inRange ? "OK" : "WAIT"));
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        allInRange = false;
+                        currentFailedProbes[probeResultId] = "读取失败：" + ex.Message;
+                        statuses.Add(probeResultId + "=ERROR(" + ex.Message + ")");
+                    }
+                }
+
+                lastFailedProbes = currentFailedProbes;
+                consecutiveSamples = allInRange ? consecutiveSamples + 1 : 0;
+                OnLogInfo(
+                    "工作点就绪轮询 " + definition.Leader + " #" + sampleNumber + "：" +
+                    string.Join("，", statuses) +
+                    "；连续稳定=" + consecutiveSamples + "/" + requiredConsecutiveSamples + "。");
+
+                if (consecutiveSamples >= requiredConsecutiveSamples)
+                {
+                    timer.Stop();
+                    OnLogSuccess(
+                        "工作点已就绪：" + definition.Leader +
+                        "，耗时=" + timer.ElapsedMilliseconds + "ms；开始正式顺序采样。");
+                    return new MeasurementReadinessResult
+                    {
+                        IsReady = true,
+                        LastValues = lastValues,
+                        FailedProbes = lastFailedProbes
+                    };
+                }
+
+                int remainingMs = definition.TimeoutMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs <= 0)
+                    break;
+                await Task.Delay(Math.Min(pollIntervalMs, remainingMs), token);
+            }
+
+            timer.Stop();
+            bool finalSampleIsValid = lastFailedProbes.Count == 0 &&
+                definition.ProbeResultIds.All(id => lastValues.ContainsKey(id));
+            if (finalSampleIsValid)
+            {
+                OnLogSuccess(
+                    "工作点在等待边界取得有效测量，按XML门限接受：" +
+                    definition.Leader + "，不因连续计数器未累积而误判失败。");
+                return new MeasurementReadinessResult
+                {
+                    IsReady = true,
+                    LastValues = lastValues,
+                    FailedProbes = lastFailedProbes
+                };
+            }
+
+            string lastValueText = string.Join(
+                "，",
+                definition.ProbeResultIds.Select(id =>
+                    lastValues.ContainsKey(id)
+                        ? id + "=" + lastValues[id].ToString("0.###", CultureInfo.InvariantCulture)
+                        : id + "=N/A"));
+            OnLogError(
+                "工作点就绪超时：" + definition.Leader +
+                "，最长等待=" + definition.TimeoutMs + "ms，最后值：" + lastValueText +
+                "；失败探针：" + FormatFailedProbeSummary(lastFailedProbes) + "。");
+            return new MeasurementReadinessResult
+            {
+                IsReady = false,
+                LastValues = lastValues,
+                FailedProbes = lastFailedProbes,
+                FailureReason = lastFailedProbes.Count == 0
+                    ? "未达到连续" + requiredConsecutiveSamples + "次稳定要求"
+                    : "工作点就绪超时"
+            };
+        }
+
+        private static int GetConfiguredStableSampleCount()
+        {
+            int configured;
+            string value = System.Configuration.ConfigurationManager.AppSettings[
+                "SKStableSampleCount"];
+            return int.TryParse(value, out configured)
+                ? Math.Max(1, configured)
+                : 1;
+        }
+
+        private static double GetReadinessMargin(string resultId)
+        {
+            if (!string.Equals(resultId, "R06", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(resultId, "R14", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0.0;
+            }
+
+            double configured;
+            string value = System.Configuration.ConfigurationManager.AppSettings[
+                "SKReadinessExternalCurrentMarginMa"];
+            return double.TryParse(
+                    value,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out configured)
+                ? Math.Max(0.0, configured)
+                : 100.0;
+        }
+
+        private async Task<double> ReadMeasurementReadinessProbeAsync(
+            SK441Device device,
+            Bcm250ActionDefinition action,
+            string unit,
+            TestSequenceContext context,
+            MeasurementReadinessDaqState daqState,
+            CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            switch (action.Kind)
+            {
+                case Bcm250ActionKind.DaqVoltage:
+                    {
+                        double volts = await ReadMeasurementReadinessDaqVoltageAsync(
+                            device,
+                            action.Channel,
+                            daqState,
+                            token);
+                        return unit.IndexOf("mV", StringComparison.OrdinalIgnoreCase) >= 0
+                            ? volts * 1000.0
+                            : volts;
+                    }
+                case Bcm250ActionKind.DaqShuntCurrent:
+                    {
+                        double shuntOhms = action.Scale;
+                        string resistanceKey = Bcm250ResultKeys.ShuntResistanceForChannel(action.Channel);
+                        double measuredResistance;
+                        bool useNominalResistance =
+                            action.Channel == Bcm250StationMap.StringShuntDaqChannel ||
+                            string.Equals(action.ResultId, "B06", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(action.ResultId, "B07", StringComparison.OrdinalIgnoreCase);
+                        if (!useNominalResistance &&
+                            context != null &&
+                            context.TryGetNumericValue(resistanceKey, out measuredResistance) &&
+                            !double.IsNaN(measuredResistance) &&
+                            !double.IsInfinity(measuredResistance) &&
+                            measuredResistance > 0.0)
+                        {
+                            shuntOhms = measuredResistance;
+                        }
+                        if (double.IsNaN(shuntOhms) ||
+                            double.IsInfinity(shuntOhms) ||
+                            shuntOhms <= 0.0)
+                        {
+                            throw new InvalidOperationException(
+                                "Missing/invalid readiness shunt resistance: " + resistanceKey);
+                        }
+
+                        double volts = await ReadMeasurementReadinessDaqVoltageAsync(
+                            device,
+                            action.Channel,
+                            daqState,
+                            token);
+                        return volts / shuntOhms * 1000.0;
+                    }
+                case Bcm250ActionKind.MbdNumeric:
+                    {
+                        string command = action.Argument;
+                        string response = _mbdTerminalState == MbdTerminalState.Bcm &&
+                                          device.IsTargetBoardCommunicationConnected
+                            ? await device.QueryMbdCommandOnCurrentConnectionAsync(command, 0)
+                            : await device.QueryMbdCommandAsync(command, 0);
+                        return MbdResponseParser.ParseScalar(command, response);
+                    }
+                default:
+                    throw new InvalidOperationException(
+                        "Unsupported readiness probe kind for " + action.ResultId + ": " + action.Kind);
+            }
+        }
+
+        private async Task<double> ReadMeasurementReadinessDaqVoltageAsync(
+            SK441Device device,
+            int channel,
+            MeasurementReadinessDaqState state,
+            CancellationToken token)
+        {
+            const int channelSwitchSettleMs = 100;
+            const int retrySettleMs = 150;
+
+            if (!device.SkipComInit &&
+                state.LastChannel.HasValue &&
+                state.LastChannel.Value != channel)
+            {
+                device.RecoverDaqVoltageMeasurement(
+                    "稳定门禁由通道" + state.LastChannel.Value + "切换到通道" + channel);
+                await Task.Delay(channelSwitchSettleMs, token);
+            }
+
+            state.LastChannel = channel;
+            try
+            {
+                return await device.MeasureDaqChannelVoltageAsync(channel);
+            }
+            catch (TimeoutException ex)
+            {
+                OnLogWarning(
+                    "稳定门禁DAQ通道" + channel + "首次读取超时，恢复测量状态后单次重试：" +
+                    ex.Message);
+                device.RecoverDaqVoltageMeasurement("通道" + channel + "读取超时重试");
+                await Task.Delay(retrySettleMs, token);
+                return await device.MeasureDaqChannelVoltageAsync(channel);
+            }
+        }
+
+        private static string FormatReadinessFailureSummary(MeasurementReadinessResult readiness)
+        {
+            string failedProbeSummary = FormatFailedProbeSummary(readiness.FailedProbes);
+            return string.Equals(failedProbeSummary, "无", StringComparison.Ordinal)
+                ? readiness.FailureReason ?? "工作点未就绪"
+                : failedProbeSummary;
+        }
+
+        private static string FormatFailedProbeSummary(
+            IDictionary<string, string> failedProbes)
+        {
+            if (failedProbes == null || failedProbes.Count == 0)
+                return "无";
+
+            return string.Join(
+                "；",
+                failedProbes.Select(pair => pair.Key + "=" + pair.Value));
+        }
+
         private async Task<double> ReadHardwareValueWithParallelPrefetchAsync(
             SK441Device device,
             Bcm250ActionDefinition action,
@@ -536,16 +973,19 @@ namespace TestPlatform.TestSequences
             TestSequenceContext context,
             CancellationToken token)
         {
+            bool engineeringStepMode = context?.RequiresSynchronousUiResults?.Invoke() == true;
             double prefetched;
             if (_prefetchedHardwareValues.TryGetValue(action.ResultId, out prefetched))
             {
                 _prefetchedHardwareValues.Remove(action.ResultId);
-                return prefetched;
+                if (!engineeringStepMode)
+                    return prefetched;
+                OnLogInfo("工程单步/断点模式：重新读取 " + action.ResultId + "，不复用提前采样。");
             }
 
             ParallelMeasurementBatch batch = ParallelMeasurementBatches.FirstOrDefault(x =>
                 string.Equals(x.Leader, action.ResultId, StringComparison.OrdinalIgnoreCase));
-            if (batch == null)
+            if (batch == null || engineeringStepMode)
                 return await ReadHardwareValueAsync(device, action, unit, context, token);
 
             OnLogInfo("启动跨仪器并行测量批次：" + string.Join(" + ", batch.Branches.SelectMany(x => x)));
@@ -675,13 +1115,18 @@ namespace TestPlatform.TestSequences
                         return currentMa;
                     }
                 case Bcm250ActionKind.ProgramFirmware:
-                    if (!_firmwareReadinessEvaluated)
+                    if (!_firmwareReadinessEvaluated || !_firmwareReadinessPrepared)
                     {
-                        OnLogError("BCM250尚未完成通讯和版本预检查，禁止进入C01。");
+                        OnLogError("BCM250烧录前检查或TTL路由准备未通过，C01不能放行。");
                         return 0.0;
                     }
                     if (!_programFirmwareThisRun)
                     {
+                        if (_forceFirmwareProgramming)
+                        {
+                            OnLogError("BCM250已启用真实TTL烧录，但C01没有执行烧录，判定失败。");
+                            return 0.0;
+                        }
                         OnLogSuccess(
                             "BCM250现有固件已通过通讯和版本检查，C01不重复烧录。" +
                             (string.IsNullOrWhiteSpace(_precheckedFirmwareVersion)
@@ -767,6 +1212,7 @@ namespace TestPlatform.TestSequences
             CancellationToken token)
         {
             _firmwareReadinessEvaluated = true;
+            _firmwareReadinessPrepared = false;
             _programFirmwareThisRun = false;
             _firmwareProgrammedThisRun = false;
             _precheckedFirmwareVersion = null;
@@ -786,9 +1232,12 @@ namespace TestPlatform.TestSequences
                 _precheckedFirmwareVersion = expectedVersion;
                 _prefetchedHardwareValues["D01"] = 0.0;
                 _prefetchedHardwareValues["D02"] = 0.0;
-                _firmwarePrecheckCacheValid = true;
-                OnLogInfo(
-                    "[调试模式] BCM250通讯和版本预检查通过，模拟按版本一致跳过烧录。");
+                _firmwarePrecheckCacheValid = !_forceFirmwareProgramming;
+                _programFirmwareThisRun = _forceFirmwareProgramming;
+                _firmwareReadinessPrepared = true;
+                OnLogInfo(_programFirmwareThisRun
+                    ? "[调试模式] BCM250已启用TTL烧录，模拟执行烧录及后续复检。"
+                    : "[调试模式] BCM250模拟版本预检查通过，按需模式跳过本轮TTL烧录。");
                 return true;
             }
 
@@ -866,7 +1315,7 @@ namespace TestPlatform.TestSequences
                 return false;
             }
 
-            if (versionMatches)
+            if (versionMatches && !_forceFirmwareProgramming)
             {
                 _prefetchedHardwareValues["D01"] = bcmCanOk ? 0.0 : 1.0;
                 _prefetchedHardwareValues["D02"] = 0.0;
@@ -878,26 +1327,28 @@ namespace TestPlatform.TestSequences
                 }
                 OnLogSuccess(
                     "BCM250现有固件版本正确（" + expectedVersion + "），跳过本轮TTL烧录。");
+                _firmwareReadinessPrepared = true;
                 return true;
             }
 
             OnLogWarning(string.Format(
                 CultureInfo.InvariantCulture,
-                "BCM250需要烧录：R14={0}，当前版本={1}，目标版本={2}。",
+                versionMatches
+                    ? "BCM250已启用真实TTL烧录：即使版本一致也执行C01。R14={0}，当前版本={1}，目标版本={2}。"
+                    : "BCM250需要烧录：R14={0}，当前版本={1}，目标版本={2}。",
                 bcmCanOk ? "OK" : "FAIL/NO RESPONSE",
                 string.IsNullOrWhiteSpace(_precheckedFirmwareVersion)
                     ? "NO RESPONSE"
                     : _precheckedFirmwareVersion,
                 expectedVersion));
 
-            if (!device.IsTtlProgrammingRequired)
+            if (SkipFirmwareProgramming)
             {
                 OnLogError(
                     "BCM250版本不匹配或无响应，但当前配置禁止TTL烧录，C01不能按成功放行。");
                 return false;
             }
 
-            _programFirmwareThisRun = true;
             if (!await SendCommandsAsync(
                     device,
                     Bcm250Commands.EnableDiagnostics,
@@ -923,6 +1374,8 @@ namespace TestPlatform.TestSequences
                 return false;
             }
 
+            _programFirmwareThisRun = true;
+            _firmwareReadinessPrepared = true;
             return true;
         }
 
@@ -931,6 +1384,15 @@ namespace TestPlatform.TestSequences
             string firmwareFileName,
             CancellationToken token)
         {
+            if (device.SkipComInit)
+            {
+                token.ThrowIfCancellationRequested();
+                _firmwareProgrammedThisRun = true;
+                InvalidateFirmwarePrecheckCache();
+                OnLogInfo("[调试模式] BCM250模拟TTL烧录完成；后续复位和版本复检仍按步骤执行。");
+                return true;
+            }
+
             FirmwareProgrammingWindow dialog = await ShowFirmwareProgrammingAsync(
                 firmwareFileName);
             Action<string, int> progressHandler = (phase, percent) =>
@@ -1237,16 +1699,13 @@ namespace TestPlatform.TestSequences
             int[] relayIds,
             bool close)
         {
-            bool passed = true;
-            foreach (int relayId in relayIds)
-                passed = await device.ControlRelayAsync(relayId, close) && passed;
+            bool passed = await device.ControlRelaysAsync(relayIds, close);
 
             // A partially closed power path is not a valid state. In particular,
             // BCM250 String output requires Y1/Y3/Y6 as one indivisible route.
             if (close && !passed)
             {
-                foreach (int relayId in relayIds)
-                    await device.ControlRelayAsync(relayId, false);
+                await device.ControlRelaysAsync(relayIds, false);
             }
             return passed;
         }
@@ -1325,37 +1784,53 @@ namespace TestPlatform.TestSequences
 
         private static int SampleCountForResult(string resultId)
         {
-            switch ((resultId ?? string.Empty).ToUpperInvariant())
+            string normalizedResultId = (resultId ?? string.Empty).ToUpperInvariant();
+            int defaultCount;
+            switch (normalizedResultId)
             {
                 case "J04":
-                    return 5;
+                    defaultCount = 5;
+                    break;
                 case "M01":
                 case "M02":
                 case "M03":
                 case "M04":
                 case "N02":
                 case "N04":
-                    return 8;
+                    defaultCount = 8;
+                    break;
                 case "M09":
                 case "T01":
                 case "T02":
-                    return 20;
+                    defaultCount = 20;
+                    break;
                 case "N01":
                 case "N03":
-                    return 16;
+                    defaultCount = 16;
+                    break;
                 case "N07":
                 case "N08":
-                    return 50;
+                    defaultCount = 50;
+                    break;
                 case "Q01":
                 case "Q02":
                 case "Q05":
                 case "Q06":
                 case "Q08":
                 case "Q09":
-                    return 4;
+                    defaultCount = 4;
+                    break;
                 default:
-                    return 1;
+                    defaultCount = 1;
+                    break;
             }
+
+            int configuredCount;
+            string configuredValue = System.Configuration.ConfigurationManager.AppSettings[
+                "SKBCM250SampleCount" + normalizedResultId];
+            return int.TryParse(configuredValue, out configuredCount) && configuredCount > 0
+                ? configuredCount
+                : defaultCount;
         }
 
         private static int SampleIntervalForResult(string resultId)
@@ -1554,7 +2029,7 @@ namespace TestPlatform.TestSequences
         {
             int timeoutMs = GetPlanDelayMs(new[] { step }, 0, 20000);
             const int pollIntervalMs = 500;
-            const int requiredConsecutiveSamples = 2;
+            int requiredConsecutiveSamples = GetConfiguredStableSampleCount();
 
             TestStepItem s01Step;
             if (!_stepsByResultId.TryGetValue("S01", out s01Step) ||
@@ -1658,6 +2133,143 @@ namespace TestPlatform.TestSequences
             int maximumWaitMs,
             CancellationToken token)
         {
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH18.S018.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                bool prechargeSenseReady = await WaitForL01L02ReadyAsync(
+                    device,
+                    3000,
+                    maximumWaitMs,
+                    token);
+                if (!prechargeSenseReady)
+                {
+                    OnLogWarning(
+                        stepId + " R69/R68未在最长等待内同时进入XML范围；" +
+                        "后续L01/L02仍执行正式读取并独立判定。");
+                }
+                return;
+            }
+
+            if (IsSecondarySettleDelay(stepId, out int secondaryMinimumWaitMs))
+            {
+                int settleMs = Math.Min(maximumWaitMs, secondaryMinimumWaitMs);
+                await Task.Delay(settleMs, token);
+                OnLogInfo(
+                    stepId + " String发生器设定值和输出状态已由下发命令回读确认；" +
+                    "保留" + settleMs + "ms硬件稳定时间，实际DUT值由紧随其后的正式测量判定。");
+                return;
+            }
+
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH16.S006.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                bool vbusReady = await WaitForDaqVoltageInRangeAsync(
+                    device,
+                    Bcm250StationMap.VbusReferenceDaqChannel,
+                    260.0,
+                    290.0,
+                    500,
+                    maximumWaitMs,
+                    token);
+                if (!vbusReady)
+                {
+                    OnLogWarning(
+                        stepId + " DAQ105未在最长等待内确认VBUS接通；" +
+                        "已完整保留XML等待上限，后续R51/DAQ105正式步骤继续判定。");
+                }
+                return;
+            }
+
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH20.S029.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                int flashSettleMs = Math.Min(maximumWaitMs, 250);
+                await Task.Delay(flashSettleMs, token);
+                OnLogInfo(
+                    stepId + " ACT->FLASH已返回完成；保留" + flashSettleMs +
+                    "ms落盘缓冲，0A状态由紧随其后的N07稳定门禁确认。");
+                return;
+            }
+
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH26.S028.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                bool currentReady = await WaitForMbdScalarInRangeAsync(
+                    device,
+                    "R44",
+                    -20.0,
+                    20.0,
+                    500,
+                    maximumWaitMs,
+                    GetConfiguredStableSampleCount(),
+                    token);
+                if (!currentReady)
+                {
+                    OnLogWarning(
+                        stepId + " R44未在最长等待内回到-20~20mA；" +
+                        "已完整保留XML等待上限，后续T03正式步骤继续判定。");
+                }
+                return;
+            }
+
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH19.S015.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                // W91 only needs relay settling. The following explicit two-second
+                // delay plus the M01/M02 readiness gate performs the real VMID
+                // stability check, so a second blind ten-second wait is redundant.
+                int relaySettleMs = Math.Min(maximumWaitMs, 500);
+                await Task.Delay(relaySettleMs, token);
+                OnLogInfo(
+                    stepId + " 已保留" + relaySettleMs +
+                    "ms继电器稳定时间；VMID由后续M01/M02工作点门禁确认。");
+                return;
+            }
+
+            if (string.Equals(
+                    stepId,
+                    "BCM250.CH26.S024.ACTION",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                double lower = -750.0;
+                double upper = -300.0;
+                TestStepItem t01Step;
+                if (_stepsByResultId.TryGetValue("T01", out t01Step) &&
+                    t01Step.PlanDefinition?.LowerLimit != null &&
+                    t01Step.PlanDefinition.UpperLimit != null)
+                {
+                    lower = t01Step.PlanDefinition.LowerLimit.Value;
+                    upper = t01Step.PlanDefinition.UpperLimit.Value;
+                }
+
+                bool mosCurrentReady = await WaitForMbdScalarInRangeAsync(
+                    device,
+                    "R44",
+                    lower,
+                    upper,
+                    500,
+                    maximumWaitMs,
+                    GetConfiguredStableSampleCount(),
+                    token);
+                if (!mosCurrentReady)
+                {
+                    OnLogWarning(
+                        stepId + " R44未在最长等待内进入T01限值；" +
+                        "后续T01正式平均测量仍继续判定。");
+                }
+                return;
+            }
+
             int minimumWaitMs;
             string[] domains;
             float[] targets;
@@ -1706,6 +2318,231 @@ namespace TestPlatform.TestSequences
             await Task.Delay(maximumWaitMs, token);
         }
 
+        private async Task<bool> WaitForDaqVoltageInRangeAsync(
+            SK441Device device,
+            int channel,
+            double lowerVoltage,
+            double upperVoltage,
+            int minimumWaitMs,
+            int maximumWaitMs,
+            CancellationToken token)
+        {
+            var timer = Stopwatch.StartNew();
+            int stableSamples = 0;
+            int requiredStableSamples = GetConfiguredStableSampleCount();
+            double lastVoltage = double.NaN;
+            while (timer.ElapsedMilliseconds < maximumWaitMs)
+            {
+                token.ThrowIfCancellationRequested();
+                int remainingMinimumMs = minimumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMinimumMs > 0)
+                {
+                    await Task.Delay(Math.Min(100, remainingMinimumMs), token);
+                    continue;
+                }
+
+                try
+                {
+                    lastVoltage = await device.MeasureDaqChannelVoltageAsync(channel);
+                    bool inRange = lastVoltage >= lowerVoltage && lastVoltage <= upperVoltage;
+                    stableSamples = inRange ? stableSamples + 1 : 0;
+                    OnLogInfo(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "DAQ{0}快速就绪轮询：{1:0.###}V，范围={2:0.###}~{3:0.###}V，连续稳定={4}/{5}。",
+                        channel,
+                        lastVoltage,
+                        lowerVoltage,
+                        upperVoltage,
+                        stableSamples,
+                        requiredStableSamples));
+                    if (stableSamples >= requiredStableSamples)
+                    {
+                        OnLogSuccess(string.Format(
+                            CultureInfo.InvariantCulture,
+                            "DAQ{0}工作点已就绪，提前结束等待：{1:0.###}V，耗时={2}ms。",
+                            channel,
+                            lastVoltage,
+                            timer.ElapsedMilliseconds));
+                        return true;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    stableSamples = 0;
+                    OnLogWarning("DAQ" + channel + "快速就绪读取失败：" + ex.Message);
+                }
+
+                int remainingMs = maximumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs > 0)
+                    await Task.Delay(Math.Min(200, remainingMs), token);
+            }
+            return false;
+        }
+
+        private async Task<bool> WaitForMbdScalarInRangeAsync(
+            SK441Device device,
+            string command,
+            double lower,
+            double upper,
+            int minimumWaitMs,
+            int maximumWaitMs,
+            int requiredConsecutiveSamples,
+            CancellationToken token)
+        {
+            requiredConsecutiveSamples = GetConfiguredStableSampleCount();
+            var timer = Stopwatch.StartNew();
+            int stableSamples = 0;
+            double lastValue = double.NaN;
+            while (timer.ElapsedMilliseconds < maximumWaitMs)
+            {
+                token.ThrowIfCancellationRequested();
+                int remainingMinimumMs = minimumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMinimumMs > 0)
+                {
+                    await Task.Delay(Math.Min(100, remainingMinimumMs), token);
+                    continue;
+                }
+
+                try
+                {
+                    string response = await device.QueryMbdCommandAsync(command, 0);
+                    lastValue = MbdResponseParser.ParseScalar(command, response);
+                    bool inRange = lastValue >= lower && lastValue <= upper;
+                    stableSamples = inRange ? stableSamples + 1 : 0;
+                    OnLogInfo(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "{0}快速就绪轮询：{1:0.###}，范围={2:0.###}~{3:0.###}，连续稳定={4}/{5}。",
+                        command,
+                        lastValue,
+                        lower,
+                        upper,
+                        stableSamples,
+                        requiredConsecutiveSamples));
+                    if (stableSamples >= requiredConsecutiveSamples)
+                    {
+                        OnLogSuccess(string.Format(
+                            CultureInfo.InvariantCulture,
+                            "{0}已稳定，提前结束等待：{1:0.###}，耗时={2}ms。",
+                            command,
+                            lastValue,
+                            timer.ElapsedMilliseconds));
+                        return true;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    stableSamples = 0;
+                    OnLogWarning(command + "快速就绪读取失败：" + ex.Message);
+                }
+
+                int remainingMs = maximumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs > 0)
+                    await Task.Delay(Math.Min(200, remainingMs), token);
+            }
+            return false;
+        }
+
+        private async Task<bool> WaitForL01L02ReadyAsync(
+            SK441Device device,
+            int minimumWaitMs,
+            int maximumWaitMs,
+            CancellationToken token)
+        {
+            TestStepItem l01Step;
+            TestStepItem l02Step;
+            if (!_stepsByResultId.TryGetValue("L01", out l01Step) ||
+                !_stepsByResultId.TryGetValue("L02", out l02Step) ||
+                l01Step.PlanDefinition?.LowerLimit == null ||
+                l01Step.PlanDefinition.UpperLimit == null ||
+                l02Step.PlanDefinition?.LowerLimit == null ||
+                l02Step.PlanDefinition.UpperLimit == null)
+            {
+                throw new TestPlanConfigurationException(
+                    "L01/L02 readiness requires complete XML limits.");
+            }
+
+            double l01Lower = l01Step.PlanDefinition.LowerLimit.Value;
+            double l01Upper = l01Step.PlanDefinition.UpperLimit.Value;
+            double l02Lower = l02Step.PlanDefinition.LowerLimit.Value;
+            double l02Upper = l02Step.PlanDefinition.UpperLimit.Value;
+            var timer = Stopwatch.StartNew();
+            while (timer.ElapsedMilliseconds < maximumWaitMs)
+            {
+                token.ThrowIfCancellationRequested();
+                int remainingMinimumMs = minimumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMinimumMs > 0)
+                {
+                    await Task.Delay(Math.Min(100, remainingMinimumMs), token);
+                    continue;
+                }
+
+                try
+                {
+                    double l01 = MbdResponseParser.ParseScalar(
+                        "R69",
+                        await device.QueryMbdCommandAsync("R69", 0));
+                    double l02 = MbdResponseParser.ParseScalar(
+                        "R68",
+                        await device.QueryMbdCommandAsync("R68", 0));
+                    bool ready = l01 >= l01Lower && l01 <= l01Upper &&
+                                 l02 >= l02Lower && l02 <= l02Upper;
+                    OnLogInfo(string.Format(
+                        CultureInfo.InvariantCulture,
+                        "L01/L02就绪轮询：R69={0:0.###}[{1:0.###}~{2:0.###}]，" +
+                        "R68={3:0.###}[{4:0.###}~{5:0.###}]，状态={6}。",
+                        l01,
+                        l01Lower,
+                        l01Upper,
+                        l02,
+                        l02Lower,
+                        l02Upper,
+                        ready ? "READY" : "WAIT"));
+                    if (ready)
+                    {
+                        _prefetchedHardwareValues["L01"] = l01;
+                        _prefetchedHardwareValues["L02"] = l02;
+                        OnLogSuccess(
+                            "L01/L02实际信号已稳定，复用最终R69/R68读数，耗时=" +
+                            timer.ElapsedMilliseconds + "ms。");
+                        return true;
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    OnLogWarning("L01/L02就绪轮询读取失败：" + ex.Message);
+                }
+
+                int remainingMs = maximumWaitMs - (int)timer.ElapsedMilliseconds;
+                if (remainingMs > 0)
+                    await Task.Delay(Math.Min(250, remainingMs), token);
+            }
+            return false;
+        }
+
+        private static bool IsSecondarySettleDelay(string stepId, out int minimumWaitMs)
+        {
+            switch ((stepId ?? string.Empty).ToUpperInvariant())
+            {
+                case "BCM250.CH23.S034.ACTION": minimumWaitMs = 1500; return true;
+                case "BCM250.CH24.S027.ACTION": minimumWaitMs = 1500; return true;
+                case "BCM250.CH25.S025.ACTION": minimumWaitMs = 750; return true;
+                case "BCM250.CH25.S044.ACTION": minimumWaitMs = 500; return true;
+                default: minimumWaitMs = 0; return false;
+            }
+        }
+
         private static bool TryGetPowerPollingDefinition(
             string stepId,
             out int minimumWaitMs,
@@ -1717,15 +2554,25 @@ namespace TestPlatform.TestSequences
             targets = null;
             switch ((stepId ?? string.Empty).ToUpperInvariant())
             {
-                case "BCM250.CH19.S009.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
-                case "BCM250.CH19.S025.ACTION": minimumWaitMs = 2000; domains = new[] { "VBUS" }; targets = new[] { 5f }; return true;
-                case "BCM250.CH19.S034.ACTION": minimumWaitMs = 2500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
+                case "BCM250.CH18.S018.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS" }; targets = new[] { 275f }; return true;
+                case "BCM250.CH18.S034.ACTION": minimumWaitMs = 750; domains = new[] { "VBUS" }; targets = new[] { 0f }; return true;
+                // M01/M02, M03/M04 and M09 immediately perform independent
+                // DUT-side readiness checks. Once the source readback reaches
+                // target, those gates provide the remaining settling time.
+                case "BCM250.CH19.S009.ACTION": minimumWaitMs = 500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
+                case "BCM250.CH19.S023.ACTION": minimumWaitMs = 1000; domains = new[] { "VBUS" }; targets = new[] { 0f }; return true;
+                case "BCM250.CH19.S025.ACTION": minimumWaitMs = 500; domains = new[] { "VBUS" }; targets = new[] { 5f }; return true;
+                case "BCM250.CH19.S034.ACTION": minimumWaitMs = 500; domains = new[] { "VBUS" }; targets = new[] { 125f }; return true;
                 case "BCM250.CH23.S028.ACTION": minimumWaitMs = 750; domains = new[] { "VBUS" }; targets = new[] { 15f }; return true;
                 case "BCM250.CH23.S034.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 25f }; return true;
                 case "BCM250.CH24.S027.ACTION": minimumWaitMs = 1500; domains = new[] { "VBUS", "SECONDARY" }; targets = new[] { 1f, 15f }; return true;
                 case "BCM250.CH25.S016.ACTION": minimumWaitMs = 3000; domains = new[] { "VBUS" }; targets = new[] { 275f }; return true;
                 case "BCM250.CH25.S025.ACTION": minimumWaitMs = 750; domains = new[] { "SECONDARY" }; targets = new[] { 225f }; return true;
+                case "BCM250.CH24.S058.ACTION": minimumWaitMs = 250; domains = new[] { "LOAD" }; targets = new[] { 0f }; return true;
+                case "BCM250.CH25.S038.ACTION": minimumWaitMs = 250; domains = new[] { "LOAD" }; targets = new[] { 255f }; return true;
+                case "BCM250.CH25.S044.ACTION": minimumWaitMs = 500; domains = new[] { "SECONDARY" }; targets = new[] { 0f }; return true;
                 case "BCM250.CH26.S012.ACTION": minimumWaitMs = 1000; domains = new[] { "VBUS" }; targets = new[] { 100f }; return true;
+                case "BCM250.CH26.S037.ACTION": minimumWaitMs = 250; domains = new[] { "LOAD" }; targets = new[] { 0f }; return true;
                 default: return false;
             }
         }

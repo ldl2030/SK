@@ -43,20 +43,32 @@ namespace TestPlatform.TestSequences
 
             steps.Add(new TestStepItem
             {
-                Name = "7.3 断开测试继电器（保持Y1/Y2）",
+                Name = boardName == "BCM-125"
+                    ? "7.3 断开测试继电器并恢复电子负载Y2/Y5"
+                    : "7.3 断开测试继电器（保持Y1/Y2）",
                 RowIndex = steps.Count,
                 Action = async token =>
                 {
                     OnLogInfo($"正在执行 {boardName} 测试继电器复位 (Chapter 7.3)...");
                     bool placementPassed = await deviceManager.OpenPlacementDetectionRelaysAsync();
                     bool relaysPassed = await deviceManager.OpenAllRelaysAsync();
-                    bool passed = placementPassed && relaysPassed;
+                    bool loadPathPassed = true;
+                    if (placementPassed && relaysPassed && boardName == "BCM-125")
+                    {
+                        // The precheck powers the load through station-3 Y2/Y5, but the
+                        // all-relay reset above opens them again. Restore that path while
+                        // every source is still off so CH25 can use the load terminals.
+                        loadPathPassed = await deviceManager.EnableBcmElectronicLoadSupplyAsync();
+                    }
+                    bool passed = placementPassed && relaysPassed && loadPathPassed;
                     if (!passed)
                         OnLogError("测试继电器或万用表继电器复位失败！");
                     return new StepResult
                     {
                         IsPass = passed,
-                        Value = passed ? "Relay Open OK" : "Relay Fail"
+                        Value = passed
+                            ? boardName == "BCM-125" ? "Relay Reset / Load Path Ready" : "Relay Open OK"
+                            : "Relay Fail"
                     };
                 }
             });

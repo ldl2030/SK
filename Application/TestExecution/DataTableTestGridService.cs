@@ -10,12 +10,25 @@ namespace TestPlatform.TestSequences
     /// 基于 ProjectSettings.testDataTable 的表格更新服务。
     /// 该类只负责 DataTable 读写，不包含任何测试流程逻辑。
     /// </summary>
-    public class DataTableTestGridService : ITestGridService
+    public class DataTableTestGridService : ITestGridService, IFlushableTestGridService
     {
+        private sealed class PendingOutcome
+        {
+            public int ChannelIndex;
+            public string StepId;
+            public string Value;
+            public StepExecutionStatus Status;
+            public long ElapsedMs;
+        }
+
         private readonly Func<DataTable> _getTable;
         private readonly Dispatcher _dispatcher;
         private readonly Func<int, int, Task> _scrollToRowAsync;
         private readonly Action<int, int, string, bool, string> _stepResultUpdated;
+        private readonly object _pendingOutcomeSync = new object();
+        private readonly Queue<PendingOutcome> _pendingOutcomes = new Queue<PendingOutcome>();
+        private bool _outcomeDrainScheduled;
+        private Exception _outcomeDrainError;
         private DataTable _indexedTable;
         private int _indexedRowCount = -1;
         private Dictionary<string, int> _stepIndexById;
@@ -198,6 +211,7 @@ namespace TestPlatform.TestSequences
                 case StepExecutionStatus.Skipped: return "已跳过";
                 case StepExecutionStatus.CleanupRunning: return "收尾中";
                 case StepExecutionStatus.CleanupFailed: return "收尾失败";
+                case StepExecutionStatus.Warning: return "警告";
                 default: return "待测";
             }
         }
@@ -219,6 +233,136 @@ namespace TestPlatform.TestSequences
         {
             int rowIndex = await GetRowIndexByStepIdAsync(stepId);
             await SetExecTimeAsync(rowIndex, elapsedMs);
+        }
+
+        public Task SetOutcomeByStepIdAsync(
+            int channelIndex,
+            string stepId,
+            string value,
+            StepExecutionStatus status,
+            long elapsedMs)
+        {
+            if (string.IsNullOrWhiteSpace(stepId))
+                throw new TestPlanConfigurationException("StepId cannot be empty.");
+
+            bool scheduleDrain = false;
+            lock (_pendingOutcomeSync)
+            {
+                if (_outcomeDrainError != null)
+                    throw new InvalidOperationException(
+                        "A queued test-grid update failed.", _outcomeDrainError);
+                _pendingOutcomes.Enqueue(new PendingOutcome
+                {
+                    ChannelIndex = channelIndex,
+                    StepId = stepId,
+                    Value = value ?? string.Empty,
+                    Status = status,
+                    ElapsedMs = elapsedMs
+                });
+                if (!_outcomeDrainScheduled)
+                {
+                    _outcomeDrainScheduled = true;
+                    scheduleDrain = true;
+                }
+            }
+
+            if (scheduleDrain)
+                ScheduleOutcomeDrain();
+            return Task.CompletedTask;
+        }
+
+        public async Task FlushPendingOutcomesAsync()
+        {
+            await _dispatcher.InvokeAsync(
+                () => DrainPendingOutcomes(int.MaxValue),
+                DispatcherPriority.Normal);
+            lock (_pendingOutcomeSync)
+            {
+                if (_outcomeDrainError != null)
+                    throw new InvalidOperationException(
+                        "A queued test-grid update failed.", _outcomeDrainError);
+            }
+        }
+
+        private void ScheduleOutcomeDrain()
+        {
+            _dispatcher.BeginInvoke(
+                new Action(() => DrainPendingOutcomes(64)),
+                DispatcherPriority.Background);
+        }
+
+        private void DrainPendingOutcomes(int maximumBatchSize)
+        {
+            var batch = new List<PendingOutcome>();
+            lock (_pendingOutcomeSync)
+            {
+                while (batch.Count < maximumBatchSize && _pendingOutcomes.Count > 0)
+                    batch.Add(_pendingOutcomes.Dequeue());
+                _outcomeDrainScheduled = false;
+            }
+
+            // Only the latest item in a batch needs to update the large channel
+            // banner. Every row still receives its own value, status and timing.
+            for (int index = 0; index < batch.Count; index++)
+            {
+                try
+                {
+                    ApplyOutcome(batch[index], index == batch.Count - 1);
+                }
+                catch (Exception ex)
+                {
+                    lock (_pendingOutcomeSync)
+                        _outcomeDrainError = _outcomeDrainError ?? ex;
+                }
+            }
+
+            bool scheduleDrain = false;
+            lock (_pendingOutcomeSync)
+            {
+                if (_pendingOutcomes.Count > 0 && !_outcomeDrainScheduled)
+                {
+                    _outcomeDrainScheduled = true;
+                    scheduleDrain = true;
+                }
+            }
+            if (scheduleDrain)
+                ScheduleOutcomeDrain();
+        }
+
+        private void ApplyOutcome(PendingOutcome outcome, bool updateBanner)
+        {
+            int rowIndex = GetRowIndexByStepId(outcome.StepId);
+            DataRow row = GetRow(rowIndex);
+            if (row == null)
+                return;
+
+            string valueColumn = GetValueColumn(outcome.ChannelIndex);
+            string resultColumn = GetResultColumn(outcome.ChannelIndex);
+            if (row.Table.Columns.Contains("ExecTime"))
+                row["ExecTime"] = outcome.ElapsedMs.ToString();
+            if (row.Table.Columns.Contains(valueColumn))
+                row[valueColumn] = outcome.Value;
+            if (row.Table.Columns.Contains(resultColumn))
+                row[resultColumn] = ToDisplayText(outcome.Status);
+
+            if (updateBanner &&
+                (outcome.Status == StepExecutionStatus.Passed ||
+                 outcome.Status == StepExecutionStatus.PassedAfterRetry ||
+                 outcome.Status == StepExecutionStatus.Failed ||
+                 outcome.Status == StepExecutionStatus.CleanupFailed))
+            {
+                string itemName = row.Table.Columns.Contains("TestItem")
+                    ? row["TestItem"]?.ToString()
+                    : string.Empty;
+                bool pass = outcome.Status == StepExecutionStatus.Passed ||
+                            outcome.Status == StepExecutionStatus.PassedAfterRetry;
+                _stepResultUpdated?.Invoke(
+                    outcome.ChannelIndex,
+                    rowIndex,
+                    outcome.Value,
+                    pass,
+                    itemName);
+            }
         }
 
         public async Task<(bool IsValid, double Lower, double Upper, string ErrorMessage)> GetLimitsAsync(int rowIndex)
@@ -256,8 +400,11 @@ namespace TestPlatform.TestSequences
 
         private async Task<int> GetRowIndexByStepIdAsync(string stepId)
         {
-            return await _dispatcher.InvokeAsync(() =>
-            {
+            return await _dispatcher.InvokeAsync(() => GetRowIndexByStepId(stepId));
+        }
+
+        private int GetRowIndexByStepId(string stepId)
+        {
                 if (string.IsNullOrWhiteSpace(stepId))
                     throw new TestPlanConfigurationException("StepId cannot be empty.");
 
@@ -290,7 +437,6 @@ namespace TestPlatform.TestSequences
                     throw new TestPlanConfigurationException($"StepId not found in test grid: {stepId}");
 
                 return foundIndex;
-            });
         }
 
         private string GetValueColumn(int channelIndex)

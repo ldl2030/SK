@@ -202,6 +202,27 @@ namespace TestPlatform
             VerifySetpoint(":CURR?", current, "current");
         }
 
+        public bool HasVoltageCurrentOvpSetpoint(float voltage, float current, float ovp)
+        {
+            try
+            {
+                return MatchesSetpoint(":VOLT?", voltage) &&
+                       MatchesSetpoint(":CURR?", current) &&
+                       MatchesSetpoint(":VOLT:PROT?", ovp);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool MatchesSetpoint(string query, float expected)
+        {
+            float actual = QueryFloat(query);
+            float tolerance = Math.Max(0.001f, Math.Abs(expected) * 0.001f);
+            return Math.Abs(actual - expected) <= tolerance;
+        }
+
         public void SetVoltage(float voltage)
         {
             ValidateSetpoint(voltage, Vmax, nameof(voltage));
@@ -227,7 +248,7 @@ namespace TestPlatform
             }
         }
 
-        public void ReadVoltageCurrent(out float voltage, out float current)
+        public virtual void ReadVoltageCurrent(out float voltage, out float current)
         {
             voltage = QueryFloat(":MEAS:VOLT?");
             current = QueryFloat(":MEAS:CURR?");

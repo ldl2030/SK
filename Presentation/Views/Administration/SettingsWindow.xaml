@@ -626,6 +626,7 @@
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
                                             <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <CheckBox x:Name="chkStopOnFail" Grid.Row="0" Grid.Column="0" Content="失败时停止整个测试" IsChecked="True"/>
                                         <CheckBox x:Name="chkPromptOnFail" Grid.Row="0" Grid.Column="2" Content="失败时弹窗提示" IsChecked="True"/>
@@ -645,8 +646,16 @@
                                                   ToolTip="仅在工程 Profile 且未勾选失败时停止整个测试时生效；急停、治具和接口等安全关键失败仍会停止。"/>
                                         <CheckBox x:Name="chkFirmwareProgrammingEnabled"
                                                   Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
-                                                  Content="BCM250：启用真实 TTL 固件烧录"
-                                                  ToolTip="勾选后执行真实固件烧录，并要求配置独立 TTL 串口和有效 HEX 文件；取消勾选时跳过烧录。"/>
+                                                  Content="允许 BCM TTL 固件烧录（版本异常时自动烧录）"
+                                                  ToolTip="BCM125/250先检查应用固件；版本正确则跳过，异常时才烧录。关闭此项后版本异常会判失败。其他项目保留原有跳过烧录行为。"/>
+                                        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3">
+                                            <CheckBox x:Name="chkForceFirmwareProgramming"
+                                                      Content="BCM125/250：每轮强制烧录"
+                                                      ToolTip="版本一致也执行烧录；此项优先于允许/跳过烧录设置，启动前要求TTL及有效HEX文件。"/>
+                                            <CheckBox x:Name="chkSkipFirmwareVerification"
+                                                      Content="BCM125/250：跳过烧录后的写入校验（verify）"
+                                                      ToolTip="仅跳过Bootloader逐块回读比对，仍检查写入ACK、应用固件版本和后续功能。默认关闭，正常烧录保留verify。"/>
+                                        </StackPanel>
                                     </Grid>
                                 </Grid>
                             </Border>

@@ -5,24 +5,24 @@ Executable procedure chapters are 6-17; threshold table 6 is on pages 20-21.
 
 ## Station mapping decisions
 
-- Voltage source A (`HengHuiPower1`) is the VBUS simulator (275 V operating point).
+- Voltage source A (`AinuoPowerA`, AN50300-10) is the VBUS simulator (275 V operating
+  point); voltage and current limits are sent separately and remote OVP is not sent.
 - Voltage source B (`HengHuiPower2`) is the VBATT simulator (275/250 V operating points).
 - Ans/source C and the electronic load are not required by this MPS procedure.
 - VBUS source A directly powers the MPS board/DUT. VBATT source B must pass
   through station-3 high-power relays Y1 and Y9; both close before source-B
   output is enabled and open after source-B output is off and discharged.
   Relay_3, Relay_4, Relay_5 and Relay_6 are DAQ relay
-  channels 301, 302, 303 and 304. Logical Relay_2 controls both Relay_2 and
+  channels 308, 302, 303 and 304. Logical Relay_2 controls both Relay_2 and
   Relay_2BIS on DAQ305/DAQ306.
 - Table 9 physical CH01-CH20 maps one-to-one to DAQ101-DAQ120. The latest
   MPS-250 station table puts P+ on DAQ113, VPWM on DAQ114, the 1 ohm VBUS
   absorption shunt on DAQ117 and +5VI on DAQ119; direct-current mode is not used.
 - COM_USB uses DAQ111, LS1COM resistance DAQ118, U24 pin 7 DAQ109, P+ as the
   VBUS calibration reference DAQ113, and MCU_ISOBATT/TP230 DAQ105.
-- User reconfirmed on 2026-08-20 that all MPS-250 relay assignments
-  (`@301`-`@306`) and measurement assignments (DAQ101/102/103/105/106/107/
-  108/109/111/113/114/117/118/119/120) above are the correct current station
-  mapping. They are no longer open PDF-versus-station mapping conflicts.
+- User reconfirmed the measurement assignments (DAQ101/102/103/105/106/107/
+  108/109/111/113/114/117/118/119/120) and the original relay wiring on
+  2026-08-20. Per the 2026-10-10 user update, Relay_3 now uses CH_8/DAQ308; damaged CH_1/DAQ301 remains excluded, and Relay_2 and Relay_4-6 retain their assignments.
 - MPS-250 USB-B follows Rev.3 chapter 9 at 115200 baud, 8N1, no flow control,
   transmit CR. BCM keeps its separate station-confirmed 9600 baud setting.
 
@@ -73,10 +73,18 @@ cannot be bypassed by the engineering continue-after-power-failure option.
 DAQ series timing is start-to-start: a slow `READ?` no longer receives an
 additional full interval delay. If the serial acquisition itself exceeds the
 requested interval, sampling continues immediately and logs one overrun. This
-keeps the K 16-by-500 ms window near eight seconds and avoids the previous
-approximately seventeen-second sparse sampling. All Chapter 17 result rows are
-safety-critical; any invalid R71, FBK or current result closes the heaters and
-all power outputs before later PWM actions can execute.
+avoids extra waits after slow serial acquisitions. K01-K03 use the DAQ internal
+timed scan with 81 endpoint-inclusive readings at 100 ms over a real 8-second
+window. Final Chapter 16/17 result failures follow the configured global
+stop-on-fail policy; their power transitions retain the separate safety gates.
+
+The user authorized shorter averages on 2026-10-10. MPS-250 Chapter 11/13/17
+16-sample averages now use `SKMPS250PwmAverageSampleCount` (default/minimum 8;
+16 restores the procedure count), retaining 100 ms intervals and NPLC=1.
+Fixed DC ranges are selected per result state rather than globally per channel,
+including the three-sample Chapter 14 averages. K01-K03 timed windows and the
+10-second heater settling waits are unchanged. Timing evidence, ranges, and
+estimated savings are recorded in `Docs/MPS250_145249_测试提速分析_20261010.md`.
 
 ## Main-switch terminology
 
@@ -116,7 +124,9 @@ configured/fixed-port behavior.
 | 15.15-16 / table 6 | Detailed text lists J06 Gain_VSTRING from nonexistent PA4 and J07 Gain_VSTRING2; table 6 ends at J06 and only J03/R70 vstring2 exists | Keep one result J06, calculate the sole string gain from J03/R70 (vstring2+) and omit orphan J07 | Confirm calibration variable expected by MPS-250 firmware |
 | 8.6 | Gradual ramp has no increment/dwell | 1 V steps, 100 ms dwell, 5-85 V | Approve ramp resolution and dwell |
 | G02 | Maximum is infinity | Use PDF table-6 lower limit 1000000 ohm and no upper limit, rendered as `[1000000; any]` | Confirm DAQ over-range representation |
-| PDF table 6 vs REF2/report | REF2 contains a newer but different threshold set, including P+=270-280 V and gain=400k-410k | User directed PDF Rev.3 to be authoritative; XML and report use table-6 values, including P+=137-138 V and gain=200k-205k | Run a known-good MPS-250 and escalate any systematic mismatch before changing limits again |
+| Table 6 §18 J04/J05/J06 | Printed gain=200k-205k is incorrect; the 2026-10-10 hardware log gives J05=404586.69 | User corrected all three gains to 400000-410000 on 2026-10-10; XML and generated reports use this range | Gain steps reuse the successful DAQ113 reference from 15.12; a missing/failed reference blocks calculation |
+| Table 6 L02-L16, excluding any rows | Printed heater thresholds differ from the user-provided 2026-10-10 image | Apply the image's twelve finite L ranges; retain L01/L05/L09/L13 exactly as requested | Validate actual heater behavior on the next hardware run |
+| Chapter 11/13/17 averages | Procedure specifies 16 readings; user authorized reducing unnecessary sampling time on 2026-10-10 | Default eight readings with fixed ranges and independent result judgments; configurable return to 16 | Confirm average stability and cycle-time savings on the next hardware run |
 
 ## Hardware-only gates
 
@@ -124,7 +134,7 @@ C01 cycle-time observations and the future optimization gate are recorded in
 `Docs/MPS250_C01_IGNITION_VOLTAGE_NOTES.md`. The expected ignition point is
 approximately 33 V; the current 5-85 V implementation remains unchanged.
 
-The DAQ301-306 relay assignments, Relay_2/2BIS pairing, and listed DAQ101-120
+The DAQ302-306/308 relay assignments, Relay_2/2BIS pairing, and listed DAQ101-120
 signal assignments are station-confirmed and do not block Hardware mode.
 During first hardware execution, validate relay contact polarity/behavior,
 source-B VBATT polarity, DAQ118 over-range behavior, DAQ109 U24.7, DAQ113 P+

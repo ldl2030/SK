@@ -13,6 +13,7 @@ namespace TestPlatform.TestSequences
 
     public static class Mps250ResultKeys
     {
+        public const string VbusCalibrationReference = "MPS250.CALIBRATION.VBUS_REFERENCE";
         public static string For(string resultId) => "MPS250.RESULT." + resultId;
     }
 
@@ -23,7 +24,7 @@ namespace TestPlatform.TestSequences
         SetVbusAndWaitStable, SetVbusRampStep, WaitForMbdReadyAfterPowerCycle, SetVbatt,
         SetVbattAndWaitStable,
         SafeVbusRelay, SafeVbattConnect, SafeVbattDisconnect,
-        DaqVoltage, DaqAverageVoltage, DaqAverageVoltageAfterVbattBaseline,
+        DaqVoltage, DaqVbusCalibrationReference, DaqAverageVoltage, DaqAverageVoltageAfterVbattBaseline,
         DaqTimedWindowAverageVoltage, DaqTimedWindowAverageVoltageAfterVbattBaseline,
         DaqShuntCurrent, DaqResistance,
         MbdNumeric, FirmwareVersion, IgnitionRamp, ComputedGain,
@@ -42,6 +43,7 @@ namespace TestPlatform.TestSequences
         public double Scale { get; set; }
         public int SampleCount { get; set; } = 1;
         public int SampleIntervalMs { get; set; }
+        public double? DaqRangeVolts { get; set; }
         public bool State { get; set; }
         public bool AlwaysRun { get; set; }
         public string[] RequiresResultIds { get; set; } = Array.Empty<string>();

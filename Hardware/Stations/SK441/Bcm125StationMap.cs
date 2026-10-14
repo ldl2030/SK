@@ -51,8 +51,29 @@ namespace TestPlatform
         public const int String2ShuntDaqChannel = 115;
         public const int String1VoltageDaqChannel = 114;
         public const int String2VoltageDaqChannel = 116;
-        public const double String1ShuntOhms = 0.0215909;
-        public const double String2ShuntOhms = 0.0215914;
+        public static readonly double String1ShuntOhms = GetShuntOhms(
+            "SKBCM125String1ShuntOhms", 0.0205);
+        public static readonly double String2ShuntOhms = GetShuntOhms(
+            "SKBCM125String2ShuntOhms", 0.0205);
+
+        private static double GetShuntOhms(string settingName, double legacyValue)
+        {
+            string configured = System.Configuration.ConfigurationManager.AppSettings[settingName];
+            if (string.IsNullOrWhiteSpace(configured))
+                return legacyValue;
+
+            double ohms;
+            if (!double.TryParse(configured, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out ohms) ||
+                double.IsNaN(ohms) || double.IsInfinity(ohms) ||
+                ohms < 0.015 || ohms > 0.03)
+            {
+                throw new System.Configuration.ConfigurationErrorsException(
+                    settingName + " must be a shunt resistance in ohms between 0.015 and 0.030.");
+            }
+
+            return ohms;
+        }
 
         public const string ProgrammingBcm1DaqRelay = "@305";
         public const string ProgrammingBcm2DaqRelay = "@306";

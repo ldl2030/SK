@@ -238,9 +238,11 @@ namespace TestPlatform
             }
 
             int baudRate = GetIntAppSetting("SKFixtureRelayBaudRate", 38400);
-            string comPort = GetAppSetting(
-                "SKFixtureRelayComPort",
-                GetAppSetting("SKRelayComPort", ComName.rs485ComName));
+            string comPort = !string.IsNullOrWhiteSpace(ComName.fixtureRelayComName)
+                ? ComName.fixtureRelayComName
+                : GetAppSetting(
+                    "SKFixtureRelayComPort",
+                    GetAppSetting("SKRelayComPort", ComName.rs485ComName));
             string response = await RelayController.SendCommandAsync(
                 address,
                 relayId,

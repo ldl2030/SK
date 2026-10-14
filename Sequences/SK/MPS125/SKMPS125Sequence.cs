@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace TestPlatform.TestSequences
 {
-    public sealed class SKMPS125Sequence : SKBcmSequenceBase
+    public sealed partial class SKMPS125Sequence : SKBcmSequenceBase
     {
         public override string SequenceKey => "SK_MPS125_Sequence";
         public override string ExpectedBoardType => "MPS-125";
@@ -45,6 +45,8 @@ namespace TestPlatform.TestSequences
             });
             AssignPlanGroupToRange(steps, context, Mps125GroupIds.Precheck, 0, steps.Count);
             IReadOnlyList<Mps125ActionDefinition> catalog = Mps125ActionCatalog.Create();
+            // A fresh cache belongs only to this run and the current heater state.
+            var earlyResults = new Dictionary<string, StepResult>(StringComparer.OrdinalIgnoreCase);
 
             foreach (IGrouping<int, Mps125ActionDefinition> chapter in catalog
                 .Where(x => !x.AlwaysRun)
@@ -55,18 +57,19 @@ namespace TestPlatform.TestSequences
                 AddPlanChapter(steps, context, groupId, () =>
                 {
                     foreach (Mps125ActionDefinition action in chapter)
-                        AddCatalogStep(steps, context, device, action, groupId);
+                        AddCatalogStep(steps, context, device, action, groupId, catalog, earlyResults);
                 });
             }
 
             AddPlanChapter(steps, context, Mps125GroupIds.Cleanup, () =>
             {
                 foreach (Mps125ActionDefinition action in catalog.Where(x => x.AlwaysRun))
-                    AddCatalogStep(steps, context, device, action, Mps125GroupIds.Cleanup);
+                    AddCatalogStep(steps, context, device, action, Mps125GroupIds.Cleanup, catalog, earlyResults);
             });
         }
 
-        private void AddCatalogStep(IList<TestStepItem> steps, TestSequenceContext context, SK441Device device, Mps125ActionDefinition action, string groupId)
+        private void AddCatalogStep(IList<TestStepItem> steps, TestSequenceContext context, SK441Device device, Mps125ActionDefinition action, string groupId,
+            IReadOnlyList<Mps125ActionDefinition> catalog, Dictionary<string, StepResult> earlyResults)
         {
             var step = new TestStepItem
             {
@@ -80,23 +83,42 @@ namespace TestPlatform.TestSequences
                 PowerCritical = IsPowerCritical(action) && !IsFinalChapterResult(action),
                 IsFixtureReleaseStep = action.AlwaysRun && action.Kind == Mps125ActionKind.Cleanup
             };
-            step.Action = token => ExecuteActionAsync(step, context, device, action, token);
+            step.Action = async token =>
+            {
+                token.ThrowIfCancellationRequested();
+                if (!action.IsResult)
+                    earlyResults.Clear();
+
+                if (action.Kind == Mps125ActionKind.Delay)
+                    return await ExecuteStabilityDelayAsync(step, steps, context, device, action, catalog, earlyResults, token);
+
+                StepResult measured;
+                if (action.IsResult && earlyResults.TryGetValue(action.StepId, out measured))
+                {
+                    earlyResults.Remove(action.StepId);
+                    OnLogInfo("MPS-125 " + action.ResultId + " 复用稳定等待内的完整测量结果：" + measured.Value + " " + measured.Unit);
+                    return measured;
+                }
+
+                return await ExecuteActionAsync(step, context, device, action, token);
+            };
             steps.Add(step);
         }
 
         private async Task<StepResult> ExecuteActionAsync(TestStepItem step, TestSequenceContext context, SK441Device device, Mps125ActionDefinition action, CancellationToken token)
         {
+            if (action.Chapter == 15 &&
+                (action.Kind == Mps125ActionKind.DaqVbusCalibrationReference ||
+                 action.Kind == Mps125ActionKind.SetVbus ||
+                 action.Kind == Mps125ActionKind.SetVbusRampStep))
+            {
+                context.Values.Remove(Mps125ResultKeys.VbusCalibrationReference);
+            }
+
             string faultStep = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS125_FAULT_STEP");
             if (device.SkipComInit && !string.IsNullOrWhiteSpace(faultStep) &&
                 string.Equals(faultStep, action.StepId, StringComparison.OrdinalIgnoreCase))
                 return BasicResult(false, "Injected fault", action);
-
-            if (action.Kind == Mps125ActionKind.Delay)
-            {
-                int delayMs = GetPlanDelayMs(new[] { step }, 0, 0);
-                await Task.Delay(device.SkipComInit ? Math.Min(delayMs, 1) : delayMs, token);
-                return BasicResult(true, delayMs + " ms", action);
-            }
 
             if (action.IsResult)
                 return await ExecuteResultAsync(step, context, device, action, token);
@@ -171,7 +193,7 @@ namespace TestPlatform.TestSequences
                                 action.State);
                         if (passed)
                         {
-                            int delayMs = GetPlanDelayMs(new[] { step }, 0, 200);
+                            int delayMs = GetPlanDelayMs(new[] { step }, 0, 100);
                             await Task.Delay(
                                 device.SkipComInit ? Math.Min(delayMs, 1) : delayMs,
                                 token);
@@ -217,6 +239,16 @@ namespace TestPlatform.TestSequences
                         Mps125StationMap.GetDaqRelayChannels(ParseInt(action.Argument)),
                         150,
                         token);
+                    if (passed && !await device.WaitForMps125VbattVoltageAsync(0, token, preparationOnly: true))
+                    {
+                        OnLogWarning("K02前的VBATT零电压条件未确认；记录告警并继续8秒实测，不触发安全停机。K02仍按原范围判定。");
+                        return new StepResult
+                        {
+                            IsPass = true,
+                            IsWarning = true,
+                            Value = "零电压条件未确认，告警续测"
+                        };
+                    }
                     break;
                 case Mps125ActionKind.SafeVbattDisconnect:
                     passed = await device.SafeDisconnectMpsVbattRelayAsync(
@@ -228,6 +260,22 @@ namespace TestPlatform.TestSequences
                     await device.MeasureDaqChannelVoltageAsync(ParseInt(action.Argument));
                     passed = true;
                     break;
+                case Mps125ActionKind.DaqVbusCalibrationReference:
+                    double referenceVolts = device.SkipComInit
+                        ? 137.5
+                        : await device.MeasureDaqChannelVoltageAsync(ParseInt(action.Argument));
+                    token.ThrowIfCancellationRequested();
+                    bool referenceValid = IsPositiveFinite(referenceVolts) && referenceVolts < 9E36;
+                    return new StepResult
+                    {
+                        IsPass = referenceValid,
+                        Value = referenceValid
+                            ? referenceVolts.ToString("0.######", CultureInfo.InvariantCulture)
+                            : "Invalid VBUS reference",
+                        NumericValue = referenceValid ? (double?)referenceVolts : null,
+                        StoreKey = Mps125ResultKeys.VbusCalibrationReference,
+                        Unit = "V"
+                    };
                 case Mps125ActionKind.DocumentedBoundary:
                     passed = true;
                     break;
@@ -275,6 +323,7 @@ namespace TestPlatform.TestSequences
                 };
             }
 
+            bool preparationWarning = false;
             if (action.Kind == Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline ||
                 action.Kind == Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline)
             {
@@ -294,9 +343,12 @@ namespace TestPlatform.TestSequences
                         Unit = plan.Unit
                     };
                 }
+                preparationWarning = !await device.WaitForMps125VbattVoltageAsync(0, token, preparationOnly: true);
+                if (preparationWarning)
+                    OnLogWarning("K01前的VBATT零电压条件未确认；记录告警并继续8秒实测，不触发安全停机。K01仍按原范围判定。");
             }
 
-            double value = device.SkipComInit
+            double value = device.SkipComInit && action.Kind != Mps125ActionKind.ComputedGain
                 ? SimulationValue(action.ResultId, plan.LowerLimit, plan.UpperLimit)
                 : await ReadHardwareValueAsync(device, context, action, plan.Unit, token);
             bool passed = (!plan.LowerLimit.HasValue || value >= plan.LowerLimit.Value) &&
@@ -311,7 +363,9 @@ namespace TestPlatform.TestSequences
             return new StepResult
             {
                 IsPass = passed,
-                Value = value.ToString("0.###", CultureInfo.InvariantCulture),
+                IsWarning = passed && preparationWarning,
+                Value = value.ToString("0.###", CultureInfo.InvariantCulture) +
+                    (preparationWarning ? "（零电压条件未确认，告警续测）" : string.Empty),
                 NumericValue = value,
                 StoreKey = Mps125ResultKeys.For(action.ResultId),
                 Unit = plan.Unit
@@ -326,7 +380,7 @@ namespace TestPlatform.TestSequences
                 case Mps125ActionKind.DaqVoltage:
                 case Mps125ActionKind.DaqAverageVoltage:
                 case Mps125ActionKind.DaqAverageVoltageAfterVbattBaseline:
-                    return ScaleVoltage(await ReadDaqAverageAsync(device, action.Channel, ResolveAverageSampleCount(action), action.SampleIntervalMs, token), unit);
+                    return ScaleVoltage(await ReadDaqVoltageAverageWithRangeRecoveryAsync(device, action.Channel, ResolveAverageSampleCount(action), action.SampleIntervalMs, token, action.DaqRangeVolts), unit);
                 case Mps125ActionKind.DaqTimedWindowAverageVoltage:
                 case Mps125ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline:
                     return ScaleVoltage(
@@ -343,7 +397,7 @@ namespace TestPlatform.TestSequences
                 case Mps125ActionKind.IgnitionRamp:
                     return await RunIgnitionRampAsync(device, action, token);
                 case Mps125ActionKind.ComputedGain:
-                    return await ComputeGainAsync(device, context, action);
+                    return await ComputeGainAsync(context, action);
                 default:
                     return await ReadMbdAverageAsync(
                         device,
@@ -371,6 +425,7 @@ namespace TestPlatform.TestSequences
                 case Mps125ActionKind.SafeVbattConnect:
                 case Mps125ActionKind.SafeVbattDisconnect:
                 case Mps125ActionKind.DaqRelays:
+                case Mps125ActionKind.DaqVbusCalibrationReference:
                     return true;
                 default:
                     return false;
@@ -399,17 +454,19 @@ namespace TestPlatform.TestSequences
 
         private static int ResolveAverageSampleCount(Mps125ActionDefinition action)
         {
-            if (action.SampleCount != 16 || IsPwmSamplingChapter(action.Chapter))
+            if (action.SampleCount != 16)
                 return Math.Max(1, action.SampleCount);
 
+            bool pwm = IsPwmSamplingChapter(action.Chapter);
             int configured;
             return int.TryParse(
-                       System.Configuration.ConfigurationManager.AppSettings["SKMPSNonPwmAverageSampleCount"],
+                       System.Configuration.ConfigurationManager.AppSettings[
+                           pwm ? "SKMPS125PwmAverageSampleCount" : "SKMPSNonPwmAverageSampleCount"],
                        NumberStyles.Integer,
                        CultureInfo.InvariantCulture,
-                       out configured) && configured > 0
+                       out configured) && configured > 0 && (!pwm || configured >= 8)
                 ? configured
-                : 16;
+                : (pwm ? 8 : 16);
         }
 
         private static bool IsPwmSamplingChapter(int chapter)
@@ -417,24 +474,21 @@ namespace TestPlatform.TestSequences
             return chapter == 11 || chapter == 13 || chapter == 16 || chapter == 17;
         }
 
-        private static async Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)
+        private static Task<bool> SetMpsRelaysAsync(SK441Device device, int[] ids, bool state)
         {
-            bool passed = true;
-            foreach (int id in ids)
-                passed = await device.ControlMpsRelayAsync(
-                    id,
-                    Mps125StationMap.GetDaqRelayChannels(id),
-                    state) && passed;
-            return passed;
+            return device.ControlMpsRelaysAsync(ids, state);
         }
-
-        private static async Task<double> ReadDaqAverageAsync(SK441Device device, int channel, int count, int intervalMs, CancellationToken token)
+        private static async Task<double> ReadDaqAverageAsync(SK441Device device, int channel, int count, int intervalMs, CancellationToken token, double? rangeVolts = null)
         {
+            if (count <= 1 && !rangeVolts.HasValue)
+                return await device.MeasureDaqChannelVoltageAsync(channel);
+
             return await device.MeasureDaqChannelVoltageAverageAsync(
                 channel,
                 Math.Max(1, count),
                 intervalMs,
-                token);
+                token,
+                rangeVolts: rangeVolts);
         }
 
         private static async Task<double> ReadMbdAverageAsync(
@@ -463,30 +517,32 @@ namespace TestPlatform.TestSequences
         private static async Task<double> RunIgnitionRampAsync(SK441Device device, Mps125ActionDefinition action, CancellationToken token)
         {
             double[] values = ParseNumbers(action.Argument);
-            double start = values.Length > 0 ? values[0] : 5;
+            double start = values.Length > 0 ? values[0] : 28;
             double stop = values.Length > 1 ? values[1] : 80;
             double increment = values.Length > 2 ? values[2] : 1;
-            for (double voltage = start; voltage <= stop; voltage += increment)
-            {
-                token.ThrowIfCancellationRequested();
-                if (!await device.SetVbusGeneratorAsync((float)voltage, 0.5f, 300, true))
-                    throw new InvalidOperationException("VBUS ramp setting failed.");
-                double fiveVolt = await device.MeasureDaqChannelVoltageAsync(action.Channel);
-                if (fiveVolt > 4.8)
-                    return voltage * 1000.0;
-                await Task.Delay(100, token);
-            }
-            return stop * 1000.0;
+            return await device.MeasureMps125IgnitionVoltageAsync(
+                action.Channel, start, stop, increment, token) * 1000.0;
         }
 
-        private static async Task<double> ComputeGainAsync(SK441Device device, TestSequenceContext context, Mps125ActionDefinition action)
+        private static Task<double> ComputeGainAsync(TestSequenceContext context, Mps125ActionDefinition action)
         {
             double adc;
-            if (!TryGetStored(context, action.Argument, out adc) || Math.Abs(adc) < 0.000001)
-                throw new InvalidOperationException("Missing/zero MPS-125 gain dependency " + action.Argument);
-            double vbusMv = await device.MeasureDaqChannelVoltageAsync(action.Channel) * 1000.0;
-            return 4096.0 * vbusMv / adc;
+            if (!TryGetStored(context, action.Argument, out adc) || !IsPositiveFinite(adc))
+                throw new InvalidOperationException("Missing/invalid MPS-125 gain dependency " + action.Argument);
+
+            TestSequenceValue reference;
+            if (!context.TryGetValue(Mps125ResultKeys.VbusCalibrationReference, out reference) ||
+                !reference.Pass || !reference.HasNumericValue ||
+                !string.Equals(reference.Unit, "V", StringComparison.OrdinalIgnoreCase) ||
+                !IsPositiveFinite(reference.NumericValue) || reference.NumericValue >= 9E36)
+            {
+                throw new InvalidOperationException("MPS-125 gain requires a successful DAQ113 VBUS reference from step 15.15.");
+            }
+
+            return Task.FromResult(4096.0 * reference.NumericValue * 1000.0 / adc);
         }
+
+        private static bool IsPositiveFinite(double value) => value > 0 && !double.IsNaN(value) && !double.IsInfinity(value);
 
         private static bool TryGetStored(TestSequenceContext context, string resultId, out double value)
         {

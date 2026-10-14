@@ -11,6 +11,8 @@ namespace TestPlatform.TestSequences
 
         public double NumericValue { get; set; }
 
+        public bool HasNumericValue { get; set; }
+
         public string DisplayValue { get; set; }
 
         public string Unit { get; set; }
@@ -45,6 +47,12 @@ namespace TestPlatform.TestSequences
         /// </summary>
         public Func<string, CancellationToken, Task> WaitBeforeStepAsync { get; set; }
 
+        /// <summary>
+        /// Engineering pause/single-step mode needs completed results visible at
+        /// the next step boundary instead of waiting for a background UI batch.
+        /// </summary>
+        public Func<bool> RequiresSynchronousUiResults { get; set; }
+
         public bool StopOnFail { get; set; }
 
         public bool PromptOnFail { get; set; }
@@ -64,7 +72,8 @@ namespace TestPlatform.TestSequences
             get { return _values; }
         }
 
-        public void StoreValue(string key, double numericValue, string displayValue, string unit, bool pass)
+        public void StoreValue(string key, double numericValue, string displayValue, string unit,
+            bool pass, bool hasNumericValue = true)
         {
             if (string.IsNullOrWhiteSpace(key))
                 return;
@@ -73,6 +82,7 @@ namespace TestPlatform.TestSequences
             {
                 Key = key,
                 NumericValue = numericValue,
+                HasNumericValue = hasNumericValue,
                 DisplayValue = displayValue,
                 Unit = unit,
                 Pass = pass

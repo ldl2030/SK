@@ -3,25 +3,25 @@ namespace TestPlatform.TestSequences
     /// <summary>
     /// MPS-125 Rev.3 fixture map. DAQ physical CH01-CH20 map to 101-120.
     /// VBATT/source B uses station-3 high-power relays Y1 and Y9. Logical
-    /// Relay_2-Relay_6 remain DAQ960 functional relays 301-306.
+    /// Relay_2-Relay_6 remain DAQ960 functional relays 302-306/308.
     /// </summary>
     public static class Mps125StationMap
     {
         public const int VbattSourcePowerRelay = SK441Device.MpsVbattSourcePowerRelay;
         public const int VbattDutPowerRelay = SK441Device.MpsVbattDutPowerRelay;
         public const string VbattPowerRelays = "1,9";
-        public const int ExternalPowerRelay = 2;
-        public const int WithdrawalRelay = 3;
-        public const int Contact80VRelay = 4;
-        public const int SensPrecRelay = 5;
-        public const int IsoBattRelay = 6;
-        public const string AllControlledRelays = "2,3,4,5,6";
-        public const string AllDaqControlRelays = "@301:306";
-        public const string WithdrawalDaqRelay = "@301";
-        public const string Contact80VDaqRelay = "@302";
-        public const string SensPrecDaqRelay = "@303";
-        public const string IsoBattDaqRelay = "@304";
-        public const string ExternalPowerDaqRelays = "@305,306";
+        public const int ExternalPowerRelay = MpsFunctionalRelayMap.ExternalPowerRelay;
+        public const int WithdrawalRelay = MpsFunctionalRelayMap.WithdrawalRelay;
+        public const int Contact80VRelay = MpsFunctionalRelayMap.Contact80VRelay;
+        public const int SensPrecRelay = MpsFunctionalRelayMap.SensPrecRelay;
+        public const int IsoBattRelay = MpsFunctionalRelayMap.IsoBattRelay;
+        public const string AllControlledRelays = MpsFunctionalRelayMap.AllControlledRelays;
+        public const string AllDaqControlRelays = MpsFunctionalRelayMap.AllDaqControlRelays;
+        public const string WithdrawalDaqRelay = MpsFunctionalRelayMap.WithdrawalDaqRelay;
+        public const string Contact80VDaqRelay = MpsFunctionalRelayMap.Contact80VDaqRelay;
+        public const string SensPrecDaqRelay = MpsFunctionalRelayMap.SensPrecDaqRelay;
+        public const string IsoBattDaqRelay = MpsFunctionalRelayMap.IsoBattDaqRelay;
+        public const string ExternalPowerDaqRelays = MpsFunctionalRelayMap.ExternalPowerDaqRelays;
 
         public const int FiveVolt = 101;
         public const int Vcc = 102;
@@ -46,15 +46,7 @@ namespace TestPlatform.TestSequences
 
         public static string GetDaqRelayChannels(int logicalRelay)
         {
-            switch (logicalRelay)
-            {
-                case ExternalPowerRelay: return ExternalPowerDaqRelays;
-                case WithdrawalRelay: return WithdrawalDaqRelay;
-                case Contact80VRelay: return Contact80VDaqRelay;
-                case SensPrecRelay: return SensPrecDaqRelay;
-                case IsoBattRelay: return IsoBattDaqRelay;
-                default: return null;
-            }
+            return MpsFunctionalRelayMap.GetDaqRelayChannels(logicalRelay);
         }
     }
 }

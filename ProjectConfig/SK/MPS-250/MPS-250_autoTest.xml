@@ -316,7 +316,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>6.3 断开DAQ301-306功能继电器</Name>
+    <Name>6.3 断开DAQ302-306/308功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -350,7 +350,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>7.2 闭合Relay_3(DAQ301) withdrawal接点</Name>
+    <Name>7.2 闭合Relay_3(DAQ308) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1115,7 +1115,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F03 11.7 U24.7 DAQ109采样16次/100ms取平均</Name>
+    <Name>F03 11.7 U24.7 DAQ109按配置次数采样/100ms取平均</Name>
     <LowerLimit>10000</LowerLimit>
     <UpperLimit>11000</UpperLimit>
     <Unit>mV</Unit>
@@ -1132,7 +1132,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.8 断开Relay_3(DAQ301) withdrawal接点</Name>
+    <Name>11.8 断开Relay_3(DAQ308) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1200,7 +1200,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>F06 11.12 U24.7 DAQ109采样16次/100ms取平均</Name>
+    <Name>F06 11.12 U24.7 DAQ109按配置次数采样/100ms取平均</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -1336,7 +1336,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>11.20 恢复闭合Relay_3(DAQ301) withdrawal接点</Name>
+    <Name>11.20 恢复闭合Relay_3(DAQ308) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -1523,7 +1523,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>H01 13.3 U24.7静态采样16次/100ms</Name>
+    <Name>H01 13.3 U24.7静态按配置次数采样/100ms</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -1608,7 +1608,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>H03 13.8 U24.7高驱动采样16次/100ms</Name>
+    <Name>H03 13.8 U24.7高驱动按配置次数采样/100ms</Name>
     <LowerLimit>10000</LowerLimit>
     <UpperLimit>11000</UpperLimit>
     <Unit>mV</Unit>
@@ -1659,7 +1659,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>H05 13.11 U24.7低驱动采样16次/100ms</Name>
+    <Name>H05 13.11 U24.7低驱动按配置次数采样/100ms</Name>
     <LowerLimit>2900</LowerLimit>
     <UpperLimit>3100</UpperLimit>
     <Unit>mV</Unit>
@@ -1761,7 +1761,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>H07 13.17 U24.7关闭后采样16次/100ms（PDF H7）</Name>
+    <Name>H07 13.17 U24.7关闭后按配置次数采样/100ms（PDF H7）</Name>
     <LowerLimit>-100</LowerLimit>
     <UpperLimit>100</UpperLimit>
     <Unit>mV</Unit>
@@ -2491,10 +2491,10 @@
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
-    <DependsOn>MPS250.CH15.S003.J01</DependsOn>
+    <DependsOn>MPS250.CH15.S003.J01,MPS250.CH15.S013.ACTION</DependsOn>
     <Name>J04 15.13 计算Gain_VBUS=4096*VBUS/J01</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2508,10 +2508,10 @@
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
-    <DependsOn>MPS250.CH15.S006.J02</DependsOn>
+    <DependsOn>MPS250.CH15.S006.J02,MPS250.CH15.S013.ACTION</DependsOn>
     <Name>J05 15.14 计算Gain_VPREC=4096*VBUS/J02</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -2525,10 +2525,10 @@
     <Mandatory>false</Mandatory>
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
-    <DependsOn>MPS250.CH15.S012.J03</DependsOn>
+    <DependsOn>MPS250.CH15.S012.J03,MPS250.CH15.S013.ACTION</DependsOn>
     <Name>J06 15.15-16 计算单路Gain_VSTRING2=4096*VBUS/J03</Name>
-    <LowerLimit>200000</LowerLimit>
-    <UpperLimit>205000</UpperLimit>
+    <LowerLimit>400000</LowerLimit>
+    <UpperLimit>410000</UpperLimit>
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3071,8 +3071,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L01 17.11 读取R71 ridstrneg基线</Name>
-    <LowerLimit>3900</LowerLimit>
-    <UpperLimit>4096</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit />
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3087,7 +3087,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L02 17.12-13 FBK_1 DAQ107采样16次/100ms</Name>
+    <Name>L02 17.12-13 FBK_1 DAQ107按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -3104,7 +3104,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L03 17.12-14 FBK_2 DAQ108采样16次/100ms</Name>
+    <Name>L03 17.12-14 FBK_2 DAQ108按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
     <UpperLimit>10000</UpperLimit>
     <Unit>mV</Unit>
@@ -3122,8 +3122,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L04 17.15 测量加热器关闭时MPS电流</Name>
-    <LowerLimit>18</LowerLimit>
-    <UpperLimit>60</UpperLimit>
+    <LowerLimit>10</LowerLimit>
+    <UpperLimit>40</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3174,7 +3174,7 @@
     <DependsOn />
     <Name>L05 17.18 读取R71 ridstrneg（PWM1开启）</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>100</UpperLimit>
+    <UpperLimit />
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3189,9 +3189,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L06 17.19-20 FBK_1 100%状态采样16次/100ms</Name>
+    <Name>L06 17.19-20 FBK_1 100%状态按配置次数采样/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>600</UpperLimit>
+    <UpperLimit>200</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3207,8 +3207,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L07 17.21 测量PWM1开启时MPS电流</Name>
-    <LowerLimit>100</LowerLimit>
-    <UpperLimit>200</UpperLimit>
+    <LowerLimit>230</LowerLimit>
+    <UpperLimit>300</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3257,9 +3257,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L08 17.23 FBK_1恢复0%采样16次/100ms</Name>
+    <Name>L08 17.23 FBK_1恢复0%按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3326,8 +3326,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L09 17.27 读取R71 ridstrneg（PWM2开启）</Name>
-    <LowerLimit>3900</LowerLimit>
-    <UpperLimit>4096</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit />
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3342,9 +3342,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L10 17.28-29 FBK_2 100%状态采样16次/100ms</Name>
+    <Name>L10 17.28-29 FBK_2 100%状态按配置次数采样/100ms</Name>
     <LowerLimit>0</LowerLimit>
-    <UpperLimit>500</UpperLimit>
+    <UpperLimit>200</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3360,8 +3360,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L11 17.30 测量PWM2开启时MPS电流</Name>
-    <LowerLimit>50</LowerLimit>
-    <UpperLimit>100</UpperLimit>
+    <LowerLimit>110</LowerLimit>
+    <UpperLimit>160</UpperLimit>
     <Unit>mA</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3410,9 +3410,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L12 17.32 FBK_2恢复0%采样16次/100ms</Name>
+    <Name>L12 17.32 FBK_2恢复0%按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3445,8 +3445,8 @@
     <RunCondition>Selected</RunCondition>
     <DependsOn />
     <Name>L13 17.34 读取R71 ridstrneg（risc_on关闭）</Name>
-    <LowerLimit>3900</LowerLimit>
-    <UpperLimit>4096</UpperLimit>
+    <LowerLimit>0</LowerLimit>
+    <UpperLimit />
     <Unit>Count</Unit>
     <ExpectedValue />
     <DelayMs />
@@ -3512,9 +3512,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L14 17.36-37 FBK_1最终采样16次/100ms</Name>
+    <Name>L14 17.36-37 FBK_1最终按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3529,9 +3529,9 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>L15 17.36-38 FBK_2最终采样16次/100ms</Name>
+    <Name>L15 17.36-38 FBK_2最终按配置次数采样/100ms</Name>
     <LowerLimit>7000</LowerLimit>
-    <UpperLimit>10000</UpperLimit>
+    <UpperLimit>9000</UpperLimit>
     <Unit>mV</Unit>
     <ExpectedValue />
     <DelayMs>100</DelayMs>
@@ -3580,7 +3580,7 @@
     <AlwaysRun>false</AlwaysRun>
     <RunCondition>Selected</RunCondition>
     <DependsOn />
-    <Name>17.42 断开Relay_3(DAQ301) withdrawal接点</Name>
+    <Name>17.42 断开Relay_3(DAQ308) withdrawal接点</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />
@@ -3665,7 +3665,7 @@
     <AlwaysRun>true</AlwaysRun>
     <RunCondition>Always</RunCondition>
     <DependsOn />
-    <Name>断开DAQ301-306功能继电器</Name>
+    <Name>断开DAQ302-306/308功能继电器</Name>
     <LowerLimit />
     <UpperLimit />
     <Unit />

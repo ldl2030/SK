@@ -2,16 +2,22 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Ports;
+using System.Text;
+using System.Threading;
 
 namespace TestPlatform
 {
     /// <summary>
-    /// Optional Ainuo AN50(V3) backup source B using the documented serial SCPI
-    /// protocol. It is intentionally separate from HengHuiPowerSupply so adding
-    /// the backup instrument cannot change the installed source-B behavior.
+    /// Active source A using the documented Ainuo AN50300-10 serial SCPI protocol.
+    /// Protection commands remain unavailable until confirmed by the vendor.
     /// </summary>
     public sealed class AinuoAn50PowerSupply : IProgrammablePowerSupply
     {
+        public const string Model = "AN50300-10";
+        public const int DefaultBaudRate = 38400;
+        public const float RatedVoltage = 300.0f;
+        public const float RatedCurrent = 10.0f;
+
         private readonly object _sync = new object();
         private SerialPort _serialPort;
 
@@ -20,7 +26,9 @@ namespace TestPlatform
         private string _ocpSetCommandFormat;
         private string _ocpQueryCommand;
 
-        public AinuoAn50PowerSupply(float vmax = 300.0f, float imax = 10.0f)
+        public AinuoAn50PowerSupply(
+            float vmax = RatedVoltage,
+            float imax = RatedCurrent)
         {
             Vmax = vmax;
             Imax = imax;
@@ -31,7 +39,10 @@ namespace TestPlatform
         public string Identity { get; private set; }
         public int ReadTimeoutMs { get; set; } = 1500;
         public int WriteTimeoutMs { get; set; } = 1000;
-        public string LineTerminator { get; set; } = "\n";
+        public int OpenSettleMs { get; set; } = 200;
+        public int ResponseIdleMs { get; set; } = 120;
+        public int CommandDelayMs { get; set; } = 180;
+        public string LineTerminator { get; set; } = "\r\n";
 
         public bool IsConnected
         {
@@ -70,10 +81,10 @@ namespace TestPlatform
 
         // address is retained for API compatibility. SCPI over the dedicated
         // serial port does not include a slave address.
-        public void Connect(string portName, int baudRate = 38400, byte address = 0)
+        public void Connect(string portName, int baudRate = DefaultBaudRate, byte address = 0)
         {
             if (string.IsNullOrWhiteSpace(portName))
-                throw new ArgumentException("Ainuo AN50 backup-B COM port cannot be empty.", nameof(portName));
+                throw new ArgumentException($"Ainuo {Model} source-A COM port cannot be empty.", nameof(portName));
             if (string.IsNullOrEmpty(LineTerminator))
                 throw new InvalidOperationException("Ainuo AN50 line terminator cannot be empty.");
 
@@ -87,18 +98,22 @@ namespace TestPlatform
                     NewLine = LineTerminator,
                     DtrEnable = false,
                     RtsEnable = false,
-                    Handshake = Handshake.None
+                    Handshake = Handshake.None,
+                    Encoding = Encoding.ASCII
                 };
                 port.Open();
                 lock (_sync)
                     _serialPort = port;
+                if (OpenSettleMs > 0)
+                    Thread.Sleep(OpenSettleMs);
 
                 bool outputOn = QueryOutputState();
                 float voltageSetpoint = QueryFloat("SOUR:VOLT?");
                 float currentSetpoint = QueryFloat("SOUR:CURR?");
                 Identity = string.Format(
                     CultureInfo.InvariantCulture,
-                    "AINUO AN50 SCPI; OUTP={0}; VSET={1:0.###}V; ISET={2:0.###}A",
+                    "AINUO {0} SCPI; OUTP={1}; VSET={2:0.###}V; ISET={3:0.###}A",
+                    Model,
                     outputOn ? "ON" : "OFF",
                     voltageSetpoint,
                     currentSetpoint);
@@ -149,12 +164,33 @@ namespace TestPlatform
             ValidateSetpoint(voltage, Vmax, nameof(voltage));
             ValidateSetpoint(current, Imax, nameof(current));
 
-            // AN50's documented SCPI list has no APPL command, so set and verify
-            // the two values independently.
-            Send("SOUR:VOLT " + Number(voltage));
-            VerifySetpoint("SOUR:VOLT?", voltage, "voltage", VoltageResolution());
+            // Apply the current limit first so an already-enabled output never
+            // inherits a larger limit while its voltage is being changed.
             Send("SOUR:CURR " + Number(current));
             VerifySetpoint("SOUR:CURR?", current, "current", CurrentResolution());
+            Send("SOUR:VOLT " + Number(voltage));
+            VerifySetpoint("SOUR:VOLT?", voltage, "voltage", VoltageResolution());
+        }
+
+        public bool HasVoltageCurrentSetpoint(float voltage, float current)
+        {
+            try
+            {
+                float actualCurrent = QueryFloat("SOUR:CURR?");
+                float actualVoltage = QueryFloat("SOUR:VOLT?");
+                float currentTolerance = Math.Max(
+                    CurrentResolution() * 0.51f,
+                    Math.Max(0.001f, Math.Abs(current) * 0.001f));
+                float voltageTolerance = Math.Max(
+                    VoltageResolution() * 0.51f,
+                    Math.Max(0.001f, Math.Abs(voltage) * 0.001f));
+                return Math.Abs(actualCurrent - current) <= currentTolerance &&
+                       Math.Abs(actualVoltage - voltage) <= voltageTolerance;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void SetVoltage(float voltage)
@@ -304,6 +340,8 @@ namespace TestPlatform
                 EnsureConnected();
                 _serialPort.DiscardInBuffer();
                 _serialPort.Write(NormalizeCommand(command) + _serialPort.NewLine);
+                if (CommandDelayMs > 0)
+                    Thread.Sleep(CommandDelayMs);
             }
         }
 
@@ -320,7 +358,10 @@ namespace TestPlatform
                 string normalizedCommand = NormalizeCommand(command);
                 int originalTimeout = _serialPort.ReadTimeout;
                 int timeoutMs = Math.Max(50, readTimeoutMs ?? originalTimeout);
+                int responseIdleMs = Math.Max(20, Math.Min(ResponseIdleMs, timeoutMs));
                 var timer = Stopwatch.StartNew();
+                var responseBuffer = new StringBuilder();
+                long lastDataAtMs = -1;
                 try
                 {
                     _serialPort.ReadTimeout = timeoutMs;
@@ -329,19 +370,33 @@ namespace TestPlatform
 
                     while (timer.ElapsedMilliseconds < timeoutMs)
                     {
-                        int remaining = Math.Max(50, timeoutMs - (int)timer.ElapsedMilliseconds);
-                        _serialPort.ReadTimeout = remaining;
-                        string response = (_serialPort.ReadLine() ?? string.Empty).Trim();
-                        if (response.Length == 0 ||
-                            string.Equals(response, normalizedCommand, StringComparison.OrdinalIgnoreCase))
+                        string chunk = _serialPort.ReadExisting();
+                        if (!string.IsNullOrEmpty(chunk))
                         {
-                            continue;
+                            responseBuffer.Append(chunk);
+                            lastDataAtMs = timer.ElapsedMilliseconds;
                         }
-                        return response;
+
+                        if (responseBuffer.Length > 0 &&
+                            lastDataAtMs >= 0 &&
+                            timer.ElapsedMilliseconds - lastDataAtMs >= responseIdleMs)
+                        {
+                            break;
+                        }
+
+                        Thread.Sleep(10);
                     }
 
-                    throw new TimeoutException(
-                        $"Ainuo AN50 returned no data for {normalizedCommand} within {timeoutMs}ms.");
+                    string response = NormalizeResponse(
+                        responseBuffer.ToString(),
+                        normalizedCommand);
+                    if (response.Length == 0)
+                    {
+                        throw new TimeoutException(
+                            $"Ainuo {Model} returned no data for {normalizedCommand} " +
+                            $"within {timeoutMs}ms.");
+                    }
+                    return response;
                 }
                 catch (TimeoutException)
                 {
@@ -389,18 +444,18 @@ namespace TestPlatform
 
         private float VoltageResolution()
         {
-            return Vmax >= 100.0f ? 0.1f : 0.01f;
+            return 0.01f;
         }
 
         private float CurrentResolution()
         {
-            return Imax >= 10.0f ? 0.1f : 0.01f;
+            return 0.01f;
         }
 
         private void EnsureConnected()
         {
             if (_serialPort == null || !_serialPort.IsOpen)
-                throw new InvalidOperationException("Ainuo AN50 backup source B is not connected.");
+                throw new InvalidOperationException($"Ainuo {Model} source A is not connected.");
         }
 
         private static void ValidateSetpoint(float value, float maximum, string name)
@@ -420,6 +475,18 @@ namespace TestPlatform
             if (string.IsNullOrWhiteSpace(command))
                 throw new ArgumentException("SCPI command cannot be empty.", nameof(command));
             return command.Trim().TrimEnd('\r', '\n');
+        }
+
+        private static string NormalizeResponse(string rawResponse, string normalizedCommand)
+        {
+            string response = (rawResponse ?? string.Empty)
+                .Trim('\0', '\r', '\n', ' ', '\t');
+            if (response.StartsWith(normalizedCommand, StringComparison.OrdinalIgnoreCase))
+            {
+                response = response.Substring(normalizedCommand.Length)
+                    .Trim('\0', '\r', '\n', ' ', '\t');
+            }
+            return response;
         }
 
         private static string NullIfWhiteSpace(string value)

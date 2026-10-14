@@ -341,12 +341,16 @@
     <Compile Include="Hardware\Stations\SK441\SK441Device.cs" />
     <Compile Include="Hardware\Stations\SK441\Bcm125StationMap.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.Fixture.cs" />
+    <Compile Include="Hardware\Stations\SK441\SK441Device.Relays.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.Mps125.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.PowerSafety.cs" />
     <Compile Include="Hardware\Stations\SK441\SK441Device.EmergencySafety.cs" />
     <Compile Include="Sequences\SK\SKSequences.cs" />
+    <Compile Include="Domain\TestExecution\SkTestPolicy.cs" />
     <Compile Include="Sequences\SK\Common\SKBaseSequence.OperatorPrompts.cs" />
     <Compile Include="Sequences\SK\Common\SKBaseSequence.Initializing.cs" />
+    <Compile Include="Sequences\SK\Common\SKBaseSequence.Stability.cs" />
+    <Compile Include="Sequences\SK\Common\MpsFunctionalRelayMap.cs" />
     <Compile Include="Sequences\SK\Common\BcmStringChannelConfig.cs" />
     <Compile Include="Sequences\SK\Common\Sk250TestSetpoints.cs" />
     <Compile Include="Sequences\SK\Common\SKBcmSequenceBase.cs" />
@@ -358,6 +362,7 @@
     <Compile Include="Sequences\SK\BCM250\Bcm250DetailedActionCatalog.cs" />
     <Compile Include="Sequences\SK\BCM250\Bcm250StationMap.cs" />
     <Compile Include="Sequences\SK\MPS125\SKMPS125Sequence.cs" />
+    <Compile Include="Sequences\SK\MPS125\SKMPS125Sequence.Stability.cs" />
     <Compile Include="Sequences\SK\MPS125\Mps125Definitions.cs" />
     <Compile Include="Sequences\SK\MPS125\Mps125DetailedActionCatalog.cs" />
     <Compile Include="Sequences\SK\MPS125\Mps125StationMap.cs" />
@@ -665,6 +670,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\MPS-125\MPS-125_autoTest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProjectConfig\SK\MPS-125\MPS-125_report.psv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="ProjectConfig\SK\MPS-250\MPS-250_autoTest.xml">

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -25,14 +25,18 @@ namespace Mps250StructureTests
                 var context = new TestSequenceContext { TestPlan = plan, SN = "MPS250-SIM-0001" };
                 var device = new SK441Device { SkipComInit = true, SimulationBoardType = "MPS-250" };
                 IList steps = BuildSteps(context, device);
+                SkCommonBehaviorTests.Validate("MPS-250", steps);
 
                 ValidateStructure(plan, steps);
+                ValidateHeaterEarlyMeasurements(plan);
+                ValidateGainReferenceReuse(plan);
                 ValidateMps250BaudRate(root);
                 ValidateCatalog();
                 ValidateVbusRamp(root);
                 ValidatePowerTelemetry(root);
                 ValidateFinalChapterFailureRules(steps);
                 ValidateConfiguredAverageSampleCounts();
+                ValidateFixedAverageRanges(plan);
                 ValidateBufferedDaqResponseParsing();
                 ValidateDaqStartToStartTiming();
                 ValidateFixtureCleanup(steps, device);
@@ -103,13 +107,28 @@ namespace Mps250StructureTests
             ValidateLimit(plan, "K01", 1400, 1900, "mV");
             ValidateLimit(plan, "K02", 3000, 3400, "mV");
             ValidateLimit(plan, "K03", 0, 300, "mV");
-            ValidateLimit(plan, "L01", 3900, 4096, "Count");
-            ValidateLimit(plan, "L05", 0, 100, "Count");
-            ValidateLimit(plan, "L09", 3900, 4096, "Count");
-            ValidateLimit(plan, "L13", 3900, 4096, "Count");
-            ValidateLimit(plan, "J06", 200000, 205000, "Count");
-            ValidateLimit(plan, "L07", 100, 200, "mA");
-            ValidateLimit(plan, "L11", 50, 100, "mA");
+            ValidateLimit(plan, "L01", 0, null, "Count");
+            ValidateLimit(plan, "L05", 0, null, "Count");
+            ValidateLimit(plan, "L09", 0, null, "Count");
+            ValidateLimit(plan, "L13", 0, null, "Count");
+            foreach (string resultId in new[] { "J04", "J05", "J06" })
+            {
+                ValidateLimit(plan, resultId, 400000, 410000, "Count");
+                Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith("." + resultId, StringComparison.OrdinalIgnoreCase))
+                    .DependsOn.Contains("MPS250.CH15.S013.ACTION"), resultId + " must depend on the measured VBUS reference.");
+            }
+            ValidateLimit(plan, "L02", 7000, 10000, "mV");
+            ValidateLimit(plan, "L03", 7000, 10000, "mV");
+            ValidateLimit(plan, "L04", 10, 40, "mA");
+            ValidateLimit(plan, "L06", 0, 200, "mV");
+            ValidateLimit(plan, "L07", 230, 300, "mA");
+            ValidateLimit(plan, "L08", 7000, 9000, "mV");
+            ValidateLimit(plan, "L10", 0, 200, "mV");
+            ValidateLimit(plan, "L11", 110, 160, "mA");
+            ValidateLimit(plan, "L12", 7000, 9000, "mV");
+            ValidateLimit(plan, "L14", 7000, 9000, "mV");
+            ValidateLimit(plan, "L15", 7000, 9000, "mV");
+            ValidateLimit(plan, "L16", 10, 40, "mA");
             Require(plan.Definition.Steps.Single(x => x.StepId.EndsWith(".D03", StringComparison.OrdinalIgnoreCase)).ExpectedValue == "mcu_app U.1.1.5", "Firmware expectation mismatch.");
             ValidateDependency(plan, "H06", "H02");
             ValidateDependency(plan, "J04", "J01");
@@ -135,6 +154,76 @@ namespace Mps250StructureTests
                 "MPS250.CH15.P004.ACTION", "MPS250.CH15.P014.ACTION", "MPS250.CH15.P015.ACTION",
                 "MPS250.CH15.P016.ACTION", "MPS250.CH15.P017.ACTION", "MPS250.CH15.P018.ACTION"
             });
+        }
+
+        private static void ValidateGainReferenceReuse(ResolvedTestPlan plan)
+        {
+            var context = new TestSequenceContext { TestPlan = plan };
+            // Replay the hardware log without connecting any instrument. Gain
+            // steps must use the stored reference even in Hardware mode.
+            var device = new SK441Device { SkipComInit = false, SimulationBoardType = "MPS-250" };
+            IList steps = BuildSteps(context, device);
+            context.StoreValue(Mps250ResultKeys.For("J01"), 2784, "2784", "Count", true);
+            context.StoreValue(Mps250ResultKeys.For("J02"), 2785, "2785", "Count", true);
+            context.StoreValue(Mps250ResultKeys.For("J03"), 2783, "2783", "Count", true);
+            context.StoreValue(Mps250ResultKeys.VbusCalibrationReference, 275.092053, "275.092053", "V", true);
+            double[] expectedGains = { 404733.1354482759, 404587.809367325, 404878.5659676608 };
+            int index = 0;
+            foreach (string resultId in new[] { "J04", "J05", "J06" })
+            {
+                object step = steps.Cast<object>().Single(x => Read<string>(x.GetType(), x, "StepId").EndsWith("." + resultId, StringComparison.Ordinal));
+                Delegate action = Read<Delegate>(step.GetType(), step, "Action");
+                Task task = (Task)action.DynamicInvoke(CancellationToken.None);
+                task.GetAwaiter().GetResult();
+                object result = task.GetType().GetProperty("Result").GetValue(task);
+                Require(Read<bool>(result.GetType(), result, "IsPass"), resultId + " rejected the corrected gain range.");
+                Require(Math.Abs(Read<double?>(result.GetType(), result, "NumericValue").Value - expectedGains[index++]) < 0.000001,
+                    resultId + " did not use the recorded 275.092053 V reference with mV conversion.");
+            }
+
+            object gainStep = steps.Cast<object>().Single(x => Read<string>(x.GetType(), x, "StepId").EndsWith(".J04", StringComparison.Ordinal));
+            Delegate gainAction = Read<Delegate>(gainStep.GetType(), gainStep, "Action");
+            Action requireInvalidReference = () =>
+            {
+                try
+                {
+                    ((Task)gainAction.DynamicInvoke(CancellationToken.None)).GetAwaiter().GetResult();
+                    throw new InvalidOperationException("Gain accepted a missing/failed VBUS reference.");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Require(ex.Message.Contains("15.12"), "Gain failed for an unrelated reason: " + ex.Message);
+                }
+            };
+            context.Values.Remove(Mps250ResultKeys.VbusCalibrationReference);
+            requireInvalidReference();
+            context.StoreValue(Mps250ResultKeys.VbusCalibrationReference, 275.092053, "failed", "V", false);
+            requireInvalidReference();
+            context.StoreValue(Mps250ResultKeys.VbusCalibrationReference, double.NaN, "invalid", "V", true);
+            requireInvalidReference();
+            context.StoreValue(Mps250ResultKeys.VbusCalibrationReference, 275.092053, "no numeric value", "V", true, false);
+            requireInvalidReference();
+
+            // Retrying a failed reference must invalidate a previous success.
+            device.SkipComInit = true;
+            context.StoreValue(Mps250ResultKeys.VbusCalibrationReference, 275.092053, "old", "V", true);
+            object referenceStep = steps.Cast<object>().Single(x => Read<string>(x.GetType(), x, "StepId") == "MPS250.CH15.S013.ACTION");
+            Delegate referenceAction = Read<Delegate>(referenceStep.GetType(), referenceStep, "Action");
+            string oldFault = Environment.GetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP");
+            Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", "MPS250.CH15.S013.ACTION");
+            try
+            {
+                Task task = (Task)referenceAction.DynamicInvoke(CancellationToken.None);
+                task.GetAwaiter().GetResult();
+                object result = task.GetType().GetProperty("Result").GetValue(task);
+                Require(!Read<bool>(result.GetType(), result, "IsPass"), "Reference fault was not injected.");
+                Require(!context.Values.ContainsKey(Mps250ResultKeys.VbusCalibrationReference), "Failed reference retained a stale success.");
+                requireInvalidReference();
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("TESTPLATFORM_MPS250_FAULT_STEP", oldFault);
+            }
         }
 
         private static void ValidateCatalog()
@@ -180,6 +269,9 @@ namespace Mps250StructureTests
                 Mps250StationMap.VbattPowerRelays == "1,9",
                 "MPS-250 VBATT must use station-3 Y1/Y9.");
             Require(Mps250StationMap.AllControlledRelays == "2,3,4,5,6", "MPS-250 must not declare logical Relay_1.");
+            Require(Mps250StationMap.WithdrawalDaqRelay == "@308", "Relay_3 must use DAQ308 / CH_8.");
+            Require(Mps250StationMap.GetDaqRelayChannels(3) == "@308", "Logical Relay_3 must resolve to DAQ308.");
+            Require(Mps250StationMap.AllDaqControlRelays == "@302:306,308", "MPS-250 functional relay range must exclude DAQ301/307 and include DAQ308.");
             Require(!catalog.Where(x => x.Kind == Mps250ActionKind.DaqRelays)
                 .SelectMany(x => (x.Argument ?? "").Split(','))
                 .Any(x => x.Trim() == "1"), "MPS-250 DAQ functional-relay catalog must not treat power-path Y1 as a logical relay.");
@@ -431,7 +523,7 @@ namespace Mps250StructureTests
             Mps250ActionDefinition isobattPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH16.S003.K01");
             Mps250ActionDefinition heaterPwm = Mps250ActionCatalog.Create().Single(x => x.StepId == "MPS250.CH17.S012.L02");
             Require((int)resolver.Invoke(null, new object[] { nonPwm }) == 3, "Configured non-PWM average count was not applied.");
-            Require((int)resolver.Invoke(null, new object[] { mainSwitchPwm }) == 16, "Main-switch PWM sampling must remain at 16.");
+            Require((int)resolver.Invoke(null, new object[] { mainSwitchPwm }) == 8, "Main-switch PWM sampling must use the configured eight samples.");
             Require((int)resolver.Invoke(null, new object[] { isobattPwm }) == 81, "ISOBATT timed-window sampling must use 81 endpoint-inclusive samples.");
             Require(isobattPwm.Kind == Mps250ActionKind.DaqTimedWindowAverageVoltageAfterVbattBaseline,
                 "ISOBATT K01 must use the DAQ internal timed-window action.");
@@ -445,7 +537,37 @@ namespace Mps250StructureTests
             Require((isobattAtZero.SampleCount - 1) * isobattAtZero.SampleIntervalMs == 8000 &&
                     (isobattAtVoltage.SampleCount - 1) * isobattAtVoltage.SampleIntervalMs == 8000,
                 "ISOBATT K02/K03 must span real 8-second sampling windows.");
-            Require((int)resolver.Invoke(null, new object[] { heaterPwm }) == 16, "Heater PWM sampling must remain at 16.");
+            Require((int)resolver.Invoke(null, new object[] { heaterPwm }) == 8, "Heater PWM sampling must use the configured eight samples.");
+        }
+
+        private static void ValidateFixedAverageRanges(ResolvedTestPlan plan)
+        {
+            foreach (Mps250ActionDefinition action in Mps250ActionCatalog.Create()
+                .Where(x => x.Kind == Mps250ActionKind.DaqAverageVoltage))
+            {
+                TestPlanStepDefinition result = plan.Definition.Steps.Single(x => x.StepId == action.StepId);
+                Require(action.DaqRangeVolts.HasValue && action.DaqRangeVolts.Value > 0,
+                    action.ResultId + " must avoid auto-ranging during the average.");
+                double maxVolts = Math.Max(Math.Abs(result.LowerLimit ?? 0), Math.Abs(result.UpperLimit ?? 0)) / 1000.0;
+                Require(action.DaqRangeVolts.Value >= maxVolts,
+                    action.ResultId + " fixed range cannot cover its accepted mV values.");
+                if (maxVolts <= 0.2)
+                    Require(action.DaqRangeVolts.Value <= 1,
+                        action.ResultId + " low-state measurement must retain a sensitive range.");
+            }
+
+            var device = new SK441Device { SkipComInit = true };
+            foreach (double invalid in new[] { 0.0, -1.0, double.NaN, double.PositiveInfinity })
+            {
+                bool rejected = false;
+                try
+                {
+                    device.MeasureDaqChannelVoltageAverageAsync(109, 8, 100,
+                        CancellationToken.None, rangeVolts: invalid).GetAwaiter().GetResult();
+                }
+                catch (ArgumentOutOfRangeException) { rejected = true; }
+                Require(rejected, "Invalid fixed range was accepted: " + invalid);
+            }
         }
 
         private static void ValidateBufferedDaqResponseParsing()
@@ -459,6 +581,13 @@ namespace Mps250StructureTests
                     Math.Abs(values[1] - 0.082) < 0.000001 &&
                     Math.Abs(values[2] - 2.5) < 0.000001,
                 "DAQ buffered response parser did not preserve all samples.");
+            foreach (string invalid in new[] { "NaN,+1.0,+2.0", "+9.9E37,+1.0,+2.0", "+1.0,+2.0" })
+            {
+                bool rejected = false;
+                try { parser.Invoke(null, new object[] { invalid, 3 }); }
+                catch (TargetInvocationException) { rejected = true; }
+                Require(rejected, "Invalid/incomplete buffered scan must not become a passing average.");
+            }
         }
 
         private static void ValidateDaqStartToStartTiming()
@@ -524,7 +653,10 @@ namespace Mps250StructureTests
         {
             TestPlanStepDefinition item = plan.Definition.Steps.Single(x => x.StepId.EndsWith("." + resultId, StringComparison.OrdinalIgnoreCase));
             string dependencyStepId = plan.Definition.Steps.Single(x => x.StepId.EndsWith("." + dependencyResultId, StringComparison.OrdinalIgnoreCase)).StepId;
-            Require(item.DependsOn.SequenceEqual(new[] { dependencyStepId }, StringComparer.OrdinalIgnoreCase), "Dependency mismatch " + resultId + " -> " + dependencyResultId + ".");
+            string[] expectedDependencies = resultId.StartsWith("J", StringComparison.OrdinalIgnoreCase)
+                ? new[] { dependencyStepId, "MPS250.CH15.S013.ACTION" }
+                : new[] { dependencyStepId };
+            Require(item.DependsOn.SequenceEqual(expectedDependencies, StringComparer.OrdinalIgnoreCase), "Dependency mismatch " + resultId + " -> " + dependencyResultId + ".");
         }
 
         private static void ValidateExpectedValue(ResolvedTestPlan plan, string stepId, string expectedValue)
@@ -797,6 +929,154 @@ namespace Mps250StructureTests
             if (!condition) throw new InvalidOperationException(message);
         }
 
+        private static void ValidateHeaterEarlyMeasurements(ResolvedTestPlan plan)
+        {
+            var context = new TestSequenceContext { TestPlan = plan };
+            var device = new SK441Device { SkipComInit = false, SimulationBoardType = "MPS-250" };
+            var daq = new HeaterDaq();
+            typeof(SK441Device).GetProperty("Daq").GetSetMethod(true).Invoke(device, new object[] { daq });
+            IList steps = BuildSteps(context, device);
+            Func<string, object> execute = id =>
+            {
+                object step = steps.Cast<object>().Single(x => Read<string>(x.GetType(), x, "StepId") == id);
+                Task task = (Task)Read<Delegate>(step.GetType(), step, "Action").DynamicInvoke(CancellationToken.None);
+                task.GetAwaiter().GetResult();
+                return task.GetType().GetProperty("Result").GetValue(task);
+            };
+            object waitResult = execute("MPS250.CH17.S016.ACTION");
+            Require(Read<string>(waitResult.GetType(), waitResult, "Value").Contains("提前稳定"), "Stable heater did not exit early.");
+            Require(daq.FetchCount == 3 && daq.LastSampleCount == 8 && daq.SingleReadCount == 2 && !daq.Initiated,
+                "Early wait must acquire two full configured feedback averages and two current readings, then restore DAQ state.");
+            Require(daq.TransitionReadCount == 3 && daq.FullAverageRanges.SequenceEqual(new[] { 1.0, 10.0, 1.0 }),
+                "Invalid narrow readings must trigger a complete 10V average; gate readings must never replace complete results.");
+            int queries = daq.QueryCount;
+            object feedback = execute("MPS250.CH17.S018.L06");
+            object current = execute("MPS250.CH17.S019.L07");
+            Require(daq.QueryCount == queries && Read<bool>(feedback.GetType(), feedback, "IsPass") &&
+                Read<double?>(current.GetType(), current, "NumericValue") == 267,
+                "Formal result rows must consume the stable measurements without repeating I/O.");
+            execute("MPS250.CH17.S018.L06");
+            Require(daq.FetchCount == 4, "A cached result must be consumed only once; retries must remeasure.");
+
+            // Stable out-of-range current can finish the wait, but must retain NG.
+            TestPlanStepDefinition definition = plan.GetStep("MPS250.CH17.S025.ACTION");
+            int? oldDelay = definition.DelayMs;
+            try
+            {
+                definition.DelayMs = 4000;
+                waitResult = execute(definition.StepId);
+                Require(Read<string>(waitResult.GetType(), waitResult, "Value").Contains("提前稳定"),
+                    "A stable current range offset unnecessarily consumed the full wait.");
+                queries = daq.QueryCount;
+                current = execute("MPS250.CH17.S028.L11");
+                Require(daq.QueryCount == queries && !Read<bool>(current.GetType(), current, "IsPass") &&
+                    Read<double?>(current.GetType(), current, "NumericValue") == 103,
+                    "Early exit must preserve the original current range and record the cached NG, never turn it into PASS.");
+            }
+            finally { definition.DelayMs = oldDelay; }
+
+            definition = plan.GetStep("MPS250.CH17.S016.ACTION");
+            oldDelay = definition.DelayMs;
+            try
+            {
+                definition.DelayMs = 1500;
+                daq.HoldTransition = true;
+                int fetches = daq.FetchCount;
+                waitResult = execute(definition.StepId);
+                Require(Read<string>(waitResult.GetType(), waitResult, "Value").Contains("原计划测量") && daq.FetchCount == fetches,
+                    "A feedback that stays at 8.9V must preserve the deadline without starting or caching narrow-range averages.");
+                execute("MPS250.CH17.S018.L06");
+                Require(daq.FetchCount == fetches + 1, "Unready feedback must leave the formal row to acquire a fresh complete average.");
+            }
+            finally { definition.DelayMs = oldDelay; daq.HoldTransition = false; }
+
+            daq.FeedbackStuckHigh = true;
+            feedback = execute("MPS250.CH17.S018.L06");
+            Require(!Read<bool>(feedback.GetType(), feedback, "IsPass") &&
+                Math.Abs(Read<double?>(feedback.GetType(), feedback, "NumericValue").Value - 8634) < 0.001 &&
+                daq.FullAverageRanges.Last() == 10 && daq.LastSampleCount == 8 && !daq.Initiated,
+                "L06 overrange must display the real full 10V average as NG, rather than an exception, zero, or an old gate value.");
+            daq.FeedbackStuckHigh = false;
+
+            MethodInfo ids = FindMethod(typeof(SKMPS250Sequence), "GetMpsHeaterStabilityResultIds");
+            string[] bounded = ((string[])ids.Invoke(null, new object[] { "MPS250.CH17.S036.ACTION" }));
+            Require(bounded.SequenceEqual(new[] { "L14", "L15", "L16" }), "Final wait must cover both feedbacks and current.");
+            foreach (Mps250ActionDefinition item in Mps250ActionCatalog.Create().Where(x => x.Kind == Mps250ActionKind.Delay && x.Chapter != 17))
+                Require(((string[])ids.Invoke(null, new object[] { item.StepId })).Length == 0,
+                    "Early heater measurement escaped its authorized wait group.");
+        }
+
+        private sealed class HeaterDaq : DaqMultimeter
+        {
+            public int QueryCount;
+            public int FetchCount;
+            public int SingleReadCount;
+            public int LastSampleCount;
+            public bool Initiated;
+            public int TransitionReadCount;
+            public bool HoldTransition;
+            public bool FeedbackStuckHigh;
+            private bool failFirstAverage = true;
+            private bool invalidNarrowReading;
+            public readonly List<double> FullAverageRanges = new List<double>();
+            private readonly Queue<string> transition = new Queue<string>(new[] { "8.9", "+9.90000000E+37", "0.012" });
+            private double range;
+            private int channel;
+            private int count;
+
+            protected override void SendCommand(string command)
+            {
+                if (command == "ABOR") Initiated = false;
+                if (command.StartsWith("CONF:") && Initiated) throw new InvalidOperationException("Configure while initiated.");
+                if (command.StartsWith("CONF:VOLT:DC ")) double.TryParse(command.Substring(13).Split(',')[0],
+                    System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out range);
+                if (command.StartsWith("ROUT:SCAN ")) channel = int.Parse(command.Substring(command.IndexOf('@') + 1).TrimEnd(')'));
+                if (command.StartsWith("TRIG:COUN ")) count = int.Parse(command.Substring(10));
+                if (command == "INIT") Initiated = true;
+            }
+
+            protected override string Query(string command, int readTimeoutMs = 0)
+            {
+                QueryCount++;
+                if (command == "DATA:POIN?") return count.ToString();
+                if (command == "FETCH?")
+                {
+                    FetchCount++;
+                    FullAverageRanges.Add(range);
+                    LastSampleCount = count;
+                    if (FeedbackStuckHigh)
+                    {
+                        invalidNarrowReading = range == 1;
+                        return string.Join(",", Enumerable.Repeat(range == 1 ? "+9.90000000E+37" : "8.634", count));
+                    }
+                    if (failFirstAverage)
+                    {
+                        failFirstAverage = false;
+                        invalidNarrowReading = true;
+                        return string.Join(",", Enumerable.Repeat("+9.90000000E+37", count));
+                    }
+                    // L06=12 mV, L10=150 mV, L07=267 mA, L11=103 mA.
+                    double value = channel == 107 ? 0.012 : 0.150;
+                    return string.Join(",", Enumerable.Repeat(value.ToString(System.Globalization.CultureInfo.InvariantCulture), count));
+                }
+                if (command == "READ?" && (channel == 107 || channel == 108))
+                {
+                    if (range == 1 && invalidNarrowReading)
+                    {
+                        invalidNarrowReading = false;
+                        return "+9.90000000E+37";
+                    }
+                    Require(range == 10, "Transition probes must cover the pre-switch feedback voltage.");
+                    TransitionReadCount++;
+                    if (HoldTransition) return "8.9";
+                    return transition.Count > 0 ? transition.Dequeue() : channel == 107 ? "0.012" : "0.150";
+                }
+                Require(command == "READ?" && channel == 117, "Unexpected heater query " + command);
+                SingleReadCount++;
+                return SingleReadCount <= 2 ? "0.267" : "0.103";
+            }
+        }
+
         private sealed class RecordingGrid : ITestGridService
         {
             public int RowCount => 1000;
@@ -811,6 +1091,12 @@ namespace Mps250StructureTests
             public Task SetValueAndResultByStepIdAsync(int channelIndex, string stepId, string value, bool pass) => Task.CompletedTask;
             public Task SetExecTimeAsync(int rowIndex, long elapsedMs) => Task.CompletedTask;
             public Task SetExecTimeByStepIdAsync(string stepId, long elapsedMs) => Task.CompletedTask;
+            public Task SetOutcomeByStepIdAsync(
+                int channelIndex,
+                string stepId,
+                string value,
+                StepExecutionStatus status,
+                long elapsedMs) => SetValueAndStatusByStepIdAsync(channelIndex, stepId, value, status);
             public Task ScrollToRowAsync(int rowIndex, int durationMs = 150) => Task.CompletedTask;
             public Task ScrollToStepAsync(string stepId, int durationMs = 150) => Task.CompletedTask;
             public Task SetValueAndStatusByStepIdAsync(int channelIndex, string stepId, string value, StepExecutionStatus status)

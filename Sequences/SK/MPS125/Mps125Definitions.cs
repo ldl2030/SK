@@ -14,6 +14,7 @@ namespace TestPlatform.TestSequences
 
     public static class Mps125ResultKeys
     {
+        public const string VbusCalibrationReference = "MPS125.CALIBRATION.VBUS_REFERENCE";
         public static string For(string resultId) => "MPS125.RESULT." + resultId;
     }
 
@@ -37,6 +38,7 @@ namespace TestPlatform.TestSequences
         SafeVbattConnect,
         SafeVbattDisconnect,
         DaqVoltage,
+        DaqVbusCalibrationReference,
         DaqAverageVoltage,
         DaqAverageVoltageAfterVbattBaseline,
         DaqTimedWindowAverageVoltage,
@@ -63,6 +65,7 @@ namespace TestPlatform.TestSequences
         public double Scale { get; set; }
         public int SampleCount { get; set; } = 1;
         public int SampleIntervalMs { get; set; }
+        public double? DaqRangeVolts { get; set; }
         public bool State { get; set; }
         public bool AlwaysRun { get; set; }
         public string[] RequiresResultIds { get; set; } = Array.Empty<string>();

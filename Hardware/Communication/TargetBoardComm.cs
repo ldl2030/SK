@@ -19,11 +19,17 @@ namespace TestPlatform
         private const int ResponseWithoutPromptQuietMs = 300;
         private SerialPort _serialPort;
         private readonly object _lock = new object();
+        private long _lastCommandStartedTimestamp;
 
         public event Action<string> LogInfo;
+        public Func<bool> ShouldLogSuccessfulTransmit { get; set; }
         public event Action<string> LogError;
 
         public bool IsConnected => _serialPort != null && _serialPort.IsOpen;
+
+        // Stopwatch ticks of the actual latest UART transmission, including
+        // requests repeated after recovery. Sampling must use that latest start.
+        public long LastCommandStartedTimestamp => Interlocked.Read(ref _lastCommandStartedTimestamp);
 
         public void Connect(string portName, int baudRate = 9600, int openSettleMs = 500)
         {
@@ -65,6 +71,7 @@ namespace TestPlatform
         {
             lock (_lock)
             {
+                Interlocked.Exchange(ref _lastCommandStartedTimestamp, 0);
                 SerialPort port = _serialPort;
                 _serialPort = null;
                 if (port == null)
@@ -82,7 +89,10 @@ namespace TestPlatform
             }
         }
 
-        public async Task<string> SendCommandAsync(string command, int timeoutMs = DefaultTimeoutMs)
+        public async Task<string> SendCommandAsync(
+            string command,
+            int timeoutMs = DefaultTimeoutMs,
+            bool logSuccessfulTrace = true)
         {
             if (!IsConnected)
             {
@@ -101,11 +111,13 @@ namespace TestPlatform
                         int effectiveTimeoutMs = timeoutMs > 0 ? timeoutMs : DefaultTimeoutMs;
                         _serialPort.DiscardInBuffer();
                         _serialPort.DiscardOutBuffer();
+                        Interlocked.Exchange(ref _lastCommandStartedTimestamp, Stopwatch.GetTimestamp());
                         _serialPort.Write(payload);
                         _serialPort.Write(new[] { (byte)'\r' }, 0, 1);
 
                         var timer = Stopwatch.StartNew();
-                        LogInfo?.Invoke($"MBD TX [{portName}] {FormatCommandForLog(payload)}");
+                        if (logSuccessfulTrace && (ShouldLogSuccessfulTransmit?.Invoke() ?? true))
+                            LogInfo?.Invoke($"MBD TX [{portName}] {FormatCommandForLog(payload)}");
                         string response = ReadResponse(effectiveTimeoutMs);
 
                         timer.Stop();
@@ -118,9 +130,10 @@ namespace TestPlatform
                             return null;
                         }
 
-                        LogInfo?.Invoke(
-                            $"MBD RX [{portName}] {FormatCommandForLog(payload)} " +
-                            $"({timer.ElapsedMilliseconds} ms): {FormatResponseForLog(response, payload)}");
+                        if (logSuccessfulTrace)
+                            LogInfo?.Invoke(
+                                $"MBD RX [{portName}] {FormatCommandForLog(payload)} " +
+                                $"({timer.ElapsedMilliseconds} ms): {FormatResponseForLog(response, payload)}");
                         return response.Trim('\r', '\n', ' ', '\t', '\0');
                     }
                     catch (Exception ex)

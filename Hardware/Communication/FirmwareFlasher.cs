@@ -126,7 +126,8 @@ namespace TestPlatform
         public async Task<bool> FlashFirmwareAsync(
             string firmwarePath,
             string comPort,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            bool verifyAfterWrite = true)
         {
             try
             {
@@ -156,7 +157,7 @@ namespace TestPlatform
                 }
 
                 return await Task.Run(
-                    () => FlashCore(image, cancellationToken),
+                    () => FlashCore(image, cancellationToken, verifyAfterWrite),
                     cancellationToken);
             }
             catch (OperationCanceledException)
@@ -173,7 +174,7 @@ namespace TestPlatform
             }
         }
 
-        private bool FlashCore(Stm32FirmwareImage image, CancellationToken token)
+        private bool FlashCore(Stm32FirmwareImage image, CancellationToken token, bool verifyAfterWrite)
         {
             _serialPort.DiscardInBuffer();
             _serialPort.DiscardOutBuffer();
@@ -208,6 +209,14 @@ namespace TestPlatform
                 Buffer.BlockCopy(image.Data, offset, block, 0, count);
                 WriteMemory(image.StartAddress + (uint)offset, block);
                 LogProgress("写入", offset + count, image.Data.Length);
+            }
+
+            if (!verifyAfterWrite)
+            {
+                token.ThrowIfCancellationRequested();
+                LogInfo?.Invoke("STM32固件写入完成；按设置跳过逐块回读verify，后续仍检查应用固件版本及功能。");
+                ReportProgress("写入完成（verify已跳过）", 100);
+                return true;
             }
 
             LogInfo?.Invoke("STM32开始逐块回读校验...");

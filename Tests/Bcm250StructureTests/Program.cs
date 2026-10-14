@@ -40,6 +40,7 @@ namespace Bcm250StructureTests
                     SimulationBoardType = "BCM-250"
                 };
                 IList steps = BuildSteps(context, device);
+                SkCommonBehaviorTests.Validate("BCM-250", steps);
                 ValidateMbdSerialIdentification();
                 ValidateMbdResponseCompletion();
                 ValidateMbdResponseParsing();
@@ -54,6 +55,9 @@ namespace Bcm250StructureTests
                 ValidateConditionalProgrammingStructure(steps);
                 ValidateProgrammingGuards(root, steps);
                 ValidatePowerSafety();
+                ValidateElectronicLoadScpiContract();
+                ValidateMeasurementReadinessContract();
+                ValidateOptimizedWaitContract();
                 ValidateCustomerReport(root, plan);
                 RunSimulation(context, steps);
                 RunFaultInjection(steps, "Q16");
@@ -367,7 +371,7 @@ namespace Bcm250StructureTests
             foreach (string propertyName in new[]
             {
                 "AnsPowerPort",
-                "HengHuiPowerAPort",
+                "AinuoPowerAPort",
                 "HengHuiPowerBPort",
                 "ElectronicLoadPort",
                 "DaqPort",
@@ -385,7 +389,7 @@ namespace Bcm250StructureTests
             Require(!result.GetMissingDeviceNames().Contains("MBD UART/目标板USB-B"),
                 "Startup missing-device list must not require unpowered MBD UART.");
 
-            type.GetProperty("HengHuiPowerAPort").SetValue(result, null, null);
+            type.GetProperty("AinuoPowerAPort").SetValue(result, null, null);
             type.GetProperty("HengHuiPowerBPort").SetValue(result, null, null);
             type.GetProperty("ElectronicLoadPort").SetValue(result, null, null);
             var bcm250DebugPorts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -858,6 +862,181 @@ namespace Bcm250StructureTests
             }
         }
 
+        private static void ValidateElectronicLoadScpiContract()
+        {
+            Type loadType = typeof(HengHuiElectronicLoad);
+            MethodInfo normalize = loadType.GetMethod(
+                "NormalizeProgrammableSetpoint",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            MethodInfo format = loadType.GetMethod(
+                "FormatProgrammableSetpoint",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Require(normalize != null && format != null,
+                "Electronic-load SCPI setpoint normalization helpers are missing.");
+
+            float zeroNormalized = (float)normalize.Invoke(
+                null,
+                new object[] { 0.0f, "test" });
+            Require(Math.Abs(zeroNormalized - 0.001f) < 0.0000001f,
+                "Electronic-load logical zero must use the documented 0.001 minimum setpoint.");
+            Require(
+                string.Equals(
+                    (string)format.Invoke(null, new object[] { zeroNormalized }),
+                    "0.001",
+                    StringComparison.Ordinal),
+                "Electronic-load SCPI setpoints must use three decimal places.");
+            Require(
+                string.Equals(
+                    (string)format.Invoke(null, new object[] { 250.0f }),
+                    "250.000",
+                    StringComparison.Ordinal),
+                "Electronic-load whole-number SCPI setpoints must retain three decimal places.");
+
+            var load = new HengHuiElectronicLoad();
+            Require(string.IsNullOrWhiteSpace(load.ProtectionClearCommand),
+                "Undocumented electronic-load protection clear command must be disabled by default.");
+            Require(load.FastQueryTimeoutMs == 700 &&
+                    load.RecoveryQueryTimeoutMs == 1500 &&
+                    load.QueryAttempts == 2,
+                "Electronic-load queries must fail fast once and then perform one longer recovery read.");
+            Require(loadType.GetMethod("MeasureVoltageOnce", new[] { typeof(int) }) != null &&
+                    loadType.GetMethod("MeasureCurrentOnce", new[] { typeof(int) }) != null,
+                "Electronic-load startup must expose bounded one-shot readiness probes.");
+        }
+
+        private static void ValidateOptimizedWaitContract()
+        {
+            Type sequenceType = typeof(SKBCM250Sequence);
+            MethodInfo powerPolling = sequenceType.GetMethod(
+                "TryGetPowerPollingDefinition",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Require(powerPolling != null,
+                "BCM250 optimized power-wait mapping is missing.");
+
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH24.S058.ACTION",
+                250,
+                "LOAD",
+                0f);
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH25.S038.ACTION",
+                250,
+                "LOAD",
+                255f);
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH18.S018.ACTION",
+                1500,
+                "VBUS",
+                275f);
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH18.S034.ACTION",
+                750,
+                "VBUS",
+                0f);
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH25.S044.ACTION",
+                500,
+                "SECONDARY",
+                0f);
+            ValidatePowerPollingDefinition(
+                powerPolling,
+                "BCM250.CH26.S037.ACTION",
+                250,
+                "LOAD",
+                0f);
+
+            Require(sequenceType.GetMethod(
+                        "WaitForDaqVoltageInRangeAsync",
+                        BindingFlags.NonPublic | BindingFlags.Instance) != null,
+                "BCM250 16.6 must use DAQ voltage readiness instead of a blind five-second delay.");
+            Require(sequenceType.GetMethod(
+                        "WaitForMbdScalarInRangeAsync",
+                        BindingFlags.NonPublic | BindingFlags.Instance) != null,
+                "BCM250 26.27 must use R44 readiness instead of a blind six-second delay.");
+            Require(sequenceType.GetMethod(
+                        "CacheReusableReadinessValues",
+                        BindingFlags.NonPublic | BindingFlags.Instance) != null,
+                "BCM250 R-result readiness samples must be reusable by the formal result step.");
+            Require(typeof(DaqMultimeter).GetMethod(
+                        "StartBufferedVoltageDcAutoRangeScan",
+                        new[] { typeof(string), typeof(double), typeof(double), typeof(int) }) != null,
+                "DAQ repeated averages must support one internally timed buffered acquisition.");
+        }
+
+        private static void ValidatePowerPollingDefinition(
+            MethodInfo method,
+            string stepId,
+            int expectedMinimumWaitMs,
+            string expectedDomain,
+            float expectedTarget)
+        {
+            object[] arguments = { stepId, 0, null, null };
+            bool found = (bool)method.Invoke(null, arguments);
+            Require(found, "Missing BCM250 optimized wait mapping for " + stepId + ".");
+            Require((int)arguments[1] == expectedMinimumWaitMs,
+                stepId + " has an unexpected minimum wait.");
+            string[] domains = (string[])arguments[2];
+            float[] targets = (float[])arguments[3];
+            Require(domains.Length == 1 &&
+                    string.Equals(domains[0], expectedDomain, StringComparison.OrdinalIgnoreCase) &&
+                    targets.Length == 1 &&
+                    Math.Abs(targets[0] - expectedTarget) < 0.001f,
+                stepId + " has an unexpected power readiness definition.");
+        }
+
+        private static void ValidateMeasurementReadinessContract()
+        {
+            Type sequenceType = typeof(SKBCM250Sequence);
+            Type resultType = sequenceType.GetNestedType(
+                "MeasurementReadinessResult",
+                BindingFlags.NonPublic);
+            Require(resultType != null,
+                "BCM250 measurement readiness must return a detailed result object.");
+            Require(resultType.GetProperty("IsReady") != null &&
+                    resultType.GetProperty("LastValues") != null &&
+                    resultType.GetProperty("FailedProbes") != null &&
+                    resultType.GetProperty("FailureReason") != null,
+                "BCM250 readiness result must expose status, last values, failed probes, and reason.");
+
+            MethodInfo waitMethod = sequenceType.GetMethod(
+                "WaitForMeasurementReadinessAsync",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            Require(waitMethod != null &&
+                    waitMethod.ReturnType.IsGenericType &&
+                    waitMethod.ReturnType.GetGenericTypeDefinition() == typeof(Task<>) &&
+                    waitMethod.ReturnType.GetGenericArguments()[0] == resultType,
+                "BCM250 readiness wait must return Task<MeasurementReadinessResult>, not Task<bool>.");
+
+            object result = Activator.CreateInstance(resultType, true);
+            resultType.GetProperty("IsReady").SetValue(result, false, null);
+            resultType.GetProperty("LastValues").SetValue(
+                result,
+                new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "R04", 512.0 }
+                },
+                null);
+            resultType.GetProperty("FailedProbes").SetValue(
+                result,
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { "R07", "读取失败：操作已超时" }
+                },
+                null);
+            resultType.GetProperty("FailureReason").SetValue(result, "工作点就绪超时", null);
+            MethodInfo formatMethod = sequenceType.GetMethod(
+                "FormatReadinessFailureSummary",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            string summary = (string)formatMethod.Invoke(null, new[] { result });
+            Require(summary.Contains("R07") && summary.Contains("操作已超时"),
+                "BCM250 readiness failure summary must identify the specific failed probe.");
+        }
+
         private static void RunEndToEndSimulation(string xmlPath)
         {
             string oldMode = Environment.GetEnvironmentVariable("TESTPLATFORM_SK_MODE");
@@ -872,11 +1051,20 @@ namespace Bcm250StructureTests
                     TestPlan = TestPlanService.Resolve(xmlPath, TestProfileIds.Normal),
                     StopOnFail = true
                 };
-                bool pass = new SKBCM250Sequence(passGrid)
+                bool simulatedFirmwareProgrammed = false;
+                var passSequence = new SKBCM250Sequence(passGrid);
+                passSequence.LogInfo += message =>
+                {
+                    if (message != null && message.Contains("BCM250模拟TTL烧录完成"))
+                        simulatedFirmwareProgrammed = true;
+                };
+                bool pass = passSequence
                     .RunAsync(passContext)
                     .GetAwaiter()
                     .GetResult();
                 Require(pass, "End-to-end simulation did not pass.");
+                Require(simulatedFirmwareProgrammed,
+                    "Enabled BCM250 firmware programming skipped C01 when the existing version matched.");
                 Require(passGrid.CleanupCompleted == 6,
                     "Passing run did not execute all cleanup steps.");
                 string[] startupResistanceSteps =
@@ -1231,6 +1419,12 @@ namespace Bcm250StructureTests
             public Task SetValueAndResultByStepIdAsync(int channelIndex, string stepId, string value, bool pass) => Task.CompletedTask;
             public Task SetExecTimeAsync(int rowIndex, long elapsedMs) => Task.CompletedTask;
             public Task SetExecTimeByStepIdAsync(string stepId, long elapsedMs) => Task.CompletedTask;
+            public Task SetOutcomeByStepIdAsync(
+                int channelIndex,
+                string stepId,
+                string value,
+                StepExecutionStatus status,
+                long elapsedMs) => SetValueAndStatusByStepIdAsync(channelIndex, stepId, value, status);
             public Task ScrollToRowAsync(int rowIndex, int durationMs = 150) => Task.CompletedTask;
             public Task ScrollToStepAsync(string stepId, int durationMs = 150)
             {

@@ -50,12 +50,29 @@ Physical BCM-125 channels and shunts are centralized in
 
 - VMID reference: DAQ 106;
 - ST1/ST2 current shunts: DAQ 113/115;
-- ST1/ST2 shunts: 0.0215909 ohm / 0.0215914 ohm;
+- ST1/ST2 shunt conversion defaults: 0.0205 ohm / 0.0205 ohm.
+  A station may set `SKBCM125String1ShuntOhms` and
+  `SKBCM125String2ShuntOhms` in its application configuration after verifying
+  current and Kelvin shunt voltage with independent instruments. The configured
+  values apply to discharge, charging, verification, CCB, string test, and
+  readiness probes together. Restart the application after changing them;
 - programming RLP4/RLP8: DAQ relays 305/306;
 - short-protection selector: DAQ relay 304.
 
 The curated SK/BMS instrument mapping takes precedence over legacy channel
 labels in the PDF procedure.
+
+## Discharge and charging calibration results
+
+Chapters 20 and 23 keep the XML limit verdict separate from numeric
+availability. If a measurement or calculated calibration is outside its XML
+range but still has a finite number, subsequent calibration calculations use
+that number. The sequence writes it to the BCM and sends `ACT->FLASH` once all
+required writes succeed. The original out-of-range result remains NG in the
+test report. A missing, nonnumeric, or nonfinite calibration value blocks its
+write and the corresponding FLASH action; communication/write failures also
+block FLASH. This policy prevents an out-of-range gain from producing false
+`Missing Input` rows and a chain of skipped writes.
 
 ## Offline structure test
 

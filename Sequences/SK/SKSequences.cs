@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +14,10 @@ namespace TestPlatform.TestSequences
         
         // 期望放上的板子类型，由子类指定，用于产线防呆
         public abstract string ExpectedBoardType { get; }
+        private bool UseCompactLogs => SkTestPolicy.UseCompactLogging(ExpectedBoardType);
         protected virtual bool SkipFirmwareProgramming => false;
+        protected virtual bool ForceFirmwareProgramming => !SkipFirmwareProgramming;
+        protected virtual bool SkipFirmwareVerification => false;
         protected virtual Task RunBoardBackgroundMonitorAsync(
             TestSequenceContext context,
             SK441Device deviceManager,
@@ -73,6 +76,7 @@ namespace TestPlatform.TestSequences
         {
             public bool IsPass { get; set; }
             public bool IsCanceled { get; set; }
+            public bool IsWarning { get; set; }
             public int AttemptCount { get; set; } = 1;
             public string Value { get; set; }
             public string StoreKey { get; set; }
@@ -91,7 +95,16 @@ namespace TestPlatform.TestSequences
 
             // 获取所需的 7 个串口号
             ISet<string> requiredPorts = context.RequiredComPorts;
-            if (SkipFirmwareProgramming && requiredPorts != null)
+            if (!SkipFirmwareProgramming && ForceFirmwareProgramming &&
+                (string.Equals(ExpectedBoardType, "BCM-250", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(ExpectedBoardType, "BCM-125", StringComparison.OrdinalIgnoreCase)))
+            {
+                requiredPorts = new HashSet<string>(
+                    requiredPorts ?? new HashSet<string>(),
+                    StringComparer.OrdinalIgnoreCase);
+                requiredPorts.Add("uartComName");
+            }
+            if ((SkipFirmwareProgramming || !ForceFirmwareProgramming) && requiredPorts != null)
             {
                 requiredPorts = new HashSet<string>(
                     requiredPorts.Where(port =>
@@ -99,7 +112,7 @@ namespace TestPlatform.TestSequences
                     StringComparer.OrdinalIgnoreCase);
             }
             string ansPort = ResolveProjectPort(requiredPorts, "ansPowerComName", ComName.ansPowerComName, "AnsPort");
-            string henghui1Port = ResolveProjectPort(requiredPorts, "hengHuiPowerAComName", ComName.hengHuiPowerAComName, "HengHui1Port");
+            string ainuoPowerAPort = ResolveProjectPort(requiredPorts, "ainuoPowerAComName", ComName.ainuoPowerAComName, "AinuoPowerAPort");
             string henghui2Port = ResolveProjectPort(requiredPorts, "hengHuiPowerBComName", ComName.hengHuiPowerBComName, "HengHui2Port");
             string loadPort = ResolveProjectPort(requiredPorts, "electronicLoadComName", ComName.electronicLoadComName, "LoadPort");
             string daqPort = ResolveProjectPort(requiredPorts, "daqComName", ComName.daqComName, "DaqPort");
@@ -115,6 +128,8 @@ namespace TestPlatform.TestSequences
                 deviceManager.LogError = msg => LogError?.Invoke(msg);
                 deviceManager.SimulationBoardType = ExpectedBoardType;
                 deviceManager.SkipFirmwareProgramming = SkipFirmwareProgramming;
+                deviceManager.ForceFirmwareProgramming = ForceFirmwareProgramming;
+                deviceManager.SkipFirmwareVerification = SkipFirmwareVerification;
                 LogWarning?.Invoke(
                     $">> SK execution mode: {deviceManager.ExecutionModeName}. " +
                     "Switch App.config SKExecutionMode between Simulation and Hardware.");
@@ -171,7 +186,7 @@ namespace TestPlatform.TestSequences
                             StringComparison.OrdinalIgnoreCase);
                         bool alreadyDiscovered =
                             IsRequiredPortReady(requiredPorts, "ansPowerComName", ansPort) &&
-                            IsRequiredPortReady(requiredPorts, "hengHuiPowerAComName", henghui1Port) &&
+                            IsRequiredPortReady(requiredPorts, "ainuoPowerAComName", ainuoPowerAPort) &&
                             IsRequiredPortReady(requiredPorts, "hengHuiPowerBComName", henghui2Port) &&
                             IsRequiredPortReady(requiredPorts, "electronicLoadComName", loadPort) &&
                             IsRequiredPortReady(requiredPorts, "daqComName", daqPort) &&
@@ -182,7 +197,7 @@ namespace TestPlatform.TestSequences
                         if (alreadyDiscovered)
                         {
                             ansPort = ResolveProjectPort(requiredPorts, "ansPowerComName", ComName.ansPowerComName, "AnsPort");
-                            henghui1Port = ResolveProjectPort(requiredPorts, "hengHuiPowerAComName", ComName.hengHuiPowerAComName, "HengHui1Port");
+                            ainuoPowerAPort = ResolveProjectPort(requiredPorts, "ainuoPowerAComName", ComName.ainuoPowerAComName, "AinuoPowerAPort");
                             henghui2Port = ResolveProjectPort(requiredPorts, "hengHuiPowerBComName", ComName.hengHuiPowerBComName, "HengHui2Port");
                             loadPort = ResolveProjectPort(requiredPorts, "electronicLoadComName", ComName.electronicLoadComName, "LoadPort");
                             daqPort = ResolveProjectPort(requiredPorts, "daqComName", ComName.daqComName, "DaqPort");
@@ -194,7 +209,7 @@ namespace TestPlatform.TestSequences
                         }
                         else
                         {
-                            LogInfo?.Invoke("正在读取预设COM口并按设备身份扫描校验...");
+                            LogInfo?.Invoke("正在按USB身份定位串口并校验仪器应答...");
                             SKSerialDeviceDiscoveryResult discovery =
                                 await SKSerialDeviceDiscovery.ResolveConfiguredOrDiscoverAsync(
                                     msg => LogInfo?.Invoke(msg),
@@ -209,7 +224,7 @@ namespace TestPlatform.TestSequences
                             }
 
                             ansPort = discovery.AnsPowerPort;
-                            henghui1Port = discovery.HengHuiPowerAPort;
+                            ainuoPowerAPort = discovery.AinuoPowerAPort;
                             henghui2Port = discovery.HengHuiPowerBPort;
                             loadPort = discovery.ElectronicLoadPort;
                             daqPort = discovery.DaqPort;
@@ -224,7 +239,7 @@ namespace TestPlatform.TestSequences
                     LogInfo?.Invoke("尝试打开物理串口硬件...");
                     bool initSuccess = await deviceManager.InitializeAllDevicesAsync(
                         ansPort,
-                        henghui1Port,
+                        ainuoPowerAPort,
                         henghui2Port,
                         loadPort,
                         daqPort,
@@ -412,7 +427,8 @@ namespace TestPlatform.TestSequences
                                             break;
                                         }
 
-                                        LogError?.Invoke($">> {step.Name} 测试失败！");
+                                        if (!UseCompactLogs)
+                                            LogError?.Invoke($">> {step.Name} 测试失败！");
                                         bool powerCriticalMustStop =
                                             step.PowerCritical &&
                                             !context.ContinueAfterPowerCriticalFailure;
@@ -523,6 +539,12 @@ namespace TestPlatform.TestSequences
                         deviceManager,
                         allPassed ? "测试流程完成" : "测试流程结束，存在失败项",
                         false);
+
+                    // The UI may still be applying passed rows in the background.
+                    // Reports are built after RunAsync returns, so drain every row now.
+                    var flushableGrid = _grid as IFlushableTestGridService;
+                    if (flushableGrid != null)
+                        await flushableGrid.FlushPendingOutcomesAsync();
 
                     if (allPassed)
                         LogSuccess?.Invoke("SK441 测试流程全部执行通过。");
@@ -664,6 +686,12 @@ namespace TestPlatform.TestSequences
             // Independent SK sequences run outside MainWindow's legacy step runner.
             // Cooperatively enter the UI pause gate before changing the row to
             // Running or issuing the next hardware command.
+            if (context?.RequiresSynchronousUiResults?.Invoke() == true)
+            {
+                var pendingGrid = _grid as IFlushableTestGridService;
+                if (pendingGrid != null)
+                    await pendingGrid.FlushPendingOutcomesAsync();
+            }
             if (!step.AlwaysRun && context?.WaitBeforeStepAsync != null)
                 await context.WaitBeforeStepAsync(step.StepId, token);
             else
@@ -679,21 +707,24 @@ namespace TestPlatform.TestSequences
             {
                 if (ShouldScrollToStep(step))
                 {
-                    await _grid.ScrollToStepAsync(step.StepId);
+                    // Navigation is visual feedback. It must not hold the next
+                    // hardware command while WPF lays out a grouped DataGrid.
+                    Task scrollTask = _grid.ScrollToStepAsync(step.StepId, 0);
+                    if (context?.RequiresSynchronousUiResults?.Invoke() == true)
+                        await scrollTask;
+                    else
+                        ObserveUiTask(scrollTask, "滚动测试表格");
                     scrolledToStep = true;
                 }
-                bool isResultRow = !step.StepId.EndsWith(
-                    ".ACTION",
-                    StringComparison.OrdinalIgnoreCase);
-                if (scrolledToStep || isResultRow || step.AlwaysRun)
+                // A short-lived result row is displayed when its outcome is
+                // available. Only cleanup needs a separate running indicator.
+                if (step.AlwaysRun)
                 {
                     await _grid.SetValueAndStatusByStepIdAsync(
                         context.ChannelIndex,
                         step.StepId,
                         string.Empty,
-                        step.AlwaysRun
-                            ? StepExecutionStatus.CleanupRunning
-                            : StepExecutionStatus.Running);
+                        StepExecutionStatus.CleanupRunning);
                 }
             }
             else
@@ -720,7 +751,8 @@ namespace TestPlatform.TestSequences
 
                 try
                 {
-                    OnLogInfo($"[通道{context.ChannelIndex + 1}] 开始执行步骤 {currentStep}/{totalSteps}，StepId={step.StepId ?? "LEGACY"}: {step.Name}");
+                    if (!UseCompactLogs)
+                        OnLogInfo($"[通道{context.ChannelIndex + 1}] 开始执行步骤 {currentStep}/{totalSteps}，StepId={step.StepId ?? "LEGACY"}: {step.Name}");
                     finalResult = await step.Action(token);
                     if (finalResult == null)
                         finalResult = new StepResult { IsPass = false, Value = "无结果" };
@@ -751,26 +783,38 @@ namespace TestPlatform.TestSequences
                 !scrolledToStep &&
                 !string.IsNullOrWhiteSpace(step.StepId))
             {
-                await _grid.ScrollToStepAsync(step.StepId);
+                ObserveUiTask(_grid.ScrollToStepAsync(step.StepId, 0), "定位失败测试项");
             }
             finalResult.AttemptCount = attemptsUsed;
             if (!string.IsNullOrWhiteSpace(step.StepId))
             {
-                await _grid.SetExecTimeByStepIdAsync(step.StepId, stopwatch.ElapsedMilliseconds);
                 StepExecutionStatus status = finalResult.IsCanceled
                     ? StepExecutionStatus.Canceled
                     : finalResult.IsPass
-                        ? (attemptsUsed > 1
+                        ? (finalResult.IsWarning
+                            ? StepExecutionStatus.Warning
+                            : attemptsUsed > 1
                             ? StepExecutionStatus.PassedAfterRetry
                             : StepExecutionStatus.Passed)
                         : step.AlwaysRun
                             ? StepExecutionStatus.CleanupFailed
                             : StepExecutionStatus.Failed;
-                await _grid.SetValueAndStatusByStepIdAsync(
+                // ExecTime/value/status share one dispatcher operation. With hundreds
+                // of short ACTION rows, two UI round trips per row used to add tens
+                // of seconds without contributing to hardware coverage.
+                await _grid.SetOutcomeByStepIdAsync(
                     context.ChannelIndex,
                     step.StepId,
                     finalResult.Value,
-                    status);
+                    status,
+                    stopwatch.ElapsedMilliseconds);
+                if (!finalResult.IsPass ||
+                    context?.RequiresSynchronousUiResults?.Invoke() == true)
+                {
+                    var flushableGrid = _grid as IFlushableTestGridService;
+                    if (flushableGrid != null)
+                        await flushableGrid.FlushPendingOutcomesAsync();
+                }
             }
             else
             {
@@ -782,14 +826,37 @@ namespace TestPlatform.TestSequences
                     finalResult.IsPass);
             }
 
-            if (finalResult.IsPass)
-                OnLogSuccess($"[通道{context.ChannelIndex + 1}] 步骤 '{step.Name}' 通过 (耗时 {stopwatch.ElapsedMilliseconds} ms)");
+            string outcomeDetails = $"StepId={step.StepId ?? "LEGACY"}，";
+            string valueDetails = $"，值={finalResult.Value} {finalResult.Unit}";
+            if (step.PlanDefinition != null &&
+                (step.PlanDefinition.LowerLimit.HasValue || step.PlanDefinition.UpperLimit.HasValue))
+            {
+                string lower = step.PlanDefinition.LowerLimit?.ToString("G", System.Globalization.CultureInfo.InvariantCulture) ?? "any";
+                string upper = step.PlanDefinition.UpperLimit?.ToString("G", System.Globalization.CultureInfo.InvariantCulture) ?? "any";
+                valueDetails += $"，范围=[{lower}；{upper}] {step.PlanDefinition.Unit}";
+            }
+            if (finalResult.IsPass && finalResult.IsWarning)
+                OnLogWarning($"[通道{context.ChannelIndex + 1}] {outcomeDetails}辅助步骤 '{step.Name}' 提示{valueDetails} (耗时 {stopwatch.ElapsedMilliseconds} ms)，不计为产品NG。");
+            else if (finalResult.IsPass)
+                OnLogSuccess($"[通道{context.ChannelIndex + 1}] {outcomeDetails}步骤 '{step.Name}' 通过{valueDetails} (耗时 {stopwatch.ElapsedMilliseconds} ms)");
             else if (finalResult.IsCanceled)
-                OnLogWarning($"[通道{context.ChannelIndex + 1}] 步骤 '{step.Name}' 已取消 (耗时 {stopwatch.ElapsedMilliseconds} ms)");
+                OnLogWarning($"[通道{context.ChannelIndex + 1}] {outcomeDetails}步骤 '{step.Name}' 已取消{valueDetails} (耗时 {stopwatch.ElapsedMilliseconds} ms)");
             else
-                OnLogError($"[通道{context.ChannelIndex + 1}] 步骤 '{step.Name}' 失败 (耗时 {stopwatch.ElapsedMilliseconds} ms)");
+                OnLogError($"[通道{context.ChannelIndex + 1}] {outcomeDetails}步骤 '{step.Name}' 失败{valueDetails} (耗时 {stopwatch.ElapsedMilliseconds} ms)");
 
             return finalResult;
+        }
+
+        private void ObserveUiTask(Task task, string operation)
+        {
+            if (task == null)
+                return;
+            task.ContinueWith(
+                completed => OnLogWarning(operation + "失败：" +
+                    completed.Exception?.GetBaseException().Message),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
         }
 
         private static async Task WaitIfPausedAsync(
@@ -814,7 +881,17 @@ namespace TestPlatform.TestSequences
             // each one forces WPF to regenerate grouped DataGrid containers and was
             // the main source of visible homepage stutter. Keep automatic location
             // for chapter transitions and meaningful result rows only.
-            if (!isResultRow && !chapterChanged)
+            int minimumScrollIntervalMs = 5000;
+            int configuredInterval;
+            if (int.TryParse(
+                    System.Configuration.ConfigurationManager.AppSettings["SKGridScrollIntervalMs"],
+                    out configuredInterval))
+            {
+                minimumScrollIntervalMs = Math.Max(0, configuredInterval);
+            }
+            bool intervalElapsed = _lastUiScrollUtc == DateTime.MinValue ||
+                (DateTime.UtcNow - _lastUiScrollUtc).TotalMilliseconds >= minimumScrollIntervalMs;
+            if (!chapterChanged && (!isResultRow || !intervalElapsed))
                 return false;
 
             _lastUiScrollUtc = DateTime.UtcNow;
@@ -843,9 +920,11 @@ namespace TestPlatform.TestSequences
                     "关闭MPS全部仪器输出",
                     () => deviceManager.TurnOffAllInstrumentsAsync());
                 await TryFailureActionAsync(
-                    "断开MPS DAQ301-306功能继电器",
+                    "断开MPS DAQ302-306/308功能继电器",
                     () => deviceManager.SetDaqRelaysAsync(
-                        "@301:306",
+                        ExpectedBoardType.StartsWith("MPS-125", StringComparison.OrdinalIgnoreCase)
+                            ? Mps125StationMap.AllDaqControlRelays
+                            : Mps250StationMap.AllDaqControlRelays,
                         false,
                         "MPS章节失败安全隔离"));
                 return;
@@ -991,6 +1070,8 @@ namespace TestPlatform.TestSequences
                 }
 
                 step.PlanDefinition = definition;
+                // The grid and execution log use the same authoritative XML label.
+                step.Name = definition.Name;
                 step.RowIndex = -1;
                 step.AlwaysRun = definition.AlwaysRun;
                 if (step.AlwaysRun)
@@ -1004,8 +1085,10 @@ namespace TestPlatform.TestSequences
                 return;
 
             double numericValue = result.NumericValue.HasValue ? result.NumericValue.Value : 0.0;
-            context.StoreValue(result.StoreKey, numericValue, result.Value, result.Unit, result.IsPass);
-            OnLogInfo($"已保存测试变量 {result.StoreKey} = {result.Value}");
+            context.StoreValue(result.StoreKey, numericValue, result.Value, result.Unit,
+                result.IsPass, result.NumericValue.HasValue);
+            if (!UseCompactLogs)
+                OnLogInfo($"已保存测试变量 {result.StoreKey} = {result.Value}");
         }
 
         protected bool TryGetStoredNumericValue(TestSequenceContext context, string key, out double value)

@@ -2,6 +2,8 @@ namespace TestPlatform
 {
     public static class ComName
     {
+        private static string _ainuoPowerAComName;
+
         public static string powerSupplyComName { get; set; }
 
         public static string rs485ComName { get; set; }
@@ -14,7 +16,19 @@ namespace TestPlatform
 
         public static string ansPowerComName { get; set; }
 
-        public static string hengHuiPowerAComName { get; set; }
+        public static string ainuoPowerAComName
+        {
+            get => _ainuoPowerAComName;
+            set => _ainuoPowerAComName = value;
+        }
+
+        // Compatibility alias for older project files. New SK projects use
+        // ainuoPowerAComName as the logical source-A role.
+        public static string hengHuiPowerAComName
+        {
+            get => _ainuoPowerAComName;
+            set => _ainuoPowerAComName = value;
+        }
 
         public static string hengHuiPowerBComName { get; set; }
 

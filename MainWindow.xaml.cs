@@ -495,9 +495,17 @@ namespace TestPlatform
         {
             if (_projectConfigs.TryGetValue(ProjectSettings.CurrentProjectName, out var config))
             {
-                return (config.RequiredComPorts ?? new List<string>())
+                var ports = (config.RequiredComPorts ?? new List<string>())
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
+                if (string.Equals(config.SequenceKey, "SK_BCM125_Sequence", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(config.SequenceKey, "SK_BCM250_Sequence", StringComparison.OrdinalIgnoreCase))
+                {
+                    ports.RemoveAll(port => string.Equals(port, "uartComName", StringComparison.OrdinalIgnoreCase));
+                    if (appSettings?.ForceFirmwareProgramming == true)
+                        ports.Add("uartComName");
+                }
+                return ports;
             }
             return new List<string>();
         }
@@ -509,7 +517,7 @@ namespace TestPlatform
                 string.Equals(mode, "Sim", StringComparison.OrdinalIgnoreCase))
             {
                 ComName.ansPowerComName = "SIMULATION";
-                ComName.hengHuiPowerAComName = "SIMULATION";
+                ComName.ainuoPowerAComName = "SIMULATION";
                 ComName.hengHuiPowerBComName = "SIMULATION";
                 ComName.electronicLoadComName = "SIMULATION";
                 ComName.daqComName = "SIMULATION";
@@ -520,7 +528,7 @@ namespace TestPlatform
                 return true;
             }
 
-            progress?.Report("正在读取SK工位预设COM口并按设备身份扫描校验...");
+            progress?.Report("正在按USB身份定位SK工位串口并校验仪器应答...");
             var requiredPorts = new HashSet<string>(
                 GetRequiredComPortsForCurrentProject(),
                 StringComparer.OrdinalIgnoreCase);
@@ -546,7 +554,7 @@ namespace TestPlatform
             progress?.Report("SK工位串口识别完成");
             AppendLog(
                 $"SK串口识别完成：ANS={discovery.AnsPowerPort}, " +
-                $"恒辉A={discovery.HengHuiPowerAPort}, 恒辉B={discovery.HengHuiPowerBPort}, " +
+                $"艾诺AN50300-10电源A={discovery.AinuoPowerAPort}, 恒辉B={discovery.HengHuiPowerBPort}, " +
                  $"负载={discovery.ElectronicLoadPort}, DAQ={discovery.DaqPort}, " +
                  $"数字输入={discovery.DigitalInputPort}, 工装继电器={discovery.FixtureRelayPort}, " +
                  $"16路继电器={discovery.Relay16Port}, MBD UART=上电后识别, " +
@@ -887,6 +895,12 @@ namespace TestPlatform
                 retryPassedTrigger.Setters.Add(new Setter(TextBlock.ForegroundProperty, new SolidColorBrush(Color.FromRgb(24, 89, 52))));
                 retryPassedTrigger.Setters.Add(new Setter(TextBlock.BackgroundProperty, new SolidColorBrush(Color.FromRgb(255, 235, 160))));
 
+                DataTrigger warningTrigger = new DataTrigger();
+                warningTrigger.Binding = new System.Windows.Data.Binding($"Channel{i}Result");
+                warningTrigger.Value = "警告";
+                warningTrigger.Setters.Add(new Setter(TextBlock.ForegroundProperty, Brushes.Black));
+                warningTrigger.Setters.Add(new Setter(TextBlock.BackgroundProperty, StatusWarning));
+
                 DataTrigger canceledTrigger = new DataTrigger();
                 canceledTrigger.Binding = new System.Windows.Data.Binding($"Channel{i}Result");
                 canceledTrigger.Value = "已取消";
@@ -910,6 +924,7 @@ namespace TestPlatform
                 textStyle.Triggers.Add(runningTrigger);
                 textStyle.Triggers.Add(retryTrigger);
                 textStyle.Triggers.Add(retryPassedTrigger);
+                textStyle.Triggers.Add(warningTrigger);
                 textStyle.Triggers.Add(canceledTrigger);
                 textStyle.Triggers.Add(cleanupTrigger);
                 textStyle.Triggers.Add(cleanupFailTrigger);
@@ -1039,7 +1054,7 @@ namespace TestPlatform
                 {
                     AppendLog($"DataGrid滚动到第 {rowIndex + 1} 行失败：{ex.Message}", LogWarning);
                 }
-            }).Task;
+            }, DispatcherPriority.Background).Task;
         }
         #endregion
 
@@ -1727,9 +1742,10 @@ namespace TestPlatform
                     .Replace(" ", string.Empty);
                 if (normalizedProjectName.IndexOf("BCM125", StringComparison.OrdinalIgnoreCase) < 0 &&
                     normalizedProjectName.IndexOf("BCM250", StringComparison.OrdinalIgnoreCase) < 0 &&
+                    normalizedProjectName.IndexOf("MPS125", StringComparison.OrdinalIgnoreCase) < 0 &&
                     normalizedProjectName.IndexOf("MPS250", StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    AppendLog("客户TXT/PDF报告模式仅适用于BCM-125、BCM-250或MPS-250项目。", LogError);
+                    AppendLog("客户TXT/PDF报告模式仅适用于BCM-125、BCM-250、MPS-125或MPS-250项目。", LogError);
                     return false;
                 }
 
@@ -2702,7 +2718,7 @@ namespace TestPlatform
                     x == "执行中" ||
                     x == "重试中" ||
                     x == "收尾中");
-                bool allPassed = results.All(x => x == "PASS" || x == "重试通过");
+                bool allPassed = results.All(x => x == "PASS" || x == "重试通过" || x == "警告");
 
                 string status;
                 if (cleanupFailed)
@@ -2716,7 +2732,7 @@ namespace TestPlatform
                 else if (running)
                     status = "执行中";
                 else if (allPassed)
-                    status = "PASS";
+                    status = results.Any(x => x == "警告") ? "警告" : "PASS";
                 else if (completed > 0)
                     status = "执行中";
                 else
@@ -2785,6 +2801,7 @@ namespace TestPlatform
             return status == "PASS" ||
                    status == "FAIL" ||
                    status == "重试通过" ||
+                   status == "警告" ||
                    status == "已取消" ||
                    status == "收尾失败";
         }
@@ -3211,6 +3228,7 @@ namespace TestPlatform
 
             int previousParallelCount = appSettings.ParallelTestCount;
             bool previousSkipFirmwareProgramming = appSettings.SkipFirmwareProgramming;
+            bool previousForceFirmwareProgramming = appSettings.ForceFirmwareProgramming;
             var settingsWin = new SettingsWindow(appSettings) { Owner = this };
             if (settingsWin.ShowDialog() == true)
             {
@@ -3230,14 +3248,17 @@ namespace TestPlatform
                     LoadTestDataFromXML();
                 }
 
-                if (previousSkipFirmwareProgramming != appSettings.SkipFirmwareProgramming)
+                if (previousSkipFirmwareProgramming != appSettings.SkipFirmwareProgramming ||
+                    previousForceFirmwareProgramming != appSettings.ForceFirmwareProgramming)
                 {
                     hasAttemptedComInit = false;
                     _comPortsReady = false;
                     AppendLog(
-                        appSettings.SkipFirmwareProgramming
-                            ? "固件烧录已关闭：下次测试不要求TTL串口。"
-                            : "固件烧录已启用：启动检查不强制TTL口；执行烧录步骤时校验TTL配置，测试开始时校验HEX文件。",
+                        appSettings.ForceFirmwareProgramming
+                            ? "BCM强制烧录已启用：即使版本相同也烧录；启动前要求独立TTL口和HEX文件。"
+                            : appSettings.SkipFirmwareProgramming
+                                ? "固件烧录已关闭：BCM先检查版本，异常时判失败，不要求TTL串口。"
+                                : "BCM按需烧录已启用：先检查现有固件，正常则跳过，异常再烧录。",
                         LogWarning);
                     _comPortsReady = await EnsureComPortsInitializedAsync();
                     UpdateTestControlsState();
@@ -10687,7 +10708,9 @@ namespace TestPlatform
                         UpdateChannelStepResultDisplay
                     ),
                     ShowSequenceConfirmAsync,
-                    appSettings?.SkipFirmwareProgramming ?? false
+                    appSettings?.SkipFirmwareProgramming ?? false,
+                    appSettings?.ForceFirmwareProgramming ?? false,
+                    appSettings?.SkipFirmwareVerification ?? false
                 ),
                 ["SK_BCM125_Sequence"] = () => new TestPlatform.TestSequences.SKBCM125Sequence(
                     new DataTableTestGridService(
@@ -10697,7 +10720,9 @@ namespace TestPlatform
                         UpdateChannelStepResultDisplay
                     ),
                     ShowSequenceConfirmAsync,
-                    appSettings?.SkipFirmwareProgramming ?? false
+                    appSettings?.SkipFirmwareProgramming ?? false,
+                    appSettings?.ForceFirmwareProgramming ?? false,
+                    appSettings?.SkipFirmwareVerification ?? false
                 )
             };
         }
@@ -10772,6 +10797,17 @@ namespace TestPlatform
                     WaitIfPausedAsync = token => WaitWhilePausedAsync(channelIndex, token),
                     WaitBeforeStepAsync = (stepId, token) =>
                         WaitBeforeDebugStepAsync(channelIndex, stepId, token),
+                    RequiresSynchronousUiResults = () =>
+                    {
+                        if (_isPauseRequested)
+                            return true;
+                        lock (_debugStepSync)
+                        {
+                            return !string.IsNullOrWhiteSpace(_pauseAfterCompletedStepId) ||
+                                   !string.IsNullOrWhiteSpace(_runToStepId) ||
+                                   _engineeringBreakpoints.Count > 0;
+                        }
+                    },
                     StopOnFail = appSettings.StopOnFail,
                     PromptOnFail = appSettings.PromptOnFail,
                     ContinueAfterPowerCriticalFailure =
@@ -11100,6 +11136,7 @@ namespace TestPlatform
             switch (status)
             {
                 case "PASS": return new SolidColorBrush(Color.FromRgb(24, 115, 60));
+                case "警告": return Brushes.DarkOrange;
                 case "FAIL":
                 case "收尾失败": return new SolidColorBrush(Color.FromRgb(180, 35, 24));
                 case "执行中": return new SolidColorBrush(Color.FromRgb(20, 92, 158));

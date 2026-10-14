@@ -340,7 +340,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>7.3 初始化-断开测试继电器（保持Y1/Y2下压）</Name>
+    <Name>7.3 初始化-断开测试继电器后恢复电子负载Y2/Y5通路</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -551,7 +551,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>9.1 检查编程电源、负载及TTL连接（MBD上电后识别）</Name>
+    <Name>9.1 检查编程电源及两颗MCU现有固件，决定是否烧录</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -722,7 +722,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>C01 BCM1 TTL烧录BCM_125_V8.hex（内置STM32 UART Bootloader）</Name>
+    <Name>C01 BCM1 固件确认或TTL烧录BCM_125_V8.hex</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -878,7 +878,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>C02 BCM2 TTL烧录BCM_125_V8.hex（内置STM32 UART Bootloader）</Name>
+    <Name>C02 BCM2 固件确认或TTL烧录BCM_125_V8.hex</Name>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -1118,8 +1118,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>E01 读取R0检查BCM1固件版本</Name>
-    <UpperLimit>BCM_125_V8.HEX</UpperLimit>
-    <LowerLimit>BCM_125_V8.HEX</LowerLimit>
+    <ExpectedValue>stcu_UP125_V8</ExpectedValue>
+    <UpperLimit>stcu_UP125_V8</UpperLimit>
+    <LowerLimit>stcu_UP125_V8</LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
@@ -1160,8 +1161,9 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>E02 读取R0检查BCM2固件版本</Name>
-    <UpperLimit>BCM_125_V8.HEX</UpperLimit>
-    <LowerLimit>BCM_125_V8.HEX</LowerLimit>
+    <ExpectedValue>stcu_UP125_V8</ExpectedValue>
+    <UpperLimit>stcu_UP125_V8</UpperLimit>
+    <LowerLimit>stcu_UP125_V8</LowerLimit>
     <Unit></Unit>
   </TestItem>
   <TestItem>
@@ -1273,6 +1275,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>12.7 ST1读取R10 running_time x</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>s</Unit>
@@ -1415,6 +1418,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>12.17 ST2读取R10 running_time x</Name>
+    <DelayMs>3000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>s</Unit>
@@ -3224,7 +3228,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>18.8 读取R68确认C21已放电</Name>
+    <Name>18.8 辅助观察R68的C21放电状态（超限提示）</Name>
     <UpperLimit>49</UpperLimit>
     <LowerLimit>0</LowerLimit>
     <Unit>count</Unit>
@@ -4160,8 +4164,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.14 ST1 等待10000ms</Name>
-    <DelayMs>10000</DelayMs>
+    <Name>19.14 ST1 等待500ms继电器稳定</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4217,8 +4221,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.18 ST1 等待2000ms</Name>
-    <DelayMs>2000</DelayMs>
+    <Name>19.18 ST1 等待18000ms上限至VMID就绪</Name>
+    <DelayMs>18000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4401,8 +4405,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.31 ST1 等待12000ms</Name>
-    <DelayMs>12000</DelayMs>
+    <Name>19.31 ST1 等待18000ms</Name>
+    <DelayMs>18000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4614,8 +4618,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.14 ST2 等待10000ms</Name>
-    <DelayMs>10000</DelayMs>
+    <Name>19.14 ST2 等待500ms继电器稳定</Name>
+    <DelayMs>500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4671,8 +4675,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.18 ST2 等待2000ms</Name>
-    <DelayMs>2000</DelayMs>
+    <Name>19.18 ST2 等待18000ms上限至VMID就绪</Name>
+    <DelayMs>18000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -4855,8 +4859,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>19.31 ST2 等待12000ms</Name>
-    <DelayMs>12000</DelayMs>
+    <Name>19.31 ST2 等待18000ms</Name>
+    <DelayMs>18000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit>ms</Unit>
@@ -5210,7 +5214,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.9 ST1 打开String发生器</Name>
+    <Name>20.9 ST1 打开String发生器并确认1A电流稳定</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -5650,7 +5654,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>20.9 ST2 打开String发生器</Name>
+    <Name>20.9 ST2 打开String发生器并确认1A电流稳定</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7682,8 +7686,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.14 ST1 发送DIAG ON并发送W94=1闭合MBD String继电器，稳定500ms</Name>
-    <DelayMs>500</DelayMs>
+    <Name>23.14 ST1 向MBD发送DIAG ON</Name>
+    <DelayMs>0</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -7937,7 +7941,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.34 ST1 等待7000ms</Name>
+    <Name>23.34 ST1 等待7000ms（String电源就绪可提前结束，超时继续）</Name>
     <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -8219,7 +8223,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.51 ST1 仅在Q12-Q16计算及写入全部通过后发送ACT-&gt;FLASH</Name>
+    <Name>23.51 ST1 在Q12-Q16均有数值且写入成功后发送ACT-&gt;FLASH</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8319,8 +8323,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.59 ST1 发送EXIT并发送W94=0释放MBD String继电器，稳定500ms</Name>
-    <DelayMs>500</DelayMs>
+    <Name>23.59 ST1 向MBD发送EXIT</Name>
+    <DelayMs>0</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8448,8 +8452,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.14 ST2 发送DIAG ON并发送W91=1闭合MBD String继电器，稳定500ms</Name>
-    <DelayMs>500</DelayMs>
+    <Name>23.14 ST2 向MBD发送DIAG ON</Name>
+    <DelayMs>0</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -8703,7 +8707,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.34 ST2 等待7000ms</Name>
+    <Name>23.34 ST2 等待7000ms（String电源就绪可提前结束，超时继续）</Name>
     <DelayMs>7000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -8985,7 +8989,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.51 ST2 仅在Q28-Q32计算及写入全部通过后发送ACT-&gt;FLASH</Name>
+    <Name>23.51 ST2 在Q28-Q32均有数值且写入成功后发送ACT-&gt;FLASH</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -9085,8 +9089,8 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>23.59 ST2 发送EXIT并发送W91=0释放MBD String继电器，稳定500ms</Name>
-    <DelayMs>500</DelayMs>
+    <Name>23.59 ST2 向MBD发送EXIT</Name>
+    <DelayMs>0</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -9496,7 +9500,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.26 ST1 等待5000ms</Name>
+    <Name>24.26 ST1 等待5000ms（就绪提前结束，超时提示后继续）</Name>
     <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -9512,6 +9516,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.26 ST1 发送W69=0打开CCB</Name>
+    <DelayMs>2500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -9581,7 +9586,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.32 ST1 设置String发生器0V/0A OVP150</Name>
+    <Name>24.32 ST1 先关闭CCB再设置String发生器0V/0A OVP150</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -9681,7 +9686,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.40 ST1 设置String发生器10V/6A OVP150</Name>
+    <Name>24.40 ST1 设置String发生器10V/6A OVP150后开启CCB</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -10203,7 +10208,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.26 ST2 等待5000ms</Name>
+    <Name>24.26 ST2 等待5000ms（就绪提前结束，超时提示后继续）</Name>
     <DelayMs>5000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -10219,6 +10224,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>24.26 ST2 发送W69=0打开CCB</Name>
+    <DelayMs>2500</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -10288,7 +10294,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.32 ST2 设置String发生器0V/0A OVP150</Name>
+    <Name>24.32 ST2 先关闭CCB再设置String发生器0V/0A OVP150</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -10388,7 +10394,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>24.40 ST2 设置String发生器10V/6A OVP150</Name>
+    <Name>24.40 ST2 设置String发生器10V/6A OVP150后开启CCB</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>
@@ -11167,7 +11173,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25.34 ST1 等待10000ms</Name>
+    <Name>25.34 ST1 最多等待10000ms负载输入及分流电流稳定</Name>
     <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -11210,7 +11216,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25.37 ST1 等待4000ms</Name>
+    <Name>25.37 ST1 最多等待4000ms负载输入及String电压稳定</Name>
     <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -11819,7 +11825,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25.34 ST2 等待10000ms</Name>
+    <Name>25.34 ST2 最多等待10000ms负载输入及分流电流稳定</Name>
     <DelayMs>10000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -11862,7 +11868,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>25.37 ST2 等待4000ms</Name>
+    <Name>25.37 ST2 最多等待4000ms负载输入及String电压稳定</Name>
     <DelayMs>4000</DelayMs>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
@@ -12443,7 +12449,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T01 ST1 读取R44内部iccb MOS打开</Name>
+    <Name>T01 ST1 读取R44内部iccb MOS打开（30点同窗全样本平均）</Name>
     <UpperLimit>-300</UpperLimit>
     <LowerLimit>-1000</LowerLimit>
     <Unit>mA</Unit>
@@ -12457,7 +12463,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T02 ST1 DAQ CH13外部分流电流MOS打开【待实机确认极性】</Name>
+    <Name>T02 ST1 DAQ CH13外部分流电流MOS打开（同窗DAQ缓存全样本平均）【待实机确认极性】</Name>
     <UpperLimit>1000</UpperLimit>
     <LowerLimit>300</LowerLimit>
     <Unit>mA</Unit>
@@ -12500,7 +12506,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T03 ST1 读取R44内部iccb MOS关闭</Name>
+    <Name>T03 ST1 读取R44内部iccb MOS关闭（固定窗口全样本平均）</Name>
     <UpperLimit>20</UpperLimit>
     <LowerLimit>-20</LowerLimit>
     <Unit>mA</Unit>
@@ -12925,7 +12931,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T04 ST2 读取R44内部iccb MOS打开</Name>
+    <Name>T04 ST2 读取R44内部iccb MOS打开（30点同窗全样本平均）</Name>
     <UpperLimit>-300</UpperLimit>
     <LowerLimit>-1000</LowerLimit>
     <Unit>mA</Unit>
@@ -12939,7 +12945,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T05 ST2 DAQ CH15外部分流电流MOS打开【待实机确认极性】</Name>
+    <Name>T05 ST2 DAQ CH15外部分流电流MOS打开（同窗DAQ缓存全样本平均）【待实机确认极性】</Name>
     <UpperLimit>1000</UpperLimit>
     <LowerLimit>300</LowerLimit>
     <Unit>mA</Unit>
@@ -12982,7 +12988,7 @@
     <AlwaysRun>false</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>T06 ST2 读取R44内部iccb MOS关闭</Name>
+    <Name>T06 ST2 读取R44内部iccb MOS关闭（固定窗口全样本平均）</Name>
     <UpperLimit>20</UpperLimit>
     <LowerLimit>-20</LowerLimit>
     <Unit>mA</Unit>
@@ -13465,6 +13471,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>U02 ST1 回读R40校准日期</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -13664,6 +13671,7 @@
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
     <Name>U05 ST2 回读R40校准日期</Name>
+    <DelayMs>200</DelayMs>
     <UpperLimit>1</UpperLimit>
     <LowerLimit>1</LowerLimit>
     <Unit>Logic (0/1)</Unit>
@@ -13734,7 +13742,7 @@
     <AlwaysRun>true</AlwaysRun>
     <DependsOn></DependsOn>
     <Enabled>true</Enabled>
-    <Name>27.24 Open RL4 after all outputs are off</Name>
+    <Name>27.24 Open RL4 and electronic load path Y2/Y5 after outputs are off</Name>
     <UpperLimit></UpperLimit>
     <LowerLimit></LowerLimit>
     <Unit></Unit>

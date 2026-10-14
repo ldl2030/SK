@@ -50,6 +50,8 @@ namespace TestPlatform
                 CurrentSettings.ContinueAfterPowerCriticalFailure;
             chkFirmwareProgrammingEnabled.IsChecked =
                 !CurrentSettings.SkipFirmwareProgramming;
+            chkForceFirmwareProgramming.IsChecked = CurrentSettings.ForceFirmwareProgramming;
+            chkSkipFirmwareVerification.IsChecked = CurrentSettings.SkipFirmwareVerification;
             chkAllowEmptySN.IsChecked = CurrentSettings.AllowEmptySN;
             // 外观
             rbLightTheme.IsChecked = CurrentSettings.LightTheme;
@@ -174,6 +176,8 @@ namespace TestPlatform
                 chkContinueAfterPowerCriticalFailure.IsChecked ?? false;
             CurrentSettings.SkipFirmwareProgramming =
                 !(chkFirmwareProgrammingEnabled.IsChecked ?? false);
+            CurrentSettings.ForceFirmwareProgramming = chkForceFirmwareProgramming.IsChecked ?? false;
+            CurrentSettings.SkipFirmwareVerification = chkSkipFirmwareVerification.IsChecked ?? false;
             CurrentSettings.AllowEmptySN = chkAllowEmptySN.IsChecked ?? false;
 
             // 外观
@@ -379,6 +383,8 @@ namespace TestPlatform
         /// Skip physical firmware-programming steps for every project.
         /// </summary>
         public bool SkipFirmwareProgramming { get; set; } = false;
+        public bool ForceFirmwareProgramming { get; set; } = false;
+        public bool SkipFirmwareVerification { get; set; } = false;
 
         // SMB 相关设置
         public bool SMBEnabled { get; set; } = false;

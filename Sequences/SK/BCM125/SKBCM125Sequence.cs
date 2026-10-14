@@ -7,6 +7,11 @@ namespace TestPlatform.TestSequences
     public partial class SKBCM125Sequence : SKBcmSequenceBase
     {
         private readonly bool _skipFirmwareProgramming;
+        private readonly bool _forceFirmwareProgramming;
+        private readonly bool _skipFirmwareVerification;
+        private readonly bool[] _programController = { true, true };
+        private readonly string[] _precheckedFirmware = new string[2];
+        private bool _firmwarePrecheckCompleted;
         private Bcm125MbdTerminalState _mbdTerminalState;
 
         private enum Bcm125MbdTerminalState
@@ -21,15 +26,21 @@ namespace TestPlatform.TestSequences
 
         public override string ExpectedBoardType => "BCM-125";
 
-        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming;
+        protected override bool SkipFirmwareProgramming => _skipFirmwareProgramming && !_forceFirmwareProgramming;
+        protected override bool ForceFirmwareProgramming => _forceFirmwareProgramming;
+        protected override bool SkipFirmwareVerification => _skipFirmwareVerification;
 
         public SKBCM125Sequence(
             ITestGridService grid = null,
             Func<string, Task<bool>> confirmAsync = null,
-            bool skipFirmwareProgramming = false)
+            bool skipFirmwareProgramming = false,
+            bool forceFirmwareProgramming = false,
+            bool skipFirmwareVerification = false)
             : base(grid, confirmAsync)
         {
             _skipFirmwareProgramming = skipFirmwareProgramming;
+            _forceFirmwareProgramming = forceFirmwareProgramming;
+            _skipFirmwareVerification = skipFirmwareVerification;
             _mbdTerminalState = Bcm125MbdTerminalState.Unknown;
         }
 
@@ -38,13 +49,16 @@ namespace TestPlatform.TestSequences
             TestSequenceContext context,
             SK441Device deviceManager)
         {
+            _firmwarePrecheckCompleted = false;
+            _programController[0] = _programController[1] = true;
+            _precheckedFirmware[0] = _precheckedFirmware[1] = null;
             AssignPlanGroupToRange(steps, context, Bcm125GroupIds.Precheck, 0, steps.Count);
             AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(7),
                 () => AddInitializingToolsStep(steps, deviceManager, ExpectedBoardType));
             AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(8),
                 () => AddBcm125FirstStartupSteps(steps, deviceManager));
             AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(9),
-                () => AddBcm125ProgrammingSteps(steps, deviceManager));
+                () => AddBcm125ProgrammingSteps(steps, context, deviceManager));
             AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(10),
                 () => AddBcm125CanBusSteps(steps, deviceManager));
             AddPlanChapter(steps, context, Bcm125GroupIds.Chapter(11),

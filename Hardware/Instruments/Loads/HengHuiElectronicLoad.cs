@@ -11,13 +11,23 @@ namespace TestPlatform
     /// </summary>
     public class HengHuiElectronicLoad : IDisposable, IDeviceLogSource
     {
+        private const float MinimumProgrammableSetpoint = 0.001f;
+        private const float MaximumProgrammableSetpoint = 999.999f;
         private SerialPort _serialPort;
         private readonly object _lock = new object();
+        private bool _protectionClearSkipLogged;
 
         public event Action<string> LogInfo;
         public event Action<string> LogError;
 
         public int CommandDelayMs { get; set; } = 50;
+        public int ReadTimeoutMs { get; set; } = 2500;
+        public int FastQueryTimeoutMs { get; set; } = 700;
+        public int RecoveryQueryTimeoutMs { get; set; } = 1500;
+        public int WriteTimeoutMs { get; set; } = 2000;
+        public int QueryRetryDelayMs { get; set; } = 200;
+        public int QueryAttempts { get; set; } = 2;
+        public string ProtectionClearCommand { get; set; }
 
         public void Connect(string portName, int baudRate = 9600)
         {
@@ -26,9 +36,12 @@ namespace TestPlatform
             Disconnect();
             _serialPort = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One);
             // 大多数 SCPI 设备以 \n 结尾
-            _serialPort.NewLine = "\n"; 
-            _serialPort.ReadTimeout = 2000;
-            _serialPort.WriteTimeout = 2000;
+            _serialPort.NewLine = "\n";
+            _serialPort.ReadTimeout = Math.Max(100, ReadTimeoutMs);
+            _serialPort.WriteTimeout = Math.Max(100, WriteTimeoutMs);
+            _serialPort.Handshake = Handshake.None;
+            _serialPort.DtrEnable = false;
+            _serialPort.RtsEnable = false;
             _serialPort.Open();
         }
 
@@ -65,15 +78,18 @@ namespace TestPlatform
             }
         }
 
-        private string Query(string queryCmd)
+        private string Query(string queryCmd, int? readTimeoutMs = null)
         {
             lock (_lock)
             {
                 if (!IsConnected) throw new InvalidOperationException("HengHui 电子负载未连接。");
                 string portName = _serialPort.PortName;
                 var timer = Stopwatch.StartNew();
+                int originalReadTimeout = _serialPort.ReadTimeout;
                 try
                 {
+                    if (readTimeoutMs.HasValue)
+                        _serialPort.ReadTimeout = Math.Max(100, readTimeoutMs.Value);
                     _serialPort.DiscardInBuffer();
                     LogInfo?.Invoke($"电子负载 TX [{portName}] {queryCmd}");
                     _serialPort.WriteLine(queryCmd);
@@ -91,18 +107,50 @@ namespace TestPlatform
                         $"({timer.ElapsedMilliseconds} ms): {ex.Message}");
                     throw;
                 }
+                finally
+                {
+                    if (_serialPort != null && _serialPort.IsOpen)
+                        _serialPort.ReadTimeout = originalReadTimeout;
+                }
             }
         }
 
-        private string QueryWithRetry(string queryCmd, int maxAttempts = 3)
+        private void ResynchronizeAfterQueryFailure()
+        {
+            lock (_lock)
+            {
+                if (!IsConnected)
+                    return;
+
+                if (QueryRetryDelayMs > 0)
+                    Thread.Sleep(QueryRetryDelayMs);
+
+                try
+                {
+                    // A reply that arrives just after a timeout must not be
+                    // mistaken for the response to the next query.
+                    _serialPort.DiscardInBuffer();
+                    _serialPort.DiscardOutBuffer();
+                }
+                catch (Exception ex)
+                {
+                    LogInfo?.Invoke($"电子负载查询重同步失败：{ex.Message}");
+                }
+            }
+        }
+
+        private string QueryWithRetry(string queryCmd, int maxAttempts = 0)
         {
             Exception lastError = null;
-            int attempts = Math.Max(1, maxAttempts);
+            int attempts = Math.Max(1, maxAttempts > 0 ? maxAttempts : QueryAttempts);
             for (int attempt = 1; attempt <= attempts; attempt++)
             {
                 try
                 {
-                    string response = Query(queryCmd);
+                    int timeoutMs = attempt == 1
+                        ? Math.Max(100, FastQueryTimeoutMs)
+                        : Math.Max(100, RecoveryQueryTimeoutMs);
+                    string response = Query(queryCmd, timeoutMs);
                     if (string.IsNullOrWhiteSpace(response))
                         throw new FormatException("empty response");
                     return response;
@@ -113,8 +161,9 @@ namespace TestPlatform
                     if (attempt < attempts)
                     {
                         LogInfo?.Invoke(
-                            $"电子负载查询重试 {queryCmd}: {attempt}/{attempts}，原因={ex.Message}");
-                        Thread.Sleep(100);
+                            $"电子负载查询重试 {queryCmd}: {attempt}/{attempts}，" +
+                            $"本次超时={Math.Max(100, FastQueryTimeoutMs)}ms，原因={ex.Message}");
+                        ResynchronizeAfterQueryFailure();
                     }
                 }
             }
@@ -142,7 +191,7 @@ namespace TestPlatform
         /// <summary>
         /// 控制负载拉载开关
         /// </summary>
-        public void SetInputState(bool on)
+        public virtual void SetInputState(bool on)
         {
             SendCommand(on ? "INP 1" : "INP 0");
         }
@@ -152,10 +201,22 @@ namespace TestPlatform
         /// </summary>
         public void ClearInputProtection()
         {
-            SendCommand("INP:PROT:CLE");
+            string command = (ProtectionClearCommand ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(command))
+            {
+                if (!_protectionClearSkipLogged)
+                {
+                    _protectionClearSkipLogged = true;
+                    LogInfo?.Invoke(
+                        "电子负载SCPI手册未定义保护清除命令；本次连接不下发INP:PROT:CLE。");
+                }
+                return;
+            }
+
+            SendCommand(command);
         }
 
-        public bool GetInputState()
+        public virtual bool GetInputState()
         {
             string response = QueryWithRetry("INP?").Trim().ToUpperInvariant();
             if (response == "1" || response == "ON" || response.EndsWith(" 1") || response.EndsWith(":ON"))
@@ -170,7 +231,37 @@ namespace TestPlatform
         /// </summary>
         public void SetMode(string mode)
         {
-            SendCommand($"MODE {mode}");
+            string requestedMode = (mode ?? string.Empty).Trim().ToUpperInvariant();
+            string deviceMode;
+            switch (requestedMode)
+            {
+                case "CV":
+                case "VOLT":
+                    deviceMode = "VOLT";
+                    break;
+                case "CC":
+                case "CURR":
+                    deviceMode = "CURR";
+                    break;
+                case "CR":
+                case "RES":
+                    deviceMode = "RES";
+                    break;
+                case "CW":
+                case "CP":
+                case "POW":
+                    deviceMode = "POW";
+                    break;
+                case "DYN":
+                    deviceMode = "DYN";
+                    break;
+                default:
+                    throw new ArgumentException(
+                        $"不支持的电子负载模式：'{mode}'。可用模式为CV/CC/CR/CW/DYN。",
+                        nameof(mode));
+            }
+
+            SendCommand($"MODE {deviceMode}");
         }
 
         public string GetMode()
@@ -189,9 +280,11 @@ namespace TestPlatform
 
         // ===================== 基本带载参数设置 =====================
 
-        public void SetCurrent(float current)
+        public virtual void SetCurrent(float current)
         {
-            SendCommand($"CURR {current.ToString(CultureInfo.InvariantCulture)}");
+            float deviceValue = NormalizeProgrammableSetpoint(current, nameof(current));
+            LogMinimumSetpointSubstitution("CURR", current, deviceValue, "A");
+            SendCommand($"CURR {FormatProgrammableSetpoint(deviceValue)}");
         }
         
         public void SetCurrentSlewRate(float slewRate)
@@ -204,9 +297,47 @@ namespace TestPlatform
             SendCommand($"CURR:PROT {currentLimit.ToString("0.###", CultureInfo.InvariantCulture)}");
         }
 
-        public void SetVoltage(float voltage)
+        public virtual void SetVoltage(float voltage)
         {
-            SendCommand($"VOLT {voltage.ToString(CultureInfo.InvariantCulture)}");
+            float deviceValue = NormalizeProgrammableSetpoint(voltage, nameof(voltage));
+            LogMinimumSetpointSubstitution("VOLT", voltage, deviceValue, "V");
+            SendCommand($"VOLT {FormatProgrammableSetpoint(deviceValue)}");
+        }
+
+        private static float NormalizeProgrammableSetpoint(float value, string parameterName)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value) || value < 0 ||
+                value > MaximumProgrammableSetpoint)
+            {
+                throw new ArgumentOutOfRangeException(
+                    parameterName,
+                    value,
+                    $"电子负载设定范围为0至{MaximumProgrammableSetpoint:0.000}；" +
+                    $"设备SCPI最小可编程值为{MinimumProgrammableSetpoint:0.000}。");
+            }
+
+            return value < MinimumProgrammableSetpoint
+                ? MinimumProgrammableSetpoint
+                : value;
+        }
+
+        private static string FormatProgrammableSetpoint(float value)
+        {
+            return value.ToString("0.000", CultureInfo.InvariantCulture);
+        }
+
+        private void LogMinimumSetpointSubstitution(
+            string command,
+            float requestedValue,
+            float deviceValue,
+            string unit)
+        {
+            if (Math.Abs(requestedValue - deviceValue) < 0.0000001f)
+                return;
+
+            LogInfo?.Invoke(
+                $"电子负载逻辑设定{command}={requestedValue:0.###}{unit}；" +
+                $"按SCPI合法范围下发{deviceValue:0.000}{unit}，输入保持OFF时等效为安全零输出。");
         }
         
         public void SetVon(float von)
@@ -247,9 +378,26 @@ namespace TestPlatform
             return ParseMeasurement("MEAS:VOLT?", resp);
         }
 
+        /// <summary>
+        /// Performs one bounded query without the normal recovery retry. This is
+        /// used while the load is powering up so readiness can be polled without
+        /// letting one early timeout consume the complete startup allowance.
+        /// </summary>
+        public float MeasureVoltageOnce(int readTimeoutMs)
+        {
+            string resp = Query("MEAS:VOLT?", readTimeoutMs);
+            return ParseMeasurement("MEAS:VOLT?", resp);
+        }
+
         public float MeasureCurrent()
         {
             string resp = QueryWithRetry("MEAS:CURR?");
+            return ParseMeasurement("MEAS:CURR?", resp);
+        }
+
+        public float MeasureCurrentOnce(int readTimeoutMs)
+        {
+            string resp = Query("MEAS:CURR?", readTimeoutMs);
             return ParseMeasurement("MEAS:CURR?", resp);
         }
 

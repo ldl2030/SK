@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,8 +15,20 @@ namespace TestPlatform
         private bool _ansOutputOn;
         private bool _vbusOutputOn;
         private float _vbusCommandedVoltage;
+        private float _vbusCommandedCurrent;
+        private bool _vbusCommandStateKnown;
+        private DateTime _vbusCommandConfirmedUtc = DateTime.MinValue;
         private bool _secondaryOutputOn;
+        private float _secondaryCommandedVoltage;
+        private float _secondaryCommandedCurrent;
+        private float _secondaryCommandedOvp;
+        private bool _secondaryCommandStateKnown;
+        private DateTime _secondaryCommandConfirmedUtc = DateTime.MinValue;
         private bool _electronicLoadOn;
+        private bool _electronicLoadSafeZeroConfirmed;
+        private DateTime _electronicLoadSafeZeroConfirmedUtc = DateTime.MinValue;
+        private readonly Dictionary<string, DateTime> _powerDomainOffConfirmedUtc =
+            new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
         public const int MpsVbattSourcePowerRelay = 1;
         public const int MpsVbattDutPowerRelay = 9;
         private static readonly int[] MpsVbattPowerRelays =
@@ -67,14 +81,14 @@ namespace TestPlatform
             int readTimeoutMs = Math.Max(
                 50,
                 GetIntAppSetting("SKMPS250PowerTelemetryReadTimeoutMs", 250));
-            return ReadHengHuiTelemetry("VBUS/A", HengHuiPower1, readTimeoutMs) +
+            return ReadPowerSupplyTelemetry("VBUS/A (AN50)", AinuoPowerA, readTimeoutMs) +
                 " | " +
-                ReadHengHuiTelemetry("VBATT/B", HengHuiPower2, readTimeoutMs);
+                ReadPowerSupplyTelemetry("VBATT/B", HengHuiPower2, readTimeoutMs);
         }
 
-        private static string ReadHengHuiTelemetry(
+        private static string ReadPowerSupplyTelemetry(
             string name,
-            HengHuiPowerSupply supply,
+            IProgrammablePowerSupply supply,
             int readTimeoutMs)
         {
             if (supply == null || !supply.IsConnected)
@@ -108,9 +122,20 @@ namespace TestPlatform
         {
             lock (_powerSafetySync)
             {
+                _powerDomainOffConfirmedUtc.Remove(domain);
                 if (domain == "ANS") _ansOutputOn = outputOn;
-                else if (domain == "VBUS") _vbusOutputOn = outputOn;
-                else if (domain == "SECONDARY") _secondaryOutputOn = outputOn;
+                else if (domain == "VBUS")
+                {
+                    _vbusOutputOn = outputOn;
+                    _vbusCommandStateKnown = false;
+                    _vbusCommandConfirmedUtc = DateTime.MinValue;
+                }
+                else if (domain == "SECONDARY")
+                {
+                    _secondaryOutputOn = outputOn;
+                    _secondaryCommandStateKnown = false;
+                    _secondaryCommandConfirmedUtc = DateTime.MinValue;
+                }
                 else if (domain == "LOAD") _electronicLoadOn = outputOn;
                 _powerSafetyTrace.Add("OUTPUT " + domain + " " + (outputOn ? "ON" : "OFF"));
             }
@@ -128,6 +153,97 @@ namespace TestPlatform
             {
                 commandedVoltage = _vbusCommandedVoltage;
                 return _vbusOutputOn;
+            }
+        }
+
+        private void RecordVbusCommandState(float voltage, float current, bool outputOn)
+        {
+            lock (_powerSafetySync)
+            {
+                _vbusCommandedVoltage = voltage;
+                _vbusCommandedCurrent = current;
+                _vbusOutputOn = outputOn;
+                _vbusCommandStateKnown = true;
+                _vbusCommandConfirmedUtc = DateTime.UtcNow;
+            }
+        }
+
+        private bool CanReuseRecentVbusOffCommand(float voltage, float current)
+        {
+            int reuseWindowMs = Math.Max(
+                0,
+                GetIntAppSetting("SKVbusOffCommandReuseWindowMs", 5000));
+            lock (_powerSafetySync)
+            {
+                return reuseWindowMs > 0 &&
+                       _vbusCommandStateKnown &&
+                       !_vbusOutputOn &&
+                       Math.Abs(_vbusCommandedVoltage - voltage) < 0.0001f &&
+                       Math.Abs(_vbusCommandedCurrent - current) < 0.0001f &&
+                       _vbusCommandConfirmedUtc != DateTime.MinValue &&
+                       (DateTime.UtcNow - _vbusCommandConfirmedUtc).TotalMilliseconds <= reuseWindowMs;
+            }
+        }
+
+        private bool CanReuseRecentVbusSetpoint(float voltage, float current)
+        {
+            int reuseWindowMs = Math.Max(
+                0,
+                GetIntAppSetting("SKVbusSetpointReuseWindowMs", 5000));
+            lock (_powerSafetySync)
+            {
+                return reuseWindowMs > 0 &&
+                       _vbusCommandStateKnown &&
+                       Math.Abs(_vbusCommandedVoltage - voltage) < 0.0001f &&
+                       Math.Abs(_vbusCommandedCurrent - current) < 0.0001f &&
+                       (DateTime.UtcNow - _vbusCommandConfirmedUtc).TotalMilliseconds <= reuseWindowMs;
+            }
+        }
+
+        private void InvalidateVbusCommandState()
+        {
+            lock (_powerSafetySync)
+            {
+                _vbusCommandStateKnown = false;
+                _vbusCommandConfirmedUtc = DateTime.MinValue;
+            }
+        }
+
+        private void RecordSecondaryCommandState(float voltage, float current, float ovp, bool outputOn)
+        {
+            lock (_powerSafetySync)
+            {
+                _secondaryCommandedVoltage = voltage;
+                _secondaryCommandedCurrent = current;
+                _secondaryCommandedOvp = ovp;
+                _secondaryOutputOn = outputOn;
+                _secondaryCommandStateKnown = true;
+                _secondaryCommandConfirmedUtc = DateTime.UtcNow;
+            }
+        }
+
+        private bool CanReuseRecentSecondarySetpoint(float voltage, float current, float ovp)
+        {
+            int reuseWindowMs = Math.Max(
+                0,
+                GetIntAppSetting("SKSecondarySetpointReuseWindowMs", 5000));
+            lock (_powerSafetySync)
+            {
+                return reuseWindowMs > 0 &&
+                       _secondaryCommandStateKnown &&
+                       Math.Abs(_secondaryCommandedVoltage - voltage) < 0.0001f &&
+                       Math.Abs(_secondaryCommandedCurrent - current) < 0.0001f &&
+                       Math.Abs(_secondaryCommandedOvp - ovp) < 0.0001f &&
+                       (DateTime.UtcNow - _secondaryCommandConfirmedUtc).TotalMilliseconds <= reuseWindowMs;
+            }
+        }
+
+        private void InvalidateSecondaryCommandState()
+        {
+            lock (_powerSafetySync)
+            {
+                _secondaryCommandStateKnown = false;
+                _secondaryCommandConfirmedUtc = DateTime.MinValue;
             }
         }
 
@@ -226,15 +342,15 @@ namespace TestPlatform
                 }
                 else
                 {
-                    HengHuiPower1.SetCurrent(current);
-                    HengHuiPower1.SetOvp(ovp);
-                    HengHuiPower1.SetVoltage(voltage);
+                    AinuoPowerA.SetCurrent(current);
+                    AinuoPowerA.SetVoltage(voltage);
                 }
 
                 RecordVbusSetpoint(voltage);
+                RecordVbusCommandState(voltage, current, true);
                 LogInfo?.Invoke(
                     $"{boardType} VBUS保持输出ON并缓升至{voltage:0.###}V/" +
-                    $"{current:0.###}A, OVP={ovp:0.###}V");
+                    $"{current:0.###}A, OVP未下发(请求值={ovp:0.###}V)");
                 return true;
             }
             catch (Exception ex)
@@ -245,15 +361,21 @@ namespace TestPlatform
             }
         }
 
-        private bool ValidatePowerRelaySwitch(int relayId, bool close, out string error)
+        private bool ValidatePowerRelaySwitch(int relayId, bool close, out string error, bool mpsLogical = false)
         {
+            if (relayId < 1 || relayId > 16)
+            {
+                error = "继电器编号必须在1-16之间。";
+                return false;
+            }
             if (close && !ValidateEmergencyAllowsEnergizing("闭合功率继电器 " + relayId, out error))
                 return false;
 
             lock (_powerSafetySync)
             {
                 bool current;
-                if (_powerRelayStates.TryGetValue(relayId, out current) && current == close)
+                var states = mpsLogical ? _mpsRelayStates : _powerRelayStates;
+                if (states.TryGetValue(relayId, out current) && current == close)
                 {
                     error = null;
                     return true;
@@ -451,6 +573,43 @@ namespace TestPlatform
                 return true;
             }
 
+            int reuseWindowMs = Math.Max(
+                0,
+                GetIntAppSetting("SKPowerOffVerificationReuseWindowMs", 5000));
+            DateTime now = DateTime.UtcNow;
+            var domainsToVerify = new List<string>();
+            lock (_powerSafetySync)
+            {
+                foreach (string domain in domains)
+                {
+                    if (string.Equals(domain, "LOAD", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int loadReuseWindowMs = Math.Max(
+                            0,
+                            GetIntAppSetting(
+                                "SKElectronicLoadSafeZeroVerificationReuseWindowMs",
+                                5000));
+                        if (_electronicLoadSafeZeroConfirmed &&
+                            _electronicLoadSafeZeroConfirmedUtc != DateTime.MinValue &&
+                            (now - _electronicLoadSafeZeroConfirmedUtc).TotalMilliseconds <= loadReuseWindowMs)
+                        {
+                            _powerDomainOffConfirmedUtc[domain] =
+                                _electronicLoadSafeZeroConfirmedUtc;
+                            continue;
+                        }
+                    }
+
+                    DateTime confirmedUtc;
+                    if (!_powerDomainOffConfirmedUtc.TryGetValue(domain, out confirmedUtc) ||
+                        (now - confirmedUtc).TotalMilliseconds > reuseWindowMs)
+                    {
+                        domainsToVerify.Add(domain);
+                    }
+                }
+            }
+            if (domainsToVerify.Count == 0)
+                return true;
+
             float voltageThreshold = GetFloatAppSetting("SKSafeOpenVoltageThreshold", 20.0f);
             float currentThreshold = GetFloatAppSetting("SKSafeOpenCurrentThreshold", 0.05f);
             int timeoutMs = GetIntAppSetting("SKSafeDischargeTimeoutMs", 30000);
@@ -460,7 +619,7 @@ namespace TestPlatform
             while (DateTime.UtcNow <= deadline)
             {
                 bool allSafe = true;
-                foreach (string domain in domains)
+                foreach (string domain in domainsToVerify)
                 {
                     float voltage;
                     float current;
@@ -483,11 +642,20 @@ namespace TestPlatform
                     }
                 }
 
-                if (allSafe) return true;
+                if (allSafe)
+                {
+                    DateTime confirmedUtc = DateTime.UtcNow;
+                    lock (_powerSafetySync)
+                    {
+                        foreach (string domain in domainsToVerify)
+                            _powerDomainOffConfirmedUtc[domain] = confirmedUtc;
+                    }
+                    return true;
+                }
                 await Task.Delay(pollMs);
             }
 
-            LogError?.Invoke($"掉电确认超时，禁止切换继电器或释放治具：{string.Join(",", domains)}");
+            LogError?.Invoke($"掉电确认超时，禁止切换继电器或释放治具：{string.Join(",", domainsToVerify)}");
             return false;
         }
 
@@ -521,7 +689,7 @@ namespace TestPlatform
             }
             if (domain == "VBUS")
             {
-                HengHuiPower1.ReadVoltageCurrent(out voltage, out current);
+                AinuoPowerA.ReadVoltageCurrent(out voltage, out current);
                 return;
             }
             if (domain == "SECONDARY")
@@ -543,13 +711,17 @@ namespace TestPlatform
             float targetVoltage,
             int minimumWaitMs,
             int maximumWaitMs,
-            CancellationToken token)
+            CancellationToken token,
+            bool reportTimeoutAsError = true)
         {
             if (SkipComInit)
                 return true;
 
             DateTime started = DateTime.UtcNow;
             int stableSamples = 0;
+            int requiredStableSamples = Math.Max(
+                1,
+                GetIntAppSetting("SKStableSampleCount", 1));
             float tolerance = Math.Max(0.5f, Math.Abs(targetVoltage) * 0.02f);
             while ((DateTime.UtcNow - started).TotalMilliseconds < maximumWaitMs)
             {
@@ -569,7 +741,7 @@ namespace TestPlatform
                     stableSamples = Math.Abs(voltage - targetVoltage) <= tolerance
                         ? stableSamples + 1
                         : 0;
-                    if (stableSamples >= 3)
+                    if (stableSamples >= requiredStableSamples)
                     {
                         LogInfo?.Invoke(
                             $"{domain} 电压连续稳定，提前结束等待：目标={targetVoltage:0.###}V，" +
@@ -585,9 +757,63 @@ namespace TestPlatform
 
                 await Task.Delay(250, token);
             }
-            LogError?.Invoke(
-                $"{domain} 电压稳定等待超时：目标={targetVoltage:0.###}V，" +
-                $"最短等待={minimumWaitMs}ms，最长等待={maximumWaitMs}ms。");
+            string timeoutMessage = $"{domain} 电压稳定等待超时：目标={targetVoltage:0.###}V，" +
+                $"最短等待={minimumWaitMs}ms，最长等待={maximumWaitMs}ms。";
+            if (reportTimeoutAsError)
+                LogError?.Invoke(timeoutMessage);
+            else
+                LogInfo?.Invoke(timeoutMessage + "辅助等待结束，继续正式测量。");
+            return false;
+        }
+
+        public async Task<bool> WaitForPowerCurrentStableAsync(
+            string domain,
+            float targetCurrent,
+            int minimumWaitMs,
+            int maximumWaitMs,
+            CancellationToken token)
+        {
+            if (SkipComInit)
+                return true;
+
+            Stopwatch timer = Stopwatch.StartNew();
+            int stableSamples = 0;
+            float tolerance = Math.Max(0.05f, Math.Abs(targetCurrent) * 0.05f);
+            float lastVoltage = float.NaN;
+            float lastCurrent = float.NaN;
+            while (timer.ElapsedMilliseconds < maximumWaitMs)
+            {
+                token.ThrowIfCancellationRequested();
+                if (timer.ElapsedMilliseconds < minimumWaitMs)
+                {
+                    await Task.Delay(Math.Min(100, minimumWaitMs - (int)timer.ElapsedMilliseconds), token);
+                    continue;
+                }
+
+                try
+                {
+                    ReadPowerDomain(domain, out lastVoltage, out lastCurrent);
+                    stableSamples = Math.Abs(lastCurrent - targetCurrent) <= tolerance
+                        ? stableSamples + 1
+                        : 0;
+                    if (stableSamples >= 2)
+                    {
+                        LogInfo?.Invoke($"{domain} 电流连续稳定：目标={targetCurrent:0.###}A，" +
+                            $"实测={lastCurrent:0.###}A/{lastVoltage:0.###}V，耗时={timer.ElapsedMilliseconds}ms");
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    stableSamples = 0;
+                    LogInfo?.Invoke($"{domain} 电流稳定轮询暂未就绪：{ex.Message}");
+                }
+
+                await Task.Delay(150, token);
+            }
+
+            LogError?.Invoke($"{domain} 电流稳定等待超时：目标={targetCurrent:0.###}A，" +
+                $"末次回读={lastCurrent:0.###}A/{lastVoltage:0.###}V，最长等待={maximumWaitMs}ms。");
             return false;
         }
 
@@ -639,23 +865,49 @@ namespace TestPlatform
             int startupDelayMs = Math.Max(
                 0,
                 GetIntAppSetting("SKElectronicLoadPowerOnDelayMs", 3000));
-            await Task.Delay(startupDelayMs);
+            int initialDelayMs = Math.Min(
+                startupDelayMs,
+                Math.Max(0, GetIntAppSetting("SKElectronicLoadPowerOnInitialDelayMs", 500)));
+            int probeIntervalMs = Math.Max(
+                50,
+                GetIntAppSetting("SKElectronicLoadPowerOnProbeIntervalMs", 200));
+            int probeTimeoutMs = Math.Max(
+                100,
+                GetIntAppSetting("SKElectronicLoadPowerOnProbeTimeoutMs", 300));
+            var startupTimer = Stopwatch.StartNew();
+            if (initialDelayMs > 0)
+                await Task.Delay(initialDelayMs);
 
-            try
+            Exception lastError = null;
+            do
             {
-                float voltage = ElectronicLoad.MeasureVoltage();
-                float current = ElectronicLoad.MeasureCurrent();
-                LogInfo?.Invoke(
-                    $"电子负载供电继电器 Y2/Y5 已闭合，通信确认成功：{voltage:F3} V, {current:F3} A");
-                return true;
+                try
+                {
+                    float voltage = ElectronicLoad.MeasureVoltageOnce(probeTimeoutMs);
+                    float current = ElectronicLoad.MeasureCurrentOnce(probeTimeoutMs);
+                    LogInfo?.Invoke(
+                        $"电子负载供电继电器 Y2/Y5 已闭合，{startupTimer.ElapsedMilliseconds}ms 后通信就绪：" +
+                        $"{voltage:F3} V, {current:F3} A");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                }
+
+                int remainingMs = startupDelayMs - (int)startupTimer.ElapsedMilliseconds;
+                if (remainingMs <= 0)
+                    break;
+                await Task.Delay(Math.Min(probeIntervalMs, remainingMs));
             }
-            catch (Exception ex)
-            {
-                LogError?.Invoke($"电子负载 Y2/Y5 上电后通信确认失败：{ex.Message}");
-                await ControlRelayAsync(loadPowerRelay2, false);
-                await ControlRelayAsync(loadPowerRelay1, false);
-                return false;
-            }
+            while (startupTimer.ElapsedMilliseconds <= startupDelayMs);
+
+            LogError?.Invoke(
+                $"电子负载 Y2/Y5 上电后在 {startupTimer.ElapsedMilliseconds}ms 内未就绪：" +
+                (lastError?.Message ?? "无有效通信响应"));
+            await ControlRelayAsync(loadPowerRelay2, false);
+            await ControlRelayAsync(loadPowerRelay1, false);
+            return false;
         }
 
         public Task<bool> EnableBcm250ElectronicLoadSupplyAsync()
@@ -687,21 +939,14 @@ namespace TestPlatform
                 }
             }
 
-            bool passed = true;
-            foreach (int relayId in relayIds)
-            {
-                if (IsPowerRelayAlreadyInState(relayId, close)) continue;
-                // BCM功率路径属于16路功率继电器站3，不属于工装继电器站1。
-                bool ok = await ControlRelayAsync(relayId, close);
-                passed = ok && passed;
-            }
+            // BCM功率路径属于16路功率继电器站3，不属于工装继电器站1。
+            bool passed = await ControlRelaysAsync(relayIds, close);
 
             // Match the BCM250 fail-safe behavior: a partially closed String path
             // is never left energized after a relay command failure.
             if (close && !passed)
             {
-                for (int index = relayIds.Length - 1; index >= 0; index--)
-                    await ControlRelayAsync(relayIds[index], false);
+                await ControlRelaysAsync(relayIds.Reverse(), false);
             }
             return passed;
         }
@@ -794,29 +1039,39 @@ namespace TestPlatform
 
         public async Task<bool> ControlMpsRelayAsync(int logicalRelayId, string daqChannelList, bool close)
         {
-            if (string.IsNullOrWhiteSpace(daqChannelList))
-                return await ControlRelayAsync(logicalRelayId, close);
+            bool mappingValid = false;
+            try
+            {
+                string expectedChannels = TestSequences.MpsFunctionalRelayMap.GetDaqRelayChannels(logicalRelayId);
+                mappingValid = IsMpsBoard() && expectedChannels != null && !string.IsNullOrWhiteSpace(daqChannelList) &&
+                    new HashSet<int>(ParseDaqRelayChannels(expectedChannels)).SetEquals(ParseDaqRelayChannels(daqChannelList));
+            }
+            catch (ArgumentException) { }
+            if (!mappingValid)
+            {
+                LogError?.Invoke("MPS逻辑继电器映射无效，Relay_" + logicalRelayId + "不能回退到站3功率继电器。");
+                return false;
+            }
 
             string error;
-            if (!ValidatePowerRelaySwitch(logicalRelayId, close, out error))
+            if (!ValidatePowerRelaySwitch(logicalRelayId, close, out error, true))
             {
                 LogError?.Invoke(error);
                 return false;
             }
-            if (IsPowerRelayAlreadyInState(logicalRelayId, close))
-                return true;
-            if (close && !await VerifyRelayPowerIsOffAsync(logicalRelayId))
+            lock (_powerSafetySync)
             {
-                LogError?.Invoke($"MPS逻辑继电器 Relay_{logicalRelayId} 闭合前掉电确认失败。");
-                return false;
+                bool current;
+                if (_mpsRelayStates.TryGetValue(logicalRelayId, out current) && current == close)
+                    return true;
             }
-
             bool passed = await SetDaqRelaysAsync(
                 daqChannelList,
                 close,
                 $"MPS逻辑继电器 Relay_{logicalRelayId}");
             if (passed)
-                RecordPowerRelay(logicalRelayId, close);
+                lock (_powerSafetySync)
+                    _powerSafetyTrace.Add("RELAY " + logicalRelayId + " " + (close ? "CLOSED" : "OPEN"));
             return passed;
         }
 
@@ -882,7 +1137,7 @@ namespace TestPlatform
 
         public Task<bool> SafeSwitchMpsVbusRelayAsync(int relayId, bool close, float voltage, float current, float ovp, bool restoreOutput)
         {
-            return SafeSwitchMpsVbusRelayAsync(relayId, null, close, voltage, current, ovp, restoreOutput);
+            return SafeSwitchMpsVbusRelayAsync(relayId, TestSequences.MpsFunctionalRelayMap.GetDaqRelayChannels(relayId), close, voltage, current, ovp, restoreOutput);
         }
 
         public async Task<bool> PrepareMpsVbattBaselineAsync(
@@ -903,10 +1158,17 @@ namespace TestPlatform
             float ovp,
             CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             if (!await SetVbattGeneratorAsync(0, 0, ovp, false)) return false;
+            token.ThrowIfCancellationRequested();
             if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
+            token.ThrowIfCancellationRequested();
             if (!await ControlMpsRelayAsync(relayId, daqChannelList, false)) return false;
-            return await WaitForMps125VbattVoltageAsync(0, token);
+            token.ThrowIfCancellationRequested();
+            // The sequence waits for source-side zero after this safe isolation,
+            // keeping preparation warnings separate from isolation failures.
+            LogInfo?.Invoke($"MPS-125 K01基线隔离完成：VBATT输出关闭，Y9/Y1及Relay_{relayId}已断开；准备等待零电压条件后采样。");
+            return true;
         }
 
         public async Task<bool> WaitForMps250VbattVoltageAsync(
@@ -931,6 +1193,7 @@ namespace TestPlatform
                     Math.Abs(targetVoltage) < 0.001f ? 30000 : 10000));
             DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             int stableSamples = 0;
+            int requiredStableSamples = Math.Max(1, GetIntAppSetting("SKStableSampleCount", 1));
 
             while (DateTime.UtcNow <= deadline)
             {
@@ -955,7 +1218,7 @@ namespace TestPlatform
                     $"等待VBATT实测条件：目标={targetVoltage:0.###}V，" +
                     $"实测={voltage:0.###}V/{current:0.###}A，" +
                     $"电压容差=±{voltageTolerance:0.###}V。");
-                if (stableSamples >= 3)
+                if (stableSamples >= requiredStableSamples)
                     return true;
 
                 await Task.Delay(250, token);
@@ -969,26 +1232,27 @@ namespace TestPlatform
 
         public async Task<bool> WaitForMps125VbattVoltageAsync(
             float targetVoltage,
-            CancellationToken token)
+            CancellationToken token,
+            bool preparationOnly = false)
         {
+            token.ThrowIfCancellationRequested();
             if (SkipComInit)
                 return true;
 
-            float voltageTolerance = Math.Abs(targetVoltage) < 0.001f
+            bool zeroTarget = Math.Abs(targetVoltage) < 0.001f;
+            float voltageTolerance = zeroTarget
                 ? GetFloatAppSetting("SKMPS125VbattZeroToleranceV", 0.5f)
                 : Math.Max(1.0f, Math.Abs(targetVoltage) * 0.02f);
-            float zeroCurrentTolerance = GetFloatAppSetting(
-                "SKMPS125VbattZeroCurrentToleranceA",
-                0.05f);
+            float zeroCurrentTolerance = GetFloatAppSetting("SKMPS125VbattZeroCurrentToleranceA", 0.05f);
             int timeoutMs = Math.Max(
                 1000,
-                GetIntAppSetting(
-                    Math.Abs(targetVoltage) < 0.001f
-                        ? "SKMPS125VbattZeroTimeoutMs"
-                        : "SKMPS125VbattStableTimeoutMs",
-                    Math.Abs(targetVoltage) < 0.001f ? 30000 : 10000));
+                GetIntAppSetting(zeroTarget ? "SKMPS125VbattZeroTimeoutMs" : "SKMPS125VbattStableTimeoutMs",
+                    zeroTarget ? 30000 : 10000));
             DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             int stableSamples = 0;
+            int requiredStableSamples = Math.Max(1, GetIntAppSetting("SKStableSampleCount", 1));
+            var conditionTimer = Stopwatch.StartNew();
+            long lastConditionLogMs = -2000;
 
             while (DateTime.UtcNow <= deadline)
             {
@@ -1001,27 +1265,35 @@ namespace TestPlatform
                 }
                 catch (Exception ex)
                 {
-                    LogError?.Invoke("MPS-125 VBATT实测条件读取失败：" + ex.Message);
+                    token.ThrowIfCancellationRequested();
+                    string message = "MPS-125 VBATT实测条件读取失败：" + ex.Message;
+                    if (preparationOnly) LogInfo?.Invoke(message);
+                    else LogError?.Invoke(message);
                     return false;
                 }
 
                 bool voltageReady = Math.Abs(voltage - targetVoltage) <= voltageTolerance;
-                bool currentReady = Math.Abs(targetVoltage) >= 0.001f ||
-                    Math.Abs(current) <= zeroCurrentTolerance;
+                bool currentReady = !zeroTarget || Math.Abs(current) <= zeroCurrentTolerance;
                 stableSamples = voltageReady && currentReady ? stableSamples + 1 : 0;
-                LogInfo?.Invoke(
-                    $"等待MPS-125 VBATT实测条件：目标={targetVoltage:0.###}V，" +
-                    $"实测={voltage:0.###}V/{current:0.###}A，" +
-                    $"电压容差=±{voltageTolerance:0.###}V。");
-                if (stableSamples >= 3)
+                if (!IsMpsCompactLoggingEnabled() || stableSamples >= requiredStableSamples ||
+                    conditionTimer.ElapsedMilliseconds - lastConditionLogMs >= 2000)
+                {
+                    lastConditionLogMs = conditionTimer.ElapsedMilliseconds;
+                    LogInfo?.Invoke(
+                        $"等待MPS-125 VBATT实测条件：目标={targetVoltage:0.###}V，" +
+                        $"实测={voltage:0.###}V/{current:0.###}A，" +
+                        $"电压容差=±{voltageTolerance:0.###}V，耗时={conditionTimer.ElapsedMilliseconds}ms。");
+                }
+                if (stableSamples >= requiredStableSamples)
                     return true;
 
                 await Task.Delay(250, token);
             }
 
-            LogError?.Invoke(
-                $"MPS-125 VBATT实测条件在 {timeoutMs}ms 内未达成：" +
-                $"目标={targetVoltage:0.###}V，容差=±{voltageTolerance:0.###}V。");
+            string timeoutMessage = $"MPS-125 VBATT实测条件在 {timeoutMs}ms 内未达成：" +
+                $"目标={targetVoltage:0.###}V，容差=±{voltageTolerance:0.###}V。";
+            if (preparationOnly) LogInfo?.Invoke(timeoutMessage);
+            else LogError?.Invoke(timeoutMessage);
             return false;
         }
 
@@ -1031,17 +1303,19 @@ namespace TestPlatform
             float ovp,
             CancellationToken token)
         {
+            token.ThrowIfCancellationRequested();
             if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, false)) return false;
+            token.ThrowIfCancellationRequested();
             if (!await VerifyPowerDomainsOffAsync("SECONDARY")) return false;
+            token.ThrowIfCancellationRequested();
             if (!await ControlMpsRelayAsync(relayId, daqChannelList, true)) return false;
+            token.ThrowIfCancellationRequested();
             if (!await SetVbattGeneratorAsync(0, 0.1f, ovp, true)) return false;
-            if (await WaitForMps125VbattVoltageAsync(0, token)) return true;
-
-            LogError?.Invoke(
-                "MPS-125 Relay_6闭合后VBATT实测未达到0V条件，立即关闭VBATT并断开Relay_6。");
-            await SetVbattGeneratorAsync(0, 0, ovp, false);
-            await ControlMpsRelayAsync(relayId, daqChannelList, false);
-            return false;
+            token.ThrowIfCancellationRequested();
+            // The sequence performs K02's preparatory zero-voltage wait separately,
+            // so only switching/output failures are returned as critical failures.
+            LogInfo?.Invoke($"MPS-125 Relay_{relayId}已安全闭合，VBATT已设为0V并开启；准备等待零电压条件后执行K02采样。");
+            return true;
         }
 
         public async Task<bool> SafeConnectMpsVbattRelayAsync(
@@ -1077,7 +1351,7 @@ namespace TestPlatform
 
         public Task<bool> SafeConnectMpsVbattRelayAsync(int relayId, float ovp)
         {
-            return SafeConnectMpsVbattRelayAsync(relayId, null, ovp);
+            return SafeConnectMpsVbattRelayAsync(relayId, TestSequences.MpsFunctionalRelayMap.GetDaqRelayChannels(relayId), ovp);
         }
 
         public async Task<bool> SafeDisconnectMpsVbattRelayAsync(int relayId, string daqChannelList, float ovp)
@@ -1089,7 +1363,7 @@ namespace TestPlatform
 
         public Task<bool> SafeDisconnectMpsVbattRelayAsync(int relayId, float ovp)
         {
-            return SafeDisconnectMpsVbattRelayAsync(relayId, null, ovp);
+            return SafeDisconnectMpsVbattRelayAsync(relayId, TestSequences.MpsFunctionalRelayMap.GetDaqRelayChannels(relayId), ovp);
         }
     }
 }

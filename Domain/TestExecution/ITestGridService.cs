@@ -14,7 +14,8 @@ namespace TestPlatform.TestSequences
         NotTriggered,
         Skipped,
         CleanupRunning,
-        CleanupFailed
+        CleanupFailed,
+        Warning
     }
 
     /// <summary>
@@ -42,10 +43,25 @@ namespace TestPlatform.TestSequences
 
         Task SetExecTimeAsync(int rowIndex, long elapsedMs);
         Task SetExecTimeByStepIdAsync(string stepId, long elapsedMs);
+        Task SetOutcomeByStepIdAsync(
+            int channelIndex,
+            string stepId,
+            string value,
+            StepExecutionStatus status,
+            long elapsedMs);
 
         Task<(bool IsValid, double Lower, double Upper, string ErrorMessage)> GetLimitsAsync(int rowIndex);
 
         Task ScrollToRowAsync(int rowIndex, int durationMs = 150);
         Task ScrollToStepAsync(string stepId, int durationMs = 150);
+    }
+
+    /// <summary>
+    /// A grid may queue display updates while hardware work continues. Flush before
+    /// exporting reports so every completed result is present in the DataTable.
+    /// </summary>
+    public interface IFlushableTestGridService
+    {
+        Task FlushPendingOutcomesAsync();
     }
 }

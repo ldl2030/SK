@@ -24,13 +24,13 @@ namespace TestPlatform.TestSequences
         {
             A(x, 6, "6.1 检查34901A/34903A/34907A、VBUS及VBATT电源在线", Mps250ActionKind.CheckInstruments);
             A(x, 6, "6.2 关闭VBUS/VBATT及其它仪器输出", Mps250ActionKind.AllOutputsOff);
-            Relay(x, 6, "6.3 断开DAQ301-306功能继电器", Mps250StationMap.AllControlledRelays, false);
+            Relay(x, 6, "6.3 断开DAQ302-306/308功能继电器", Mps250StationMap.AllControlledRelays, false);
         }
 
         private static void AddChapter07(List<Mps250ActionDefinition> x)
         {
             Vbus(x, 7, "7.1 设置VBUS 275V/2A OVP300", Sk250TestSetpoints.Mps250.VbusNominal, false);
-            Relay(x, 7, "7.2 闭合Relay_3(DAQ301) withdrawal接点", "3", true);
+            Relay(x, 7, "7.2 闭合Relay_3(DAQ308) withdrawal接点", "3", true);
             VbusStable(x, 7, "7.1 功率路径闭合后打开VBUS输出并等待实测电压稳定", Sk250TestSetpoints.Mps250.VbusNominal);
             Daq(x, 7, "B01", "7.3.I 测量+5V DAQ101", Mps250StationMap.FiveVolt);
             Daq(x, 7, "B02", "7.3.II 测量+VCC DAQ102", Mps250StationMap.Vcc);
@@ -91,12 +91,12 @@ namespace TestPlatform.TestSequences
             Wait(x, 11, "11.4 等待500ms");
             Mbd(x, 11, "F01", "11.5 读取R79 withdrawal_status", "R79");
             Daq(x, 11, "F02", "11.6 测量OPEN_PREC_RL DAQ106", Mps250StationMap.OpenPrec);
-            DaqAvg(x, 11, "F03", "11.7 U24.7 DAQ109采样16次/100ms取平均", Mps250StationMap.U24Pin7, 16, 100);
-            Relay(x, 11, "11.8 断开Relay_3(DAQ301) withdrawal接点", "3", false);
+            DaqAvg(x, 11, "F03", "11.7 U24.7 DAQ109按配置次数采样/100ms取平均", Mps250StationMap.U24Pin7, 16, 100, 100);
+            Relay(x, 11, "11.8 断开Relay_3(DAQ308) withdrawal接点", "3", false);
             Wait(x, 11, "11.9 等待500ms");
             Mbd(x, 11, "F04", "11.10 读取R79 withdrawal_state", "R79");
             Daq(x, 11, "F05", "11.11 测量OPEN_PREC_RL DAQ106", Mps250StationMap.OpenPrec);
-            DaqAvg(x, 11, "F06", "11.12 U24.7 DAQ109采样16次/100ms取平均", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 11, "F06", "11.12 U24.7 DAQ109按配置次数采样/100ms取平均", Mps250StationMap.U24Pin7, 16, 100, 1);
             Cmd(x, 11, "11.13 关闭主开关 W101=0", "W101=0");
             Relay(x, 11, "11.14 闭合Relay_4(DAQ302)强制CONTACT_80V=0", "4", true);
             Wait(x, 11, "11.15 等待500ms");
@@ -104,7 +104,7 @@ namespace TestPlatform.TestSequences
             Relay(x, 11, "11.17 断开Relay_4(DAQ302)强制CONTACT_80V=1", "4", false);
             Wait(x, 11, "11.18 等待500ms");
             Mbd(x, 11, "F08", "11.19 读取R357 contatto_80V PC2高态（PDF F8）", "R357");
-            Relay(x, 11, "11.20 恢复闭合Relay_3(DAQ301) withdrawal接点", "3", true);
+            Relay(x, 11, "11.20 恢复闭合Relay_3(DAQ308) withdrawal接点", "3", true);
         }
 
         private static void AddChapter12(List<Mps250ActionDefinition> x)
@@ -119,18 +119,18 @@ namespace TestPlatform.TestSequences
         private static void AddChapter13(List<Mps250ActionDefinition> x)
         {
             Cmd(x, 13, "13.1 发送EXIT", "EXIT"); Cmd(x, 13, "13.2 发送DIAG ON", "DIAG ON");
-            DaqAvg(x, 13, "H01", "13.3 U24.7静态采样16次/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 13, "H01", "13.3 U24.7静态按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100, 1);
             Shunt(x, 13, "H02", "13.4 通过1Ω分流测量MPS静态电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 13, "13.5 设置pmos_sw_mcu W96=0", "W96=0");
             Cmd(x, 13, "13.6 设置主开关PWM W101=700", "W101=700"); Wait(x, 13, "13.7 等待200ms");
-            DaqAvg(x, 13, "H03", "13.8 U24.7高驱动采样16次/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 13, "H03", "13.8 U24.7高驱动按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100, 100);
             Shunt(x, 13, "H04", "13.9 测量高驱动MPS电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 13, "13.10 设置主开关PWM W101=200", "W101=200");
-            DaqAvg(x, 13, "H05", "13.11 U24.7低驱动采样16次/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 13, "H05", "13.11 U24.7低驱动按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100, 10);
             Shunt(x, 13, "H06", "13.12 测量低驱动电流并与H02比较", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Wait(x, 13, "13.13 等待200ms"); Cmd(x, 13, "13.14 关闭主开关 W101=0", "W101=0");
             Cmd(x, 13, "13.15 关闭pmos_sw_mcu W96=5", "W96=5"); Wait(x, 13, "13.16 等待500ms");
-            DaqAvg(x, 13, "H07", "13.17 U24.7关闭后采样16次/100ms（PDF H7）", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 13, "H07", "13.17 U24.7关闭后按配置次数采样/100ms（PDF H7）", Mps250StationMap.U24Pin7, 16, 100, 1);
             Shunt(x, 13, "H08", "13.18 测量关闭后MPS电流（PDF H8）", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 13, "13.19 安全确认主开关 W101=0", "W101=0");
         }
@@ -142,10 +142,10 @@ namespace TestPlatform.TestSequences
             Cmd(x, 14, "14.4 设置主开关 W101=700", "W101=700");
             Cmd(x, 14, "14.5 设置主开关 W101=200", "W101=200");
             A(x, 14, "14.6 文档标记为Removed", Mps250ActionKind.DocumentedBoundary); Wait(x, 14, "14.7 等待600ms");
-            DaqAvg(x, 14, "I01", "14.8 U24.7按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 14, "I01", "14.8 U24.7按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100, 10);
             Mbd(x, 14, "I02", "14.9 读取R81 st_westngh", "R81");
             Cmd(x, 14, "14.10 置位west_cmd W95=1", "W95=1"); Wait(x, 14, "14.11 等待600ms");
-            DaqAvg(x, 14, "I03", "14.12 U24.7急停后按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100);
+            DaqAvg(x, 14, "I03", "14.12 U24.7急停后按配置次数采样/100ms", Mps250StationMap.U24Pin7, 16, 100, 1);
             Mbd(x, 14, "I04", "14.13 读取R81 mcu_west_stat", "R81");
             Cmd(x, 14, "14.14 关闭主开关 W101=0", "W101=0"); Cmd(x, 14, "14.15 清除west_cmd W95=0", "W95=0");
             Wait(x, 14, "14.16 等待200ms"); Cmd(x, 14, "14.17 关闭pmos_sw_mcu W96=5", "W96=5");
@@ -172,7 +172,7 @@ namespace TestPlatform.TestSequences
             Vbatt(x, 15, "15.7 打开VBATT输出", Sk250TestSetpoints.Mps250.VbattCalibration, true); Wait(x, 15, "15.8 等待5000ms");
             Cmd(x, 15, "15.9 闭合内部RL1 W91=1", "W91=1"); Wait(x, 15, "15.10 等待500ms");
             Mbd(x, 15, "J03", "15.11 读取R70 adc2 vstring2+ PA2", "R70");
-            A(x, 15, "15.12 DAQ113独立测量P+ VBUS参考电压", Mps250ActionKind.DaqVoltage, Mps250StationMap.VbusReference.ToString(CultureInfo.InvariantCulture));
+            A(x, 15, "15.12 DAQ113独立测量P+ VBUS参考电压", Mps250ActionKind.DaqVbusCalibrationReference, Mps250StationMap.VbusReference.ToString(CultureInfo.InvariantCulture));
             Result(x, 15, "J04", "15.13 计算Gain_VBUS=4096*VBUS/J01", Mps250ActionKind.ComputedGain, "J01", Mps250StationMap.VbusReference);
             Result(x, 15, "J05", "15.14 计算Gain_VPREC=4096*VBUS/J02", Mps250ActionKind.ComputedGain, "J02", Mps250StationMap.VbusReference);
             Result(x, 15, "J06", "15.15-16 计算单路Gain_VSTRING2=4096*VBUS/J03", Mps250ActionKind.ComputedGain, "J03", Mps250StationMap.VbusReference);
@@ -211,29 +211,29 @@ namespace TestPlatform.TestSequences
             Cmd(x, 17, "17.7 关闭PWM1 W99=0", "W99=0"); Cmd(x, 17, "17.8 关闭PWM2 W100=0", "W100=0");
             Cmd(x, 17, "17.9 打开MCU risc_on W92=1", "W92=1"); Wait(x, 17, "17.10 等待200ms");
             Mbd(x, 17, "L01", "17.11 读取R71 ridstrneg基线", "R71");
-            DaqAvg(x, 17, "L02", "17.12-13 FBK_1 DAQ107采样16次/100ms", Mps250StationMap.HeaterFeedback1, 16, 100);
-            DaqAvg(x, 17, "L03", "17.12-14 FBK_2 DAQ108采样16次/100ms", Mps250StationMap.HeaterFeedback2, 16, 100);
+            DaqAvg(x, 17, "L02", "17.12-13 FBK_1 DAQ107按配置次数采样/100ms", Mps250StationMap.HeaterFeedback1, 16, 100, 10);
+            DaqAvg(x, 17, "L03", "17.12-14 FBK_2 DAQ108按配置次数采样/100ms", Mps250StationMap.HeaterFeedback2, 16, 100, 10);
             Shunt(x, 17, "L04", "17.15 测量加热器关闭时MPS电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 17, "17.16 激活PWM1 W99=1000", "W99=1000"); Wait(x, 17, "17.17 等待10000ms");
             Mbd(x, 17, "L05", "17.18 读取R71 ridstrneg（PWM1开启）", "R71");
-            DaqAvg(x, 17, "L06", "17.19-20 FBK_1 100%状态采样16次/100ms", Mps250StationMap.HeaterFeedback1, 16, 100);
+            DaqAvg(x, 17, "L06", "17.19-20 FBK_1 100%状态按配置次数采样/100ms", Mps250StationMap.HeaterFeedback1, 16, 100, 1);
             Shunt(x, 17, "L07", "17.21 测量PWM1开启时MPS电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 17, "17.22 关闭PWM1 W99=0", "W99=0"); Wait(x, 17, "17.22 等待10000ms");
-            DaqAvg(x, 17, "L08", "17.23 FBK_1恢复0%采样16次/100ms", Mps250StationMap.HeaterFeedback1, 16, 100);
+            DaqAvg(x, 17, "L08", "17.23 FBK_1恢复0%按配置次数采样/100ms", Mps250StationMap.HeaterFeedback1, 16, 100, 10);
             Wait(x, 17, "17.24 等待500ms"); Cmd(x, 17, "17.25 激活PWM2 W100=1000", "W100=1000"); Wait(x, 17, "17.26 等待10000ms");
             Mbd(x, 17, "L09", "17.27 读取R71 ridstrneg（PWM2开启）", "R71");
-            DaqAvg(x, 17, "L10", "17.28-29 FBK_2 100%状态采样16次/100ms", Mps250StationMap.HeaterFeedback2, 16, 100);
+            DaqAvg(x, 17, "L10", "17.28-29 FBK_2 100%状态按配置次数采样/100ms", Mps250StationMap.HeaterFeedback2, 16, 100, 1);
             Shunt(x, 17, "L11", "17.30 测量PWM2开启时MPS电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Cmd(x, 17, "17.31 关闭两路加热器risc_on W92=0", "W92=0"); Wait(x, 17, "17.31 等待10000ms");
-            DaqAvg(x, 17, "L12", "17.32 FBK_2恢复0%采样16次/100ms", Mps250StationMap.HeaterFeedback2, 16, 100);
+            DaqAvg(x, 17, "L12", "17.32 FBK_2恢复0%按配置次数采样/100ms", Mps250StationMap.HeaterFeedback2, 16, 100, 10);
             Wait(x, 17, "17.33 等待1000ms"); Mbd(x, 17, "L13", "17.34 读取R71 ridstrneg（risc_on关闭）", "R71");
             Cmd(x, 17, "17.35 确认PWM1关闭 W99=0", "W99=0"); Cmd(x, 17, "17.36 确认PWM2关闭 W100=0", "W100=0");
             Wait(x, 17, "17.36 等待10000ms");
-            DaqAvg(x, 17, "L14", "17.36-37 FBK_1最终采样16次/100ms", Mps250StationMap.HeaterFeedback1, 16, 100);
-            DaqAvg(x, 17, "L15", "17.36-38 FBK_2最终采样16次/100ms", Mps250StationMap.HeaterFeedback2, 16, 100);
+            DaqAvg(x, 17, "L14", "17.36-37 FBK_1最终按配置次数采样/100ms", Mps250StationMap.HeaterFeedback1, 16, 100, 10);
+            DaqAvg(x, 17, "L15", "17.36-38 FBK_2最终按配置次数采样/100ms", Mps250StationMap.HeaterFeedback2, 16, 100, 10);
             Shunt(x, 17, "L16", "17.39 测量最终MPS电流", Mps250StationMap.VbusShunt, Mps250StationMap.VbusShuntOhms);
             Vbus(x, 17, "17.40 关闭VBUS输出", Sk250TestSetpoints.Common.OutputOffOvp300, false);
-            Relay(x, 17, "17.42 断开Relay_3(DAQ301) withdrawal接点", "3", false); A(x, 17, "17.43 关闭目标板串口通信", Mps250ActionKind.CloseMbdCommunication);
+            Relay(x, 17, "17.42 断开Relay_3(DAQ308) withdrawal接点", "3", false); A(x, 17, "17.43 关闭目标板串口通信", Mps250ActionKind.CloseMbdCommunication);
         }
 
         private static void AddCleanup(List<Mps250ActionDefinition> x)
@@ -241,7 +241,7 @@ namespace TestPlatform.TestSequences
             Cleanup(x, "若USB仍连接则发送主开关/加热器安全关闭命令", Mps250ActionKind.MbdCleanupIfConnected, "W101=0;W95=0;W96=5;W99=0;W100=0;W92=0", true);
             Cleanup(x, "关闭VBUS输出", Mps250ActionKind.SetVbus, Sk250TestSetpoints.Common.OutputOffOvp300.ToArgument(), false);
             Cleanup(x, "关闭VBATT输出", Mps250ActionKind.SetVbatt, Sk250TestSetpoints.Common.OutputOffOvp300.ToArgument(), false);
-            Cleanup(x, "断开DAQ301-306功能继电器", Mps250ActionKind.DaqRelays, Mps250StationMap.AllControlledRelays, false);
+            Cleanup(x, "断开DAQ302-306/308功能继电器", Mps250ActionKind.DaqRelays, Mps250StationMap.AllControlledRelays, false);
             Cleanup(x, "关闭所有仪器输出", Mps250ActionKind.AllOutputsOff, null, false);
             Cleanup(x, "关闭目标板通信并释放治具", Mps250ActionKind.Cleanup, null, false);
         }
@@ -270,7 +270,11 @@ namespace TestPlatform.TestSequences
         private static void SafeVbusRelay(List<Mps250ActionDefinition> x, int ch, string name, string relay, Sk250SourceSetpoint setpoint, bool state) => A(x, ch, name, Mps250ActionKind.SafeVbusRelay, relay + "," + setpoint.ToArgument() + ",1", state);
         private static void Mbd(List<Mps250ActionDefinition> x, int ch, string id, string name, string command) => Result(x, ch, id, name, Mps250ActionKind.MbdNumeric, command);
         private static void Daq(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqVoltage, null, channel);
-        private static void DaqAvg(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel, int samples, int interval) => Result(x, ch, id, name, Mps250ActionKind.DaqAverageVoltage, null, channel, 0, samples, interval);
+        private static void DaqAvg(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel, int samples, int interval, double rangeVolts)
+        {
+            Result(x, ch, id, name, Mps250ActionKind.DaqAverageVoltage, null, channel, 0, samples, interval);
+            x[x.Count - 1].DaqRangeVolts = rangeVolts;
+        }
         private static void DaqWindow(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqTimedWindowAverageVoltage, null, channel, 0, 81, 100);
         private static void Shunt(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel, double ohms) => Result(x, ch, id, name, Mps250ActionKind.DaqShuntCurrent, null, channel, ohms);
         private static void Resistance(List<Mps250ActionDefinition> x, int ch, string id, string name, int channel) => Result(x, ch, id, name, Mps250ActionKind.DaqResistance, null, channel);

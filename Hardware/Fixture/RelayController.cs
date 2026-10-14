@@ -36,6 +36,30 @@ namespace TestPlatform
             string comPort = null,
             Action<string> logAction = null)
         {
+            if (count <= 0)
+                return "错误：继电器数量无效";
+
+            return await SendCommandsAsync(
+                address,
+                Enumerable.Range(relayIndex, count),
+                isOpen,
+                baudRate,
+                comPort,
+                logAction);
+        }
+
+        /// <summary>
+        /// 在一个串口会话中依次控制任意多路继电器。控制板仍逐条确认
+        /// Modbus 0x06 写寄存器响应，但不再为每一路反复打开、关闭串口。
+        /// </summary>
+        public static async Task<string> SendCommandsAsync(
+            int address,
+            IEnumerable<int> relayIndices,
+            bool isOpen,
+            int baudRate = 38400,
+            string comPort = null,
+            Action<string> logAction = null)
+        {
             if (string.IsNullOrEmpty(comPort))
                 comPort = ComName.rs485ComName;
 
@@ -45,13 +69,15 @@ namespace TestPlatform
                 return "错误：串口未配置";
             }
 
-            if (relayIndex <= 0)
+            int[] relays = (relayIndices ?? Enumerable.Empty<int>())
+                .Distinct()
+                .ToArray();
+            if (relays.Length == 0 || relays.Any(relayIndex => relayIndex <= 0))
             {
-                logAction?.Invoke("错误：继电器索引必须大于0");
+                logAction?.Invoke("错误：继电器列表为空或包含无效索引");
                 return "错误：继电器索引无效";
             }
 
-            int startAddress = relayIndex - 1;
             var responseBuilder = new StringBuilder();
             const int readTimeout = 500;
 
@@ -62,11 +88,11 @@ namespace TestPlatform
                 {
                     port.Open();
 
-                    for (int i = 0; i < count; i++)
+                    for (int i = 0; i < relays.Length; i++)
                     {
                         port.DiscardInBuffer();
 
-                        int currentRelay = startAddress + i;
+                        int currentRelay = relays[i] - 1;
                         byte[] command = new byte[]
                         {
                             (byte)address,
@@ -107,24 +133,21 @@ namespace TestPlatform
                         {
                             byte[] buffer = received.Take(expectedLength).ToArray();
                             string hexResp = BytesToHex(buffer);
-                            if (HasValidCrc(buffer) &&
-                                buffer[0] == fullCommand[0] &&
-                                (buffer[1] == fullCommand[1] ||
-                                 buffer[1] == (byte)(fullCommand[1] | 0x80)))
+                            if (IsSuccessfulWriteResponse(buffer, fullCommand))
                             {
-                                responseBuilder.Append(hexResp);
+                                responseBuilder.Append(hexResp).Append(';');
                                 logAction?.Invoke($"收到响应：{hexResp}");
                             }
                             else
                             {
-                                responseBuilder.Append("INVALID");
-                                logAction?.Invoke($"命令 {i + 1} 响应校验失败：{hexResp}");
+                                responseBuilder.Append("Y").Append(relays[i]).Append("=INVALID;");
+                                logAction?.Invoke($"继电器 Y{relays[i]} 响应校验失败：{hexResp}");
                             }
                         }
                         else
                         {
-                            responseBuilder.Append("TIMEOUT");
-                            logAction?.Invoke($"命令 {i + 1} 超时无响应");
+                            responseBuilder.Append("Y").Append(relays[i]).Append("=TIMEOUT;");
+                            logAction?.Invoke($"继电器 Y{relays[i]} 超时无响应");
                         }
                     }
                 }
@@ -142,6 +165,15 @@ namespace TestPlatform
             {
                 _serialSemaphore.Release();
             }
+        }
+
+        internal static bool IsSuccessfulWriteResponse(byte[] response, byte[] request)
+        {
+            // Function 0x06 succeeds only with the full eight-byte echo. A valid
+            // exception CRC or an echo for a different coil/state is not success.
+            return request != null && response != null && request.Length == 8 &&
+                response.Length == 8 && request[1] == 0x06 &&
+                HasValidCrc(response) && response.SequenceEqual(request);
         }
 
         /// <summary>

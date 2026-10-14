@@ -5,7 +5,7 @@ using System.Linq;
 namespace TestPlatform.TestSequences
 {
     /// <summary>
-    /// Shared BCM sequence infrastructure. It binds code steps to the
+    /// Shared BCM/MPS sequence infrastructure. It binds code steps to the
     /// authoritative XML plan without containing board-specific hardware data.
     /// </summary>
     public abstract class SKBcmSequenceBase : SKBaseSequence
@@ -160,7 +160,7 @@ namespace TestPlatform.TestSequences
             if (definition == null)
             {
                 throw new TestPlanConfigurationException(
-                    $"BCM {stepKind} step at index {rowIndex} has no XML definition.");
+                    $"SK {stepKind} step at index {rowIndex} has no XML definition.");
             }
             return definition;
         }

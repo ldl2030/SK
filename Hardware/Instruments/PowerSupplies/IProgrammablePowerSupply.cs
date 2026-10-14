@@ -3,8 +3,8 @@ using System;
 namespace TestPlatform
 {
     /// <summary>
-    /// Common control surface shared by the installed source B and the optional
-    /// backup source B. Implementations may reject commands that the connected
+    /// Common control surface shared by the installed station power sources.
+    /// Implementations may reject commands that the connected
     /// instrument does not expose instead of silently pretending they succeeded.
     /// </summary>
     public interface IProgrammablePowerSupply : IDisposable

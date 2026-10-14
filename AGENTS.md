@@ -22,7 +22,13 @@ Use C# conventions with 4-space indentation. Use `PascalCase` for types, methods
 
 ## Testing Guidelines
 
-No standalone automated test project is present in this checkout. Validate changes by building, running the relevant UI flow, and checking logs. For hardware-sensitive work, first test with communication skipped or simulated where supported, then confirm real ports, relays, digital inputs, and fixture state before enabling physical actions.
+The solution includes four console regression projects under `Tests/`: Bcm125StructureTests, Bcm250StructureTests, Mps125StructureTests, and Mps250StructureTests. Run them with `TESTPLATFORM_SK_MODE=Simulation` and the repository root as their first argument. They cover XML structure, simulated flows, fault cleanup, and linked shared checks in `Tests/Shared/SkCommonBehaviorTests.cs`. For hardware-sensitive work, first test with communication skipped or simulated where supported, then confirm real ports, relays, digital inputs, and fixture state before enabling physical actions.
+
+## Shared Behavior Across the Four SK Products
+
+When a useful improvement is found in BCM-125, BCM-250, MPS-125, or MPS-250, inspect its applicability to all four products in the same change. Put shared behavior in `Sequences/SK/Common/`, `SKBaseSequence`, or `SK441Device` rather than copying implementations into product sequences. Keep product wiring, limits, protocol commands, and required timing in their own station maps, catalogs, and XML. See `Docs/SK四产品共性规则与推广矩阵.md`.
+
+Use XML names for both the grid and logs, and `SKCompactLoggingEnabled` for the common logging policy. Keep fixture station-1, power station-3, and DAQ relay state separate. Reuse only successfully issued relay command states; invalidate affected states after communication failure and when reinitializing. Changes to shared behavior must build and pass all four regression executables. Timing improvements require measured readiness and a fallback to the original wait; preserve required acquisition windows and ramp timing.
 
 ## Commit & Pull Request Guidelines
 
